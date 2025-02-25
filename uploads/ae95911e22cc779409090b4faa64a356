@@ -1,0 +1,42 @@
+[
+  {
+    "student_name": "Akunur Sai Brinda ",
+    "section_id": "67379fb9a030fcad2b0d8199",
+    "guardian_mail": "brinda.parent@gmail.com",
+    "year_id": "67379f9aa030fcad2b0d8191",
+    "password": "student1",
+    "student_id_no": "23XV1M0501"
+  },
+  {
+    "student_name": "Amaram Sindhu Reddy",
+    "section_id": "67379fb9a030fcad2b0d8199",
+    "guardian_mail": "amaran.parent@gmail.com",
+    "year_id": "67379f9aa030fcad2b0d8191",
+    "password": "student1",
+    "student_id_no": "23XV1M0502"
+  },
+  {
+    "student_name": "Amrutha Varshini Astakala",
+    "section_id": "67379fb9a030fcad2b0d8199",
+    "guardian_mail": "amrutha.parent@gmail.com",
+    "year_id": "67379f9aa030fcad2b0d8191",
+    "password": "student1",
+    "student_id_no": "23XV1M0503"
+  },
+  {
+    "student_name": "Appana Hemanth",
+    "section_id": "67379fb9a030fcad2b0d8199",
+    "guardian_mail": "hemanth.parent@gmail.com",
+    "year_id": "67379f9aa030fcad2b0d8191",
+    "password": "student1",
+    "student_id_no": "23XV1M0504"
+  },
+  {
+    "student_name": "Attili Valli Sai Meghana ",
+    "section_id": "67379fb9a030fcad2b0d8199",
+    "guardian_mail": "meghana.parent@gmail.com",
+    "year_id": "67379f9aa030fcad2b0d8191",
+    "password": "student1",
+    "student_id_no": "23XV1M0505"
+  }
+]
