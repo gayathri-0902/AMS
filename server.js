@@ -13,7 +13,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173","https://profound-khapse-7f68f6.netlify.app/"],
+    origin: ["http://localhost:5173","https://ams-dx9j.onrender.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -541,6 +541,17 @@ app.post("/api/upload-students", async (req, res) => {
     res.status(500).json({ message: "Error inserting data", error: error.message });
   }
 });
+
+
+// changes are made here
+
+
+  app.use(express.static(path.join(__dirname, 'client/dist')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+  });
 
 
 
