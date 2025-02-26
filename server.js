@@ -5,7 +5,10 @@ const dotenv = require("dotenv");
 
 const fs = require('fs');
 const multer = require("multer");
+const path=require("path");
+
 const { Schema, model, Types } = mongoose;
+
 
 dotenv.config();
 const app = express();
@@ -546,11 +549,11 @@ app.post("/api/upload-students", async (req, res) => {
 // changes are made here
 
 
-  app.use(express.static(path.join(__dirname, 'client/dist')));
+  app.use(express.static(path.join(__dirname, 'dist')));
   
   // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 
 
