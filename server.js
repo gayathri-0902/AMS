@@ -333,9 +333,11 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
 app.get("/api/attendance/:studentId", async (req, res) => {
   const { studentId } = req.params;
 
+  const student = await Student.findById(studentId).populate("section_id");
+
   try {
     // Fetch all subjects (classes) in the system
-    const allClasses = await Class.find();
+    const allClasses = await Class.find({section_id: student.section_id._id});
 
     // Fetch all attendance records for this student
     const allAttendanceRecords = await Attendance.find({ studentId });
