@@ -35,12 +35,6 @@ mongoose
   .catch((err) => console.error("Error connecting to MongoDB:", err));
 
 
-//mongoose.connect(MONGO_URI, {
-//  useNewUrlParser: true,
-//  useUnifiedTopology: true,
-//}).then(async () => {
-//  console.log("Connected to MongoDB");;
-
 // Schemas and Models
 const AdminSchema = new mongoose.Schema(
   {
@@ -57,7 +51,7 @@ const FacultySchema = new mongoose.Schema(
     password: String,
     email: String
   },
-  { collection: "faculty" }
+  { collection: "faculty", versionKey: false }
 );
 const Faculty = mongoose.model("Faculty", FacultySchema);
 
@@ -70,7 +64,7 @@ const StudentSchema = new mongoose.Schema(
     year_id: { type: mongoose.Schema.Types.ObjectId, ref: "Year" },
     guardian_mail : String
   },
-  { collection: "student" }
+  { collection: "student", versionKey: false }
 );
 const Student = mongoose.model("Student", StudentSchema);
 
@@ -79,7 +73,7 @@ const SectionSchema = new mongoose.Schema(
     section_id_no: Number,
     section_name: String,
   },
-  { collection: "section" }
+  { collection: "section" , versionKey: false}
 );
 const Section = mongoose.model("Section", SectionSchema); // currently not in use, remove if not used in future
 
@@ -91,7 +85,7 @@ const ClassSchema = new mongoose.Schema(
     faculty_id: { type: mongoose.Schema.Types.ObjectId, ref: "Faculty" },
     year_id: { type: mongoose.Schema.Types.ObjectId, ref: "Year" },
   },
-  { collection: "classes" }
+  { collection: "classes" , versionKey: false}
 );
 const Class = mongoose.model("Class", ClassSchema);
 
@@ -104,7 +98,7 @@ const TimetableSchema = new mongoose.Schema(
     faculty_id: { type: mongoose.Schema.Types.ObjectId, ref: "Faculty" },
     start_time: String
   },
-  { collection: "timetable" }
+  { collection: "timetable", versionKey: false }
 );
 
 const Timetable = mongoose.model("Timetable", TimetableSchema);
@@ -116,7 +110,7 @@ const AttendanceSchema = new mongoose.Schema(
     status: String,
     date: { type: Date, default: Date.now },
   },
-  { collection: "attendance" }
+  { collection: "attendance", versionKey: false }
 );
 
 const Attendance = mongoose.model("Attendance", AttendanceSchema);
@@ -400,152 +394,178 @@ app.post("/api/attendance", async (req, res) => {
 });
 
 // API Endpoint for Yearly Changes
-app.post('/api/yearly-update', async (req, res) => {
-  try {
-    // Fetch all students
-    const students = await Student.find();
+// app.post('/api/yearly-update', async (req, res) => {
+//   try {
+//     // Fetch all students
+//     const students = await Student.find();
 
-    // Process each student
-    for (const student of students) {
+//     // Process each student
+//     for (const student of students) {
 
-      const year = await Year.findById(student.year_id).exec();
-
-
-      if (!year) {
-        // Handle case where no year data is found
-        console.log(`No year data found for student: ${student.student_name}`);
-        continue;
-      }
-
-      const yearCode = year.year_code; 
+//       const year = await Year.findById(student.year_id).exec();
 
 
-      if (yearCode >400) {
-        // Archive final year students
-        const archivedStudent = new ArchivedStudent({
-          student_id_no: student.student_id_no,
-          student_name: student.student_name,
-          password: student.password,
-          guardian_mail: student.guardian_mail,
-          section_id: student.section_id,
-          year_id: student.year_id
-          // archived_date will be auto-set
-        });
+//       if (!year) {
+//         // Handle case where no year data is found
+//         console.log(`No year data found for student: ${student.student_name}`);
+//         continue;
+//       }
 
-        await archivedStudent.save();
-        await Student.findByIdAndDelete(student._id);
-      } else {
+//       const yearCode = year.year_code; 
 
-        const year_dict = {
-          "1": "67379f9aa030fcad2b0d8190",
-          "2": "67379f9aa030fcad2b0d8191",
-          "3" : "67379f9aa030fcad2b0d8192",
-          "4" : "67379f9aa030fcad2b0d8193"
-        };
 
-        const section_dict = {
-          "101": "67379fb9a030fcad2b0d8194",
-          "102": "67379fb9a030fcad2b0d8195",
-          "103": "67379fb9a030fcad2b0d8196",
-          "104": "67379fb9a030fcad2b0d8197",
-          "201": "67379fb9a030fcad2b0d8198",
-          "202": "67379fb9a030fcad2b0d8199",
-          "203": "67a3a9bd9d6f2d735fdc63a5",
-          "204": "67a3a9e19d6f2d735fdc63a8",
-          "301": "67379fb9a030fcad2b0d819a",
-          "302": "67a3a99b9d6f2d735fdc63a3",
-          "303": "67a3a9cc9d6f2d735fdc63a6",
-          "304": "67a3a9ec9d6f2d735fdc63a9",
-          "401": "67a3a9839d6f2d735fdc63a2",
-          "402": "67a3a9a69d6f2d735fdc63a4",
-          "403": "67a3a9d79d6f2d735fdc63a7",
-          "404": "67a3a9f69d6f2d735fdc63aa"
-        };
+//       if (yearCode >400) {
+//         // Archive final year students
+//         const archivedStudent = new ArchivedStudent({
+//           student_id_no: student.student_id_no,
+//           student_name: student.student_name,
+//           password: student.password,
+//           guardian_mail: student.guardian_mail,
+//           section_id: student.section_id,
+//           year_id: student.year_id
+//           // archived_date will be auto-set
+//         });
 
-        const year = await Year.findById(student.year_id).exec();
-        const section = await section_dict.findById(student.section_id).exec();
+//         await archivedStudent.save();
+//         await Student.findByIdAndDelete(student._id);
+//       } else {
 
-        if (!year) {
-          // Handle case where no year data is found
-          console.log(`No year data found for student: ${student.student_name}`);
-          continue;
-        }
+//         const year_dict = {
+//           "1": "67379f9aa030fcad2b0d8190",
+//           "2": "67379f9aa030fcad2b0d8191",
+//           "3" : "67379f9aa030fcad2b0d8192",
+//           "4" : "67379f9aa030fcad2b0d8193"
+//         };
+
+//         const section_dict = {
+//           "101": "67379fb9a030fcad2b0d8194",
+//           "102": "67379fb9a030fcad2b0d8195",
+//           "103": "67379fb9a030fcad2b0d8196",
+//           "104": "67379fb9a030fcad2b0d8197",
+//           "201": "67379fb9a030fcad2b0d8198",
+//           "202": "67379fb9a030fcad2b0d8199",
+//           "203": "67a3a9bd9d6f2d735fdc63a5",
+//           "204": "67a3a9e19d6f2d735fdc63a8",
+//           "301": "67379fb9a030fcad2b0d819a",
+//           "302": "67a3a99b9d6f2d735fdc63a3",
+//           "303": "67a3a9cc9d6f2d735fdc63a6",
+//           "304": "67a3a9ec9d6f2d735fdc63a9",
+//           "401": "67a3a9839d6f2d735fdc63a2",
+//           "402": "67a3a9a69d6f2d735fdc63a4",
+//           "403": "67a3a9d79d6f2d735fdc63a7",
+//           "404": "67a3a9f69d6f2d735fdc63aa"
+//         };
+
+//         const year = await Year.findById(student.year_id).exec();
+//         const section = await section_dict.findById(student.section_id).exec();
+
+//         if (!year) {
+//           // Handle case where no year data is found
+//           console.log(`No year data found for student: ${student.student_name}`);
+//           continue;
+//         }
   
-        const yearCode = year.year_code; 
+//         const yearCode = year.year_code; 
 
-        if (!section) {
-          // Handle case where no year data is found
-          console.log(`No section data found for student: ${student.student_name}`);
-          continue;
-        }
+//         if (!section) {
+//           // Handle case where no year data is found
+//           console.log(`No section data found for student: ${student.student_name}`);
+//           continue;
+//         }
   
-        const sectionCode = section.section_id_no; 
+//         const sectionCode = section.section_id_no; 
 
 
-        // Promote other students (auto-calculating new year_id & section_id)
-        const newYearId = year_dict[yearCode+1];
-        const newSectionId = section_dict[sectionCode+100];
+//         // Promote other students (auto-calculating new year_id & section_id)
+//         const newYearId = year_dict[yearCode+1];
+//         const newSectionId = section_dict[sectionCode+100];
 
-        await Student.findByIdAndUpdate(student._id, {
-          year_id: newYearId,
-          section_id: newSectionId
-        });
-      }
-    }
+//         await Student.findByIdAndUpdate(student._id, {
+//           year_id: newYearId,
+//           section_id: newSectionId
+//         });
+//       }
+//     }
 
-    res.status(200).json({ message: 'Yearly update completed successfully.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'An error occurred during the yearly update.' });
-  }
-  res.status(200).json({ message: 'Yearly update completed successfully.' });
-});
+//     res.status(200).json({ message: 'Yearly update completed successfully.' });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'An error occurred during the yearly update.' });
+//   }
+//   res.status(200).json({ message: 'Yearly update completed successfully.' });
+// });
 
 // res.status(200).json({ message: 'Yearly update completed successfully.' });
 
 const upload = multer({ dest: "uploads/" });
 
 
-// load students 
-app.post("/api/upload-students", async (req, res) => {
-  console.log("Received request at /api/upload-students");
-  res.status(200).json({ message: "File uploaded successfully" });
-  console.log("Received file:", req.file);  // Debugging line
-  
+// File upload functionality
+
+const processFileUpload = async (req, res, Model, formatData) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-
-  
-
   try {
-    // Read JSON file
-    const data = JSON.parse(req.file.buffer.toString("utf8"));
+    console.log("Received file:", req.file);
+    const fileData = fs.readFileSync(req.file.path, "utf8");
+    const records = JSON.parse(fileData);
 
-    console.log("Parsed Data:", data); // Debugging line
-
-    // Convert section_id and year_id to ObjectIDs
-    const formattedData = data.map(student => ({
-      ...student,
-      // section_id: new mongoose.ObjectId(student.section_id),
-      // year_id: new mongoose.ObjectId(student.year_id),
-      section_id: isValidObjectId(student.section_id) ? new mongoose.ObjectId(student.section_id) : null,
-      year_id: isValidObjectId(student.year_id) ? new mongoose.ObjectId(student.year_id) : null,
-    }));
-
-    if (formattedData.some(student => student.section_id === null || student.year_id === null)) {
-      return res.status(400).json({ message: "Invalid ObjectId in section_id or year_id" });
+    const formattedData = records.map(formatData);
+    if (formattedData.some(record => Object.values(record).includes(null))) {
+      return res.status(400).json({ message: "Invalid ObjectId in data" });
     }
+    
 
-    // Insert into MongoDB using Mongoose
-    await Student.insertMany(formattedData);
-
-    res.json({ message: "Students added successfully" });
+    await Model.insertMany(formattedData);
+    res.json({ message: "Data added successfully" });
   } catch (error) {
-    console.error("Error processing file:", error); // Debugging line
+    console.error("Error processing file:", error);
     res.status(500).json({ message: "Error inserting data", error: error.message });
   }
+};
+
+app.post("/api/upload-students", upload.single("file"), async (req, res,next) => {
+  await processFileUpload(req, res, Student, student => ({
+    student_id_no: student.student_id_no,
+    password: student.password,
+    student_name: student.student_name,
+    section_id: mongoose.Types.ObjectId.isValid(student.section_id) ? new mongoose.Types.ObjectId(student.section_id) : null,
+    year_id: mongoose.Types.ObjectId.isValid(student.year_id) ? new mongoose.Types.ObjectId(student.year_id) : null,
+    guardian_mail: student.guardian_mail,
+  }));
 });
+
+app.post("/api/upload-faculty", upload.single("file"), async (req, res,next) => {
+  await processFileUpload(req, res, Faculty, faculty => ({
+    faculty_name: faculty.faculty_name,
+    password: faculty.password,
+    email: faculty.email,
+  }));
+});
+
+app.post("/api/upload-classes", upload.single("file"), async (req, res,next) => {
+  await processFileUpload(req, res, Class, cls => ({
+    class_name: cls.class_name,
+    class_code: cls.class_code,
+    section_id: mongoose.Types.ObjectId.isValid(cls.section_id) ? new mongoose.Types.ObjectId(cls.section_id) : null,
+    faculty_id: mongoose.Types.ObjectId.isValid(cls.faculty_id) ? new mongoose.Types.ObjectId(cls.faculty_id) : null,
+    year_id: mongoose.Types.ObjectId.isValid(cls.year_id) ? new mongoose.Types.ObjectId(cls.year_id) : null,
+  }));
+});
+
+app.post("/api/upload-timetable", upload.single("file"), async (req, res,next) => {
+  await processFileUpload(req, res, Timetable, timetable => ({
+    section_id: mongoose.Types.ObjectId.isValid(timetable.section_id) ? new mongoose.Types.ObjectId(timetable.section_id) : null,
+    class_id: mongoose.Types.ObjectId.isValid(timetable.class_id) ? new mongoose.Types.ObjectId(timetable.class_id) : null,
+    faculty_id: mongoose.Types.ObjectId.isValid(timetable.faculty_id) ? new mongoose.Types.ObjectId(timetable.faculty_id) : null,
+    day: timetable.day,
+    duration: timetable.duration,
+    start_time: timetable.start_time,
+  }));
+});
+
+
 
 
 // changes are made here
