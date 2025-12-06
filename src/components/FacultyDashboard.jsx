@@ -10,12 +10,22 @@ function FacultyDashboard() {
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
+<<<<<<< HEAD
   const [isFormVisible, setIsFormVisible] = useState(true); // State to toggle form visibility
   const [isModalVisible, setIsModalVisible] = useState(false); // State for modal visibility
+=======
+  const [isFormVisible, setIsFormVisible] = useState(true); 
+  const [isModalVisible, setIsModalVisible] = useState(false); 
+  
+  // Notes State
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState({ title: "", description: "", file_url: "" });
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
 
   useEffect(() => {
     const fetchClasses = async () => {
       try {
+<<<<<<< HEAD
         if (!auth.facultyId) {
           console.log("No facultyId found.");
           return;
@@ -24,6 +34,11 @@ function FacultyDashboard() {
           `${import.meta.env.VITE_API_BASE_URL}/api/faculty-dashboard/${
             auth.facultyId
           }`
+=======
+        if (!auth.facultyId) return;
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/faculty-dashboard/${auth.facultyId}`
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
         );
         setClasses(response.data);
       } catch (error) {
@@ -31,9 +46,13 @@ function FacultyDashboard() {
       }
     };
 
+<<<<<<< HEAD
     if (auth.facultyId) {
       fetchClasses();
     }
+=======
+    if (auth.facultyId) fetchClasses();
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
   }, [auth.facultyId]);
 
   const handleClassSelection = async (cls) => {
@@ -41,16 +60,37 @@ function FacultyDashboard() {
     setIsFormVisible(true);
     setAttendanceMarked(false);
     setAttendance({});
+<<<<<<< HEAD
     try {
       const studentResponse = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/api/faculty-dashboard/students/${
           cls.section_id
         }`
+=======
+    
+    // Fetch Students
+    try {
+      const studentResponse = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/faculty-dashboard/students/${cls.section_id}`
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
       );
       setStudents(studentResponse.data);
     } catch (error) {
       console.error("Error fetching students:", error);
     }
+<<<<<<< HEAD
+=======
+
+    // Fetch Notes (using cls.class_id which maps to subject_offering_id)
+    try {
+       const notesResponse = await axios.get(
+         `${import.meta.env.VITE_API_BASE_URL}/api/notes/${cls.class_id}`
+       );
+       setNotes(notesResponse.data);
+    } catch (error) {
+       console.error("Error fetching notes:", error);
+    }
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
   };
 
   const handleCheckboxChange = (studentId, isChecked) => {
@@ -76,22 +116,62 @@ function FacultyDashboard() {
         attendanceData: attendance,
       });
       setAttendanceMarked(true);
+<<<<<<< HEAD
       setIsModalVisible(true); // Show the modal after successful submission
       setTimeout(() => setIsModalVisible(false), 2000); // Hide modal after 3 seconds
+=======
+      setIsModalVisible(true); 
+      setTimeout(() => setIsModalVisible(false), 2000); 
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
     } catch (error) {
       console.error("Error marking attendance:", error);
     }
   };
 
+<<<<<<< HEAD
+=======
+  const handleNoteChange = (e) => {
+    setNewNote({ ...newNote, [e.target.name]: e.target.value });
+  };
+
+  const handleAddNote = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        subject_offering_id: selectedClass.class_id,
+        faculty_id: auth.facultyId,
+        ...newNote
+      };
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/notes`, payload);
+      alert("Note added successfully");
+      setNewNote({ title: "", description: "", file_url: "" });
+      
+      // Refresh notes
+      const notesResponse = await axios.get(
+         `${import.meta.env.VITE_API_BASE_URL}/api/notes/${selectedClass.class_id}`
+       );
+       setNotes(notesResponse.data);
+
+    } catch (error) {
+      console.error("Error adding note:", error);
+      alert("Failed to add note");
+    }
+  };
+
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
   const toggleFormVisibility = () => {
     setIsFormVisible((prevState) => !prevState);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
+<<<<<<< HEAD
       <h1 className="text-2xl font-bold text-center text-blue-600 mb-8">
         Faculty Dashboard
       </h1>
+=======
+      <h1 className="text-2xl font-bold text-center text-blue-600 mb-8">Faculty Dashboard</h1>
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
       <button
         onClick={logout}
         className="absolute top-4 right-4 p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition"
@@ -120,9 +200,13 @@ function FacultyDashboard() {
                       : "bg-blue-500 text-white"
                   }`}
                 >
+<<<<<<< HEAD
                   {attendanceMarked[cls.class_id]
                     ? "Attendance Marked"
                     : "Mark Attendance"}
+=======
+                  Manage Class
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
                 </button>
               </div>
             ))
@@ -142,6 +226,7 @@ function FacultyDashboard() {
       )}
 
       {selectedClass && isFormVisible && (
+<<<<<<< HEAD
         <div className="mt-8 p-6 bg-white shadow rounded-lg">
           <h3 className="text-lg font-medium mb-4">Selected Class Details</h3>
           <p>
@@ -165,10 +250,29 @@ function FacultyDashboard() {
 
           <form>
             <ul className="space-y-4">
+=======
+        <div className="space-y-8">
+          {/* Attendance Section */}
+          <div className="p-6 bg-white shadow rounded-lg">
+            <h3 className="text-lg font-medium mb-4">Attendance: {selectedClass.class_name}</h3>
+            
+            <div className="flex justify-between mb-4">
+              <span className="text-gray-600">Mark attendance for today's session.</span>
+              <button
+                onClick={handleMarkAllPresent}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Mark All Present
+              </button>
+            </div>
+
+            <ul className="space-y-2 mb-6 max-h-64 overflow-y-auto">
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
               {students.length > 0 ? (
                 students.map((student) => (
                   <li
                     key={student._id}
+<<<<<<< HEAD
                     className="flex items-center justify-between p-4 rounded-lg shadow  hover:bg-gray-100 cursor-pointer"
                     onClick={() =>
                       handleCheckboxChange(
@@ -230,6 +334,111 @@ function FacultyDashboard() {
             <h3 className="text-lg font-semibold">
               Attendance Marked Successfully!
             </h3>
+=======
+                    className="flex justify-between items-center p-3 bg-gray-50 rounded shadow-sm"
+                  >
+                    <div>
+                      <span className="font-bold mr-2">{student.student_id_no}</span>
+                      <span>{student.student_name}</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={attendance[student._id] === "Present"}
+                      onChange={(e) => handleCheckboxChange(student._id, e.target.checked)}
+                      className="w-5 h-5 accent-green-600"
+                    />
+                  </li>
+                ))
+              ) : (
+                <li className="text-gray-500 italic">No students in this class.</li>
+              )}
+            </ul>
+
+            <button
+              onClick={handleMarkAttendance}
+              className={`w-full py-2 rounded-lg text-white font-bold ${
+                attendanceMarked ? "bg-green-600 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              disabled={attendanceMarked}
+            >
+              {attendanceMarked ? "Attendance Submitted" : "Submit Attendance"}
+            </button>
+          </div>
+
+          {/* Class Notes Section */}
+          <div className="p-6 bg-white shadow rounded-lg">
+             <h3 className="text-lg font-medium mb-4">Class Resources / Notes</h3>
+             
+             {/* Add Note Form */}
+             <form onSubmit={handleAddNote} className="mb-6 p-4 bg-gray-50 rounded border">
+               <h4 className="font-semibold mb-2">Add New Resource</h4>
+               <div className="grid grid-cols-1 gap-3">
+                 <input
+                   type="text"
+                   name="title"
+                   placeholder="Title (e.g. Lecture 1 Slides)"
+                   value={newNote.title}
+                   onChange={handleNoteChange}
+                   className="p-2 border rounded w-full"
+                   required
+                 />
+                 <input
+                   type="text"
+                   name="description"
+                   placeholder="Description (Optional)"
+                   value={newNote.description}
+                   onChange={handleNoteChange}
+                   className="p-2 border rounded w-full"
+                 />
+                 <input
+                   type="url"
+                   name="file_url"
+                   placeholder="Link (Google Drive, YouTube, etc.)"
+                   value={newNote.file_url}
+                   onChange={handleNoteChange}
+                   className="p-2 border rounded w-full"
+                   required
+                 />
+                 <button type="submit" className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700">
+                   Add Note
+                 </button>
+               </div>
+             </form>
+
+             {/* List Notes */}
+             <div className="space-y-2">
+                {notes.length > 0 ? (
+                   notes.map(note => (
+                     <div key={note._id} className="p-3 border rounded flex justify-between items-center bg-gray-50 hover:bg-white transition">
+                        <div>
+                           <h5 className="font-bold text-blue-800">{note.title}</h5>
+                           <p className="text-sm text-gray-600">{note.description}</p>
+                           <span className="text-xs text-gray-400">Added: {new Date(note.upload_date).toLocaleDateString()}</span>
+                        </div>
+                        <a 
+                          href={note.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline text-sm font-semibold"
+                        >
+                          View Link
+                        </a>
+                     </div>
+                   ))
+                ) : (
+                  <p className="text-gray-500 italic">No notes added yet for this class.</p>
+                )}
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
+      {isModalVisible && (
+        <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold text-green-600">Attendance Marked Successfully!</h3>
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
           </div>
         </div>
       )}

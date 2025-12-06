@@ -7,7 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+<<<<<<< HEAD
 .env
+=======
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
 node_modules
 dist
 dist-ssr

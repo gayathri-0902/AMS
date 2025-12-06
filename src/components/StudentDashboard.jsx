@@ -7,6 +7,10 @@ function StudentDashboard() {
   const { auth, logout } = useAuth();
   const [timetable, setTimetable] = useState([]);
   const [subjectAttendance, setSubjectAttendance] = useState([]);
+<<<<<<< HEAD
+=======
+  const [notes, setNotes] = useState({}); // { subjectId: [note1, note2] }
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
   const [loadingTimetable, setLoadingTimetable] = useState(true);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
 
@@ -17,9 +21,13 @@ function StudentDashboard() {
       try {
         setLoadingTimetable(true);
         const response = await axios.get(
+<<<<<<< HEAD
           `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${
             auth.studentId
           }`
+=======
+          `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${auth.studentId}`
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
         );
         setTimetable(response.data.timetableData || []);
       } catch (err) {
@@ -29,6 +37,7 @@ function StudentDashboard() {
       }
     };
 
+<<<<<<< HEAD
     const fetchAttendance = async () => {
       try {
         setLoadingAttendance(true);
@@ -38,6 +47,33 @@ function StudentDashboard() {
           }`
         );
         setSubjectAttendance(response.data.subjectAttendance || []);
+=======
+    const fetchAttendanceAndNotes = async () => {
+      try {
+        setLoadingAttendance(true);
+        // Fetch Attendance (which now includes subject_offering_id)
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/attendance/${auth.studentId}`
+        );
+        const subjects = response.data.subjectAttendance || [];
+        setSubjectAttendance(subjects);
+        
+        // Fetch Notes for each subject
+        const notesData = {};
+        await Promise.all(subjects.map(async (subj) => {
+           try {
+              if(!subj.subject_offering_id) return;
+              const res = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/api/notes/${subj.subject_offering_id}`
+              );
+              notesData[subj.subject_offering_id] = res.data;
+           } catch(e) {
+             console.error(`Error fetching notes for ${subj.class_name}`, e);
+           }
+        }));
+        setNotes(notesData);
+
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
       } catch (err) {
         console.error("Error fetching attendance", err);
       } finally {
@@ -46,7 +82,11 @@ function StudentDashboard() {
     };
 
     fetchTimetable();
+<<<<<<< HEAD
     fetchAttendance();
+=======
+    fetchAttendanceAndNotes();
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
   }, [auth.studentId]);
 
   return (
@@ -107,6 +147,7 @@ function StudentDashboard() {
         </p>
       ) : (
         <div className="overflow-x-auto">
+<<<<<<< HEAD
           <table className="w-full border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-100">
@@ -116,10 +157,22 @@ function StudentDashboard() {
                 <th className="border p-2">Absent</th>
                 <th className="border p-2">Total</th>
                 <th className="border p-2">Attendance %</th>
+=======
+          <table className="w-full border-collapse border border-gray-300 bg-white shadow-sm rounded-lg overflow-hidden">
+            <thead className="bg-gray-200">
+              <tr>
+                <th className="border p-3 text-left">Class</th>
+                <th className="border p-3 text-left">Code</th>
+                <th className="border p-3 text-center">Present</th>
+                <th className="border p-3 text-center">Absent</th>
+                <th className="border p-3 text-center">Total</th>
+                <th className="border p-3 text-center">Percentage</th>
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
               </tr>
             </thead>
             <tbody>
               {subjectAttendance.map((subject, index) => (
+<<<<<<< HEAD
                 <tr key={index} className="text-center">
                   <td className="border p-2">{subject.class_name}</td>
                   <td className="border p-2">{subject.class_code}</td>
@@ -127,6 +180,15 @@ function StudentDashboard() {
                   <td className="border p-2">{subject.total_count - subject.present_count}</td>
                   <td className="border p-2">{subject.total_count}</td>
                   <td className="border p-2 font-bold">
+=======
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="border p-3 font-medium">{subject.class_name}</td>
+                  <td className="border p-3">{subject.class_code}</td>
+                  <td className="border p-3 text-center text-green-600 font-bold">{subject.present_count}</td>
+                  <td className="border p-3 text-center text-red-600">{subject.total_count - subject.present_count}</td>
+                  <td className="border p-3 text-center">{subject.total_count}</td>
+                  <td className="border p-3 text-center font-bold">
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
                     {subject.percentage}%
                   </td>
                 </tr>
@@ -135,6 +197,43 @@ function StudentDashboard() {
           </table>
         </div>
       )}
+<<<<<<< HEAD
+=======
+
+      {/* Class Notes Section */}
+      <h2 className="text-xl font-semibold mt-8 mb-4">Class Resources / Notes</h2>
+      <div className="space-y-6">
+        {subjectAttendance.map((subject) => {
+           const subjectNotes = notes[subject.subject_offering_id] || [];
+           if (subjectNotes.length === 0) return null;
+           
+           return (
+             <div key={subject.subject_offering_id} className="bg-white p-6 shadow rounded-lg">
+                <h3 className="text-lg font-bold text-blue-700 mb-2">{subject.class_name} ({subject.class_code})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {subjectNotes.map(note => (
+                    <a 
+                      key={note._id} 
+                      href={note.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block p-4 border rounded hover:shadow-md transition bg-gray-50"
+                    >
+                       <h4 className="font-semibold text-gray-800">{note.title}</h4>
+                       {note.description && <p className="text-sm text-gray-600 mt-1">{note.description}</p>}
+                       <p className="text-xs text-blue-500 mt-2">Added by {note.faculty_id?.name || 'Faculty'} on {new Date(note.upload_date).toLocaleDateString()}</p>
+                    </a>
+                  ))}
+                </div>
+             </div>
+           );
+        })}
+        {Object.keys(notes).length === 0 && !loadingAttendance && (
+           <p className="text-gray-500 italic">No resources available.</p>
+        )}
+      </div>
+
+>>>>>>> daef7c5 (feat: Add Admin, Faculty, Student dashboards and authentication context)
     </div>
   );
 }
