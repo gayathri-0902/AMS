@@ -80,7 +80,9 @@ function FacultyDashboard() {
     try {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance`, {
         classId: selectedClass.class_id,
+        sessionNo : selectedClass.session_no,
         attendanceData: attendance,
+        
       });
       setAttendanceMarked(true);
       setIsModalVisible(true); 

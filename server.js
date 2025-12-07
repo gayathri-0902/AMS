@@ -109,8 +109,14 @@ app.post("/api/login", async (req, res) => {
 app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
   try {
     const { facultyId } = req.params;
+    console.log("Fetching timetable for faculty ID:", facultyId);
 
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    // const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    // console.log("Current day:", currentDay);
+
+    const currentDay = "Mon";
+    console.log("Current day:", currentDay);
+
 
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
@@ -141,6 +147,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
           : "Unknown Batch",
         section_id: yrSem ? yrSem._id : null,
         class_id: subject ? subject._id : null,
+        session_no : entry.session_no,
       };
     });
 
@@ -154,12 +161,14 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
 // Fetch students for marking attendance
 app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
   const { sectionId } = req.params;
+  console.log("Fetching students for section ID:", sectionId);
 
   try {
     const enrollments = await StudentEnrollment.find({
       yr_sem_id: sectionId,
       status: "active",
-    }).populate("student_id");
+    }).populate("student_id")
+    .sort({ "student_id.roll_no": 1 });
 
     if (!enrollments || enrollments.length === 0) {
       return res
@@ -182,6 +191,39 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
     students.sort((a, b) => a.student_id_no.localeCompare(b.student_id_no));
 
     res.json(students);
+
+    //my_change
+    /*
+    const students = await StudentEnrollment.aggregate([
+    {
+      $match: {
+        yr_sem_id: sectionId,
+        status: "active",
+      }
+    },
+    {
+      $lookup: {
+        from: "students",
+        localField: "student_id",
+        foreignField: "_id",
+        as: "student"
+      }
+    },
+    { $unwind: "$student" },
+    {
+      $project: {
+        _id: "$student._id",
+        student_name: "$student.name",
+        student_id_no: "$student.roll_no"
+      }
+    },
+    {
+      $sort: { student_id_no: 1 }
+    }
+  ]);
+
+  res.json(students);*/
+
   } catch (error) {
     console.error("Error fetching students:", error);
     res.status(500).json({ message: "Server error" });
@@ -203,7 +245,9 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     }
 
     const yrSemId = enrollment.yr_sem_id;
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    //const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+
+    const currentDay = "Mon";
 
     const timetableEntries = await TimeTable.find({
       yr_sem_id: yrSemId,
@@ -287,6 +331,7 @@ app.get("/api/attendance/:studentId", async (req, res) => {
     for (const subject of subjects) {
       const sessions = await ClassSession.find({
         subject_offering_id: subject._id,
+        
       });
       const sessionIds = sessions.map((s) => s._id);
 
@@ -320,7 +365,7 @@ app.get("/api/attendance/:studentId", async (req, res) => {
 
 // Submit attendance from faculty
 app.post("/api/attendance", async (req, res) => {
-  const { classId, attendanceData } = req.body;
+  const { classId, attendanceData, sessionNo } = req.body;
 
   if (!classId || !attendanceData) {
     return res
@@ -339,6 +384,7 @@ app.post("/api/attendance", async (req, res) => {
       faculty_id: facultyId,
       date: new Date(),
       is_conducted: true,
+      session_no : sessionNo
     });
 
     await session.save();
@@ -477,7 +523,7 @@ app.post("/api/admin/schedule", async (req, res) => {
     session_no,
   } = req.body;
 
-  const acYr = academic_yr || "2025-26";
+  //const acYr = academic_yr || "2025-26";
 
   try {
     const faculty = await Faculty.findOne({ email: faculty_email });
@@ -489,8 +535,8 @@ app.post("/api/admin/schedule", async (req, res) => {
     const yrSem = await YrSem.findOne({
       yr: Number(yr),
       sem: Number(sem),
-      stream: stream,
-      academic_yr: acYr,
+      stream: stream
+      //academic_yr: academic_yr,
     });
     if (!yrSem)
       return res.status(404).json({
