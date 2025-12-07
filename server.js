@@ -111,11 +111,8 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     const { facultyId } = req.params;
     console.log("Fetching timetable for faculty ID:", facultyId);
 
-    // const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
-    // console.log("Current day:", currentDay);
+    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
 
-    const currentDay = "Mon";
-    console.log("Current day:", currentDay);
 
 
     const timetableEntries = await TimeTable.find({
@@ -192,37 +189,6 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
 
     res.json(students);
 
-    //my_change
-    /*
-    const students = await StudentEnrollment.aggregate([
-    {
-      $match: {
-        yr_sem_id: sectionId,
-        status: "active",
-      }
-    },
-    {
-      $lookup: {
-        from: "students",
-        localField: "student_id",
-        foreignField: "_id",
-        as: "student"
-      }
-    },
-    { $unwind: "$student" },
-    {
-      $project: {
-        _id: "$student._id",
-        student_name: "$student.name",
-        student_id_no: "$student.roll_no"
-      }
-    },
-    {
-      $sort: { student_id_no: 1 }
-    }
-  ]);
-
-  res.json(students);*/
 
   } catch (error) {
     console.error("Error fetching students:", error);
@@ -269,10 +235,11 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const subjectIds = timetableEntries.map((t) => t.subject_offering_id._id);
-
+    const sessionNos = timetableEntries.map((t) => t.session_no);
     const sessions = await ClassSession.find({
       subject_offering_id: { $in: subjectIds },
       date: { $gte: startOfDay, $lte: endOfDay },
+      session_no : { $in: sessionNos }
     });
 
     const sessionIds = sessions.map((s) => s._id);
@@ -285,21 +252,24 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     const attendanceMap = {};
     attendanceRecords.forEach((record) => {
       const subjectId = record.class_session_id.subject_offering_id.toString();
-      attendanceMap[subjectId] = record.status;
+      const sessNo = record.class_session_id.session_no;
+      const key = `${subjectId}_${sessNo}`;
+      attendanceMap[key] = record.status;
     });
 
     const timetableData = timetableEntries.map((entry) => {
       const subject = entry.subject_offering_id;
       const course = subject.course_master_id;
       const subjectIdString = subject._id.toString();
-
+      const sessNo = entry.session_no;
+      const key = `${subjectIdString}_${sessNo}`;
       return {
         class_name: course.course_name,
         class_code: course.course_code,
         faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
         duration: 1,
         day: entry.day_of_week,
-        attendance_status: attendanceMap[subjectIdString] || "Not Marked",
+        attendance_status: attendanceMap[key] || "Not Marked",
       };
     });
 
