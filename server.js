@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const bcrypt = require("bcrypt");
 
 // Models
 const User = require("./models/User");
@@ -62,7 +63,12 @@ app.post("/api/login", async (req, res) => {
       }
     }
 
-    if (!user || user.password !== body.password) {
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(body.password, user.password);
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
