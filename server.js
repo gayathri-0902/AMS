@@ -114,7 +114,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     // const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
     // console.log("Current day:", currentDay);
 
-    const currentDay = "Mon";
+    const currentDay = "Tue";
     console.log("Current day:", currentDay);
 
 
