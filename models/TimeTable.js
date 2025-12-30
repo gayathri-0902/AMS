@@ -30,4 +30,9 @@ const TimeTableSchema = new mongoose.Schema(
   { collection: "time_table" }
 );
 
+TimeTableSchema.index(
+  { yr_sem_id: 1, day_of_week: 1, session_no: 1 },
+  { unique: true, name: "unique_session_per_section_per_day" }
+);
+
 module.exports = mongoose.model("TimeTable", TimeTableSchema);

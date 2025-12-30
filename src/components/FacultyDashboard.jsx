@@ -84,6 +84,7 @@ function FacultyDashboard() {
         attendanceData: attendance,
         
       });
+
       setAttendanceMarked(true);
       setIsModalVisible(true); 
       setTimeout(() => setIsModalVisible(false), 2000); 

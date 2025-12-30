@@ -21,7 +21,7 @@ function AdminDashboard() {
     stream: "",
     yr: "",
     sem: "",
-    academic_yr: "2025-26",
+    academic_yr: "2022-26",
     password: "",
   });
 

@@ -131,7 +131,8 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
         path: "subject_offering_id",
         populate: { path: "course_master_id" },
       })
-      .populate("yr_sem_id");
+      .populate("yr_sem_id")
+      .sort({ session_no: 1 });
 
     if (!timetableEntries.length) {
       return res
@@ -231,7 +232,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         path: "subject_offering_id",
         populate: { path: "course_master_id" },
       })
-      .populate("faculty_id");
+      .populate("faculty_id")
+      .sort({ session_no: 1 });
 
     if (!timetableEntries.length) {
       return res.json({ timetableData: [] });
@@ -271,6 +273,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       const subjectIdString = subject._id.toString();
       const sessNo = entry.session_no;
       const key = `${subjectIdString}_${sessNo}`;
+
       return {
         class_name: course.course_name,
         class_code: course.course_code,
