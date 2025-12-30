@@ -85,7 +85,9 @@ function StudentDashboard() {
         <p className="text-center text-gray-600">No classes found for today.</p>
       ) : (
         <div className="space-y-4">
-          {timetable.map((entry, index) => (
+          {(() => {
+            const sortedTimetable = [...timetable].sort((a, b) => a.session_no - b.session_no);
+            return sortedTimetable.map((entry, index) => (
             <div
               key={index}
               className="flex justify-between items-center p-4 bg-white shadow rounded-lg"
@@ -108,7 +110,8 @@ function StudentDashboard() {
                 </span>
               </p>
             </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
 

@@ -120,7 +120,8 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
         path: "subject_offering_id",
         populate: { path: "course_master_id" },
       })
-      .populate("yr_sem_id");
+      .populate("yr_sem_id")
+      .sort({ session_no: 1 });
 
     if (!timetableEntries.length) {
       return res
@@ -141,6 +142,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
           : "Unknown Batch",
         section_id: yrSem ? yrSem._id : null,
         class_id: subject ? subject._id : null,
+        session_no : entry.session_no,
       };
     });
 
@@ -213,7 +215,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         path: "subject_offering_id",
         populate: { path: "course_master_id" },
       })
-      .populate("faculty_id");
+      .populate("faculty_id")
+      .sort({ session_no: 1 });
 
     if (!timetableEntries.length) {
       return res.json({ timetableData: [] });
@@ -225,10 +228,11 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const subjectIds = timetableEntries.map((t) => t.subject_offering_id._id);
-
+    const sessionNos = timetableEntries.map((t) => t.session_no);
     const sessions = await ClassSession.find({
       subject_offering_id: { $in: subjectIds },
       date: { $gte: startOfDay, $lte: endOfDay },
+      session_no : { $in: sessionNos }
     });
 
     const sessionIds = sessions.map((s) => s._id);
@@ -241,13 +245,17 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     const attendanceMap = {};
     attendanceRecords.forEach((record) => {
       const subjectId = record.class_session_id.subject_offering_id.toString();
-      attendanceMap[subjectId] = record.status;
+      const sessNo = record.class_session_id.session_no;
+      const key = `${subjectId}_${sessNo}`;
+      attendanceMap[key] = record.status;
     });
 
     const timetableData = timetableEntries.map((entry) => {
       const subject = entry.subject_offering_id;
       const course = subject.course_master_id;
       const subjectIdString = subject._id.toString();
+      const sessNo = entry.session_no;
+      const key = `${subjectIdString}_${sessNo}`;
 
       return {
         class_name: course.course_name,
@@ -255,7 +263,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
         duration: 1,
         day: entry.day_of_week,
-        attendance_status: attendanceMap[subjectIdString] || "Not Marked",
+        attendance_status: attendanceMap[key] || "Not Marked",
       };
     });
 
@@ -320,7 +328,7 @@ app.get("/api/attendance/:studentId", async (req, res) => {
 
 // Submit attendance from faculty
 app.post("/api/attendance", async (req, res) => {
-  const { classId, attendanceData } = req.body;
+  const { classId, attendanceData, sessionNo } = req.body;
 
   if (!classId || !attendanceData) {
     return res
@@ -339,6 +347,7 @@ app.post("/api/attendance", async (req, res) => {
       faculty_id: facultyId,
       date: new Date(),
       is_conducted: true,
+      session_no : sessionNo,
     });
 
     await session.save();
