@@ -11,6 +11,9 @@ function StudentDashboard() {
   const [loadingTimetable, setLoadingTimetable] = useState(true);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
 
+  // Added state to track which dropdown is open
+  const [openNotesIndex, setOpenNotesIndex] = useState(null);
+
   useEffect(() => {
     if (!auth.studentId) return;
 
@@ -31,14 +34,12 @@ function StudentDashboard() {
     const fetchAttendanceAndNotes = async () => {
       try {
         setLoadingAttendance(true);
-        // Fetch Attendance (which now includes subject_offering_id)
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL}/api/attendance/${auth.studentId}`
         );
         const subjects = response.data.subjectAttendance || [];
         setSubjectAttendance(subjects);
         
-        // Fetch Notes for each subject
         const notesData = {};
         await Promise.all(subjects.map(async (subj) => {
            try {
@@ -87,30 +88,65 @@ function StudentDashboard() {
         <div className="space-y-4">
           {(() => {
             const sortedTimetable = [...timetable].sort((a, b) => a.session_no - b.session_no);
-            return sortedTimetable.map((entry, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center p-4 bg-white shadow rounded-lg"
-            >
-              <div>
-                <h3 className="text-lg font-medium">{entry.class_name}</h3>
-                <p className="text-gray-600">{entry.class_code}</p>
-                <p className="text-gray-600">Faculty: {entry.faculty_name}</p>
-              </div>
-              <p>
-                Status:{" "}
-                <span
-                  className={`font-bold ${
-                    entry.attendance_status === "Present"
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }`}
-                >
-                  {entry.attendance_status}
-                </span>
-              </p>
-            </div>
-            ));
+            return sortedTimetable.map((entry, index) => {
+              // Logic to find notes for this specific row
+              const subjectInfo = subjectAttendance.find(s => s.class_code === entry.class_code);
+              const subjectId = subjectInfo?.subject_offering_id;
+              const subjectNotes = notes[subjectId] || [];
+
+              return (
+                <div key={index} className="bg-white shadow rounded-lg overflow-hidden">
+                  <div className="flex justify-between items-center p-5">
+                    <div>
+                      <h3 className="text-lg font-medium">{entry.class_name}</h3>
+                      <p className="text-gray-600">{entry.class_code}</p>
+                      <p className="text-gray-600">Faculty: {entry.faculty_name}</p>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <p className="mb-3">
+                        Status:{" "}
+                        <span className={`font-bold ${entry.attendance_status === "Present" ? "text-green-500" : "text-red-500"}`}>
+                          {entry.attendance_status}
+                        </span>
+                      </p>
+
+                      {/* MEDIUM SIZED BUTTON WITH SPACE */}
+                      <button
+                        onClick={() => setOpenNotesIndex(openNotesIndex === index ? null : index)}
+                        className="px-5 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition shadow-sm text-sm"
+                      >
+                        {openNotesIndex === index ? "Close Notes ▲" : "View Notes ▼"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dropdown area for notes */}
+                  {openNotesIndex === index && (
+                    <div className="bg-gray-50 border-t p-5">
+                      <h4 className="font-bold text-gray-700 mb-3">Available Notes:</h4>
+                      {subjectNotes.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-3">
+                          {subjectNotes.map((note) => (
+                            <a 
+                              key={note._id} 
+                              href={note.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="block p-3 border rounded bg-white hover:border-blue-400 transition"
+                            >
+                              <p className="font-semibold text-gray-800">{note.title}</p>
+                              {note.description && <p className="text-xs text-gray-500">{note.description}</p>}
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No notes uploaded for this subject.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            });
           })()}
         </div>
       )}
@@ -153,40 +189,6 @@ function StudentDashboard() {
           </table>
         </div>
       )}
-
-      {/* Class Notes Section */}
-      <h2 className="text-xl font-semibold mt-8 mb-4">Class Resources / Notes</h2>
-      <div className="space-y-6">
-        {subjectAttendance.map((subject) => {
-           const subjectNotes = notes[subject.subject_offering_id] || [];
-           if (subjectNotes.length === 0) return null;
-           
-           return (
-             <div key={subject.subject_offering_id} className="bg-white p-6 shadow rounded-lg">
-                <h3 className="text-lg font-bold text-blue-700 mb-2">{subject.class_name} ({subject.class_code})</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {subjectNotes.map(note => (
-                    <a 
-                      key={note._id} 
-                      href={note.file_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block p-4 border rounded hover:shadow-md transition bg-gray-50"
-                    >
-                       <h4 className="font-semibold text-gray-800">{note.title}</h4>
-                       {note.description && <p className="text-sm text-gray-600 mt-1">{note.description}</p>}
-                       <p className="text-xs text-blue-500 mt-2">Added by {note.faculty_id?.name || 'Faculty'} on {new Date(note.upload_date).toLocaleDateString()}</p>
-                    </a>
-                  ))}
-                </div>
-             </div>
-           );
-        })}
-        {Object.keys(notes).length === 0 && !loadingAttendance && (
-           <p className="text-gray-500 italic">No resources available.</p>
-        )}
-      </div>
-
     </div>
   );
 }

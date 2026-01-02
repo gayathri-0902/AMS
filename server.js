@@ -119,10 +119,6 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
 
     const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
 
-    //const currentDay = "Tue";
-    //console.log("Current day:", currentDay);
-
-
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
       day_of_week: currentDay,
@@ -220,9 +216,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     }
 
     const yrSemId = enrollment.yr_sem_id;
-    //const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
-
-    const currentDay = "Mon";
+    const currentDay = "Mon"; // Adjust for live: new Date().toLocaleString("en-US", { weekday: "short" })
 
     const timetableEntries = await TimeTable.find({
       yr_sem_id: yrSemId,
@@ -275,6 +269,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       const key = `${subjectIdString}_${sessNo}`;
 
       return {
+        // LINKING PART: Added subject_offering_id to match notes on frontend
+        subject_offering_id: subject._id, 
         class_name: course.course_name,
         class_code: course.course_code,
         faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
@@ -312,7 +308,6 @@ app.get("/api/attendance/:studentId", async (req, res) => {
     for (const subject of subjects) {
       const sessions = await ClassSession.find({
         subject_offering_id: subject._id,
-        
       });
       const sessionIds = sessions.map((s) => s._id);
 
@@ -394,30 +389,16 @@ app.post("/api/attendance", async (req, res) => {
 });
 
 // ADMIN ROUTES
-
-// 1. Add Faculty
 app.post("/api/admin/faculty", async (req, res) => {
   const { name, email, password } = req.body;
-
   try {
     let user = await User.findOne({ user_name: email });
-    if (user)
-      return res
-        .status(400)
-        .json({ message: "User with this email already exists" });
+    if (user) return res.status(400).json({ message: "User already exists" });
 
-    user = new User({
-      user_name: email,
-      password: password,
-      role: "faculty",
-    });
+    user = new User({ user_name: email, password, role: "faculty" });
     await user.save();
 
-    const faculty = new Faculty({
-      user_id: user._id,
-      name: name,
-      email: email,
-    });
+    const faculty = new Faculty({ user_id: user._id, name, email });
     await faculty.save();
 
     res.status(201).json({ message: "Faculty created successfully", faculty });
@@ -427,58 +408,25 @@ app.post("/api/admin/faculty", async (req, res) => {
   }
 });
 
-// 2. Add Student
 app.post("/api/admin/student", async (req, res) => {
-  const { name, roll_no, email, stream, yr, sem, academic_yr, password } =
-    req.body;
-
+  const { name, roll_no, email, stream, yr, sem, academic_yr, password } = req.body;
   try {
     let user = await User.findOne({ user_name: email });
-    if (user)
-      return res
-        .status(400)
-        .json({ message: "User with this email already exists" });
+    if (user) return res.status(400).json({ message: "User already exists" });
 
-    let yrSem = await YrSem.findOne({
-      yr: Number(yr),
-      sem: Number(sem),
-      stream: stream,
-      academic_yr: academic_yr,
-    });
-
+    let yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
     if (!yrSem) {
-      yrSem = new YrSem({
-        yr: Number(yr),
-        sem: Number(sem),
-        stream: stream,
-        academic_yr: academic_yr,
-      });
+      yrSem = new YrSem({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
       await yrSem.save();
     }
 
-    user = new User({
-      user_name: email,
-      password: password,
-      role: "student",
-    });
+    user = new User({ user_name: email, password, role: "student" });
     await user.save();
 
-    const student = new Student({
-      user_id: user._id,
-      name: name,
-      yr_sem_id: yrSem._id,
-      roll_no: roll_no,
-      email: email,
-    });
+    const student = new Student({ user_id: user._id, name, yr_sem_id: yrSem._id, roll_no, email });
     await student.save();
 
-    const enrollment = new StudentEnrollment({
-      student_id: student._id,
-      yr_sem_id: yrSem._id,
-      academic_yr: academic_yr,
-      status: "active",
-      start_date: new Date(),
-    });
+    const enrollment = new StudentEnrollment({ student_id: student._id, yr_sem_id: yrSem._id, academic_yr, status: "active", start_date: new Date() });
     await enrollment.save();
 
     res.status(201).json({ message: "Student created successfully", student });
@@ -488,120 +436,51 @@ app.post("/api/admin/student", async (req, res) => {
   }
 });
 
-// 3. Add Schedule (Timetable)
 app.post("/api/admin/schedule", async (req, res) => {
-  const {
-    course_code,
-    faculty_email,
-    stream,
-    yr,
-    sem,
-    academic_yr,
-    day,
-    start_time,
-    end_time,
-    location,
-    session_no,
-  } = req.body;
-
-  //const acYr = academic_yr || "2025-26";
-
+  const { course_code, faculty_email, stream, yr, sem, academic_yr, day, start_time, end_time, location, session_no } = req.body;
   try {
     const faculty = await Faculty.findOne({ email: faculty_email });
-    if (!faculty)
-      return res
-        .status(404)
-        .json({ message: "Faculty not found with that email" });
+    if (!faculty) return res.status(404).json({ message: "Faculty not found" });
 
-    const yrSem = await YrSem.findOne({
-      yr: Number(yr),
-      sem: Number(sem),
-      stream: stream
-      //academic_yr: academic_yr,
-    });
-    if (!yrSem)
-      return res.status(404).json({
-        message: "YrSem (Section) not found. Create it first or check inputs.",
-      });
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream });
+    if (!yrSem) return res.status(404).json({ message: "Section not found" });
 
-    let course = await CourseMaster.findOne({ course_code: course_code });
+    let course = await CourseMaster.findOne({ course_code });
     if (!course) {
-      course = new CourseMaster({
-        course_code: course_code,
-        course_name: course_code,
-        credits: 3,
-      });
+      course = new CourseMaster({ course_code, course_name: course_code, credits: 3 });
       await course.save();
     }
 
-    let subjectOffering = await SubjectOffering.findOne({
-      course_master_id: course._id,
-      yr_sem_id: yrSem._id,
-    });
+    let subjectOffering = await SubjectOffering.findOne({ course_master_id: course._id, yr_sem_id: yrSem._id });
     if (!subjectOffering) {
-      subjectOffering = new SubjectOffering({
-        course_master_id: course._id,
-        yr_sem_id: yrSem._id,
-        is_active: true,
-      });
+      subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true });
       await subjectOffering.save();
     }
 
-    const assignment = await FacultyAssignment.findOne({
-      faculty_id: faculty._id,
-      subject_offering_id: subjectOffering._id,
-    });
+    const assignment = await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id });
     if (!assignment) {
-      await new FacultyAssignment({
-        faculty_id: faculty._id,
-        subject_offering_id: subjectOffering._id,
-      }).save();
+      await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save();
     }
 
-    const timetable = new TimeTable({
-      yr_sem_id: yrSem._id,
-      day_of_week: day,
-      session_no: Number(session_no),
-      start_time,
-      end_time,
-      subject_offering_id: subjectOffering._id,
-      faculty_id: faculty._id,
-      location,
-    });
-
+    const timetable = new TimeTable({ yr_sem_id: yrSem._id, day_of_week: day, session_no: Number(session_no), start_time, end_time, subject_offering_id: subjectOffering._id, faculty_id: faculty._id, location });
     await timetable.save();
-    res
-      .status(201)
-      .json({ message: "Schedule created successfully", timetable });
+    res.status(201).json({ message: "Schedule created successfully", timetable });
   } catch (error) {
     console.error("Error adding schedule:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// 4. Add Parent
 app.post("/api/admin/parent", async (req, res) => {
   const { name, email, password, phno } = req.body;
-
   try {
     let user = await User.findOne({ user_name: email });
-    if (user)
-      return res
-        .status(400)
-        .json({ message: "User with this email already exists" });
+    if (user) return res.status(400).json({ message: "User already exists" });
 
-    user = new User({
-      user_name: email,
-      password: password,
-      role: "parent",
-    });
+    user = new User({ user_name: email, password, role: "parent" });
     await user.save();
 
-    const parent = new Parent({
-      user_id: user._id,
-      name: name,
-      phno: phno,
-    });
+    const parent = new Parent({ user_id: user._id, name, phno });
     await parent.save();
 
     res.status(201).json({ message: "Parent created successfully", parent });
@@ -611,34 +490,20 @@ app.post("/api/admin/parent", async (req, res) => {
   }
 });
 
-// 5. Map Parent to Student
 app.post("/api/admin/parent/map", async (req, res) => {
   const { parent_email, student_roll_no, relationship } = req.body;
-
   try {
-    // Find Parent User -> Parent Profile
     const parentUser = await User.findOne({ user_name: parent_email });
-    if (!parentUser)
-      return res.status(404).json({ message: "Parent user not found" });
+    if (!parentUser) return res.status(404).json({ message: "Parent user not found" });
 
     const parent = await Parent.findOne({ user_id: parentUser._id });
-    if (!parent)
-      return res.status(404).json({ message: "Parent profile not found" });
-
-    // Find Student
     const student = await Student.findOne({ roll_no: student_roll_no });
     if (!student) return res.status(404).json({ message: "Student not found" });
 
-    const mapping = new ParentStudentMap({
-      parent_id: parent._id,
-      student_id: student._id,
-      relationship: relationship,
-    });
+    const mapping = new ParentStudentMap({ parent_id: parent._id, student_id: student._id, relationship });
     await mapping.save();
 
-    res
-      .status(201)
-      .json({ message: "Parent linked to student successfully", mapping });
+    res.status(201).json({ message: "Parent linked to student successfully", mapping });
   } catch (error) {
     console.error("Error mapping parent-student:", error);
     res.status(500).json({ message: "Server error" });
@@ -646,24 +511,10 @@ app.post("/api/admin/parent/map", async (req, res) => {
 });
 
 // CLASS NOTES ROUTES
-
-// 1. Add Note
 app.post("/api/notes", async (req, res) => {
-  const { subject_offering_id, faculty_id, title, description, file_url } =
-    req.body;
-  // faculty_id should ideally come from auth token, but taking from body for prototype simplicity
-
+  const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
   try {
-    const note = new ClassNotes({
-      subject_offering_id,
-      faculty_id,
-      title,
-      description,
-      file_url,
-      upload_date: new Date(),
-      is_visible: true,
-    });
-
+    const note = new ClassNotes({ subject_offering_id, faculty_id, title, description, file_url, upload_date: new Date(), is_visible: true });
     await note.save();
     res.status(201).json({ message: "Note added successfully", note });
   } catch (error) {
@@ -672,17 +523,12 @@ app.post("/api/notes", async (req, res) => {
   }
 });
 
-// 2. Get Notes for Subject
 app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   const { subjectOfferingId } = req.params;
   try {
-    const notes = await ClassNotes.find({
-      subject_offering_id: subjectOfferingId,
-      is_visible: true,
-    })
+    const notes = await ClassNotes.find({ subject_offering_id: subjectOfferingId, is_visible: true })
       .populate("faculty_id", "name")
       .sort({ upload_date: -1 });
-
     res.json(notes);
   } catch (error) {
     console.error("Error fetching notes:", error);
