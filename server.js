@@ -20,6 +20,7 @@ const Attendance = require("./models/Attendance");
 const Parent = require("./models/Parent");
 const ParentStudentMap = require("./models/ParentStudentMap");
 const ClassNotes = require("./models/ClassNotes");
+const Feedback = require("./models/Feedback");
 
 dotenv.config();
 const app = express();
@@ -686,6 +687,85 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
     res.json(notes);
   } catch (error) {
     console.error("Error fetching notes:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//Feedback
+app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+
+  try {
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: studentId,
+    });
+
+    if (!enrollment || !enrollment.end_date) {
+      return res.json({ feedbackAllowed: false });
+    }
+
+    const today = new Date();
+    const endDate = new Date(enrollment.end_date);
+
+    // Normalize to date-only
+    today.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+
+    res.json({
+      feedbackAllowed: today.getTime() === endDate.getTime(),
+    });
+  } catch (error) {
+    console.error("Error checking feedback eligibility:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/api/feedback", async (req, res) => {
+  const {
+    student_id,
+    subject_offering_id,
+    teaching_quality,
+    clarity,
+    interaction,
+    comments,
+  } = req.body;
+
+  try {
+    const enrollment = await StudentEnrollment.findOne({
+      student_id,
+    });
+
+    if (!enrollment || !enrollment.end_date) {
+      return res.status(403).json({
+        message: "Enrollment information not found",
+      });
+    }
+
+    const today = new Date();
+
+    if (today < enrollment.end_date) {
+      return res.status(403).json({
+        message: "Feedback can be submitted only after semester end",
+      });
+    }
+
+    const feedback = new Feedback({
+      student_id,
+      subject_offering_id,
+      teaching_quality,
+      clarity,
+      interaction,
+      comments,
+    });
+
+    await feedback.save();
+    res.status(201).json({ message: "Feedback submitted successfully" });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "Feedback already submitted for this subject",
+      });
+    }
     res.status(500).json({ message: "Server error" });
   }
 });
