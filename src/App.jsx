@@ -4,6 +4,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 import { useAuth } from "./context/AuthContext";
+import FeedbackPage from "./components/FeedbackPage";
 
 function App() {
   const { ProtectedRoute, PublicRoute } = useAuth();
@@ -44,6 +45,14 @@ function App() {
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/student/feedback/:subjectOfferingId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <FeedbackPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </div>
   );

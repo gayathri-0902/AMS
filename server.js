@@ -696,26 +696,23 @@ app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
   const { studentId } = req.params;
 
   try {
-    const enrollment = await StudentEnrollment.findOne({
-      student_id: studentId,
-    });
+    const enrollment = await StudentEnrollment.findOne({ student_id: studentId });
 
     if (!enrollment || !enrollment.end_date) {
       return res.json({ feedbackAllowed: false });
     }
 
-    const today = new Date();
-    const endDate = new Date(enrollment.end_date);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const endDateStr = new Date(enrollment.end_date).toISOString().slice(0, 10);
 
-    // Normalize to date-only
-    today.setHours(0, 0, 0, 0);
-    endDate.setHours(0, 0, 0, 0);
+    console.log("Today:", todayStr);
+    console.log("End Date:", endDateStr);
 
     res.json({
-      feedbackAllowed: today.getTime() === endDate.getTime(),
+      feedbackAllowed: todayStr === endDateStr,
     });
-  } catch (error) {
-    console.error("Error checking feedback eligibility:", error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -724,16 +721,19 @@ app.post("/api/feedback", async (req, res) => {
   const {
     student_id,
     subject_offering_id,
-    teaching_quality,
-    clarity,
+    regularity,
     interaction,
+    explanation,
+    resources,
+    counselling,
+    remedial,
+    syllabus_alignment,
+    pace,
     comments,
   } = req.body;
 
   try {
-    const enrollment = await StudentEnrollment.findOne({
-      student_id,
-    });
+    const enrollment = await StudentEnrollment.findOne({ student_id });
 
     if (!enrollment || !enrollment.end_date) {
       return res.status(403).json({
@@ -742,19 +742,28 @@ app.post("/api/feedback", async (req, res) => {
     }
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (today < enrollment.end_date) {
+    const endDate = new Date(enrollment.end_date);
+    endDate.setHours(0, 0, 0, 0);
+
+    if (today.getTime() !== endDate.getTime()) {
       return res.status(403).json({
-        message: "Feedback can be submitted only after semester end",
+        message: "Feedback allowed only on semester end date",
       });
     }
 
     const feedback = new Feedback({
       student_id,
       subject_offering_id,
-      teaching_quality,
-      clarity,
+      regularity,
       interaction,
+      explanation,
+      resources,
+      counselling,
+      remedial,
+      syllabus_alignment,
+      pace,
       comments,
     });
 
@@ -766,6 +775,7 @@ app.post("/api/feedback", async (req, res) => {
         message: "Feedback already submitted for this subject",
       });
     }
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });

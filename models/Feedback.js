@@ -14,35 +14,18 @@ const FeedbackSchema = new mongoose.Schema(
       required: true,
     },
 
-    teaching_quality: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true,
-    },
+    regularity: { type: Number, min: 1, max: 5, required: true },
+    interaction: { type: Number, min: 1, max: 5, required: true },
+    explanation: { type: Number, min: 1, max: 5, required: true },
+    resources: { type: Number, min: 1, max: 5, required: true },
+    counselling: { type: Number, min: 1, max: 5, required: true },
+    remedial: { type: Number, min: 1, max: 5, required: true },
+    syllabus_alignment: { type: Number, min: 1, max: 5, required: true },
+    pace: { type: Number, min: 1, max: 5, required: true },
 
-    clarity: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true,
-    },
-
-    interaction: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true,
-    },
-
-    comments: {
-      type: String,
-      trim: true,
-    },
+    comments: { type: String },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 FeedbackSchema.index(

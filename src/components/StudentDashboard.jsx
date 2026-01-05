@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { HiOutlineLogout } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 
 function StudentDashboard() {
   const { auth, logout } = useAuth();
@@ -10,15 +11,8 @@ function StudentDashboard() {
   const [notes, setNotes] = useState({}); // { subjectId: [note1, note2] }
   const [loadingTimetable, setLoadingTimetable] = useState(true);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const navigate = useNavigate();
   const [feedbackAllowed, setFeedbackAllowed] = useState(false);
-  const [feedbackStatus, setFeedbackStatus] = useState({});
-  const [showFeedbackForm, setShowFeedbackForm] = useState(null);
-  const [feedbackData, setFeedbackData] = useState({
-    teaching_quality: "",
-    clarity: "",
-    interaction: "",
-    comments: "",
-  });
 
   useEffect(() => {
     if (!auth.studentId) return;
@@ -89,24 +83,6 @@ function StudentDashboard() {
 
     fetchFeedbackEligibility();
   }, [auth.studentId]);
-
-  const submitFeedback = async () => {
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/feedback`,
-        {
-          student_id: auth.studentId, 
-          subject_offering_id: showFeedbackForm,
-          ...feedbackData,
-        }
-      );
-
-      alert("Feedback submitted successfully");
-      setShowFeedbackForm(null);
-    } catch (err) {
-      alert(err.response?.data?.message || "Error submitting feedback");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -194,19 +170,17 @@ function StudentDashboard() {
                   </td>
                   <td className="border p-3 text-center">
                     {feedbackAllowed ? (
-                      feedbackStatus[subject.subject_offering_id] ? (
-                        <span className="text-green-600 font-semibold">Submitted</span>
-                      ) : (
-                        <button
-                          onClick={() => setShowFeedbackForm(subject.subject_offering_id)}
-                          className="text-blue-600 underline"
-                        >
-                          Give Feedback
-                        </button>
-                      )
+                      <button
+                        onClick={() =>
+                          navigate(`/student/feedback/${subject.subject_offering_id}`)
+                        }
+                        className="text-blue-600 underline"
+                      >
+                        Give Feedback
+                      </button>
                     ) : (
                       <span className="text-gray-400 italic">
-                        Available after semester end
+                        Available on semester end date
                       </span>
                     )}
                   </td>
@@ -249,64 +223,6 @@ function StudentDashboard() {
            <p className="text-gray-500 italic">No resources available.</p>
         )}
       </div>
-    
-      {showFeedbackForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Anonymous Feedback</h2>
-
-            {["teaching_quality", "clarity", "interaction"].map(
-              (field) => (
-                <div key={field} className="mb-3">
-                  <label className="block text-sm font-medium mb-1">
-                    {field.replace("_", " ").toUpperCase()}
-                  </label>
-                  <select
-                    className="w-full border p-2 rounded"
-                    value={feedbackData[field]}
-                    onChange={(e) =>
-                    setFeedbackData({ ...feedbackData, [field]: e.target.value })
-                  }
-                  required
-                >
-                  <option value="">Select</option>
-                  <option value="1">1 - Poor</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5 - Excellent</option>
-                </select>
-              </div>
-            )
-          )}
-
-          <textarea
-            placeholder="Additional comments (optional)"
-            className="w-full border p-2 rounded mb-4"
-            value={feedbackData.comments}
-            onChange={(e) =>
-              setFeedbackData({ ...feedbackData, comments: e.target.value })
-            }
-          />
-
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setShowFeedbackForm(null)}
-              className="px-4 py-2 bg-gray-300 rounded"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={submitFeedback}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-              Submit
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
     </div>
   );
 }
