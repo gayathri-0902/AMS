@@ -780,6 +780,471 @@ app.post("/api/feedback", async (req, res) => {
   }
 });
 
+app.post("/api/admin/setup-faculty", async (req, res) => {
+  try {
+    const { users_entries, faculties_entries } = req.body;
+
+    if (!users_entries || !faculties_entries) {
+      return res.status(400).json({
+        message: "users_entries or faculties_entries missing"
+      });
+    }
+
+    const userMap = {}; // email → user document
+    const summary = {
+      users_created: [],
+      users_existing: [],
+      faculty_created: [],
+      faculty_existing: []
+    };
+
+    // -----------------------------
+    // 1️⃣ USERS (with bcrypt)
+    // -----------------------------
+    for (const userData of users_entries) {
+      let user = await User.findOne({ user_name: userData.user_name });
+
+      if (!user) {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+        user = new User({
+          user_name: userData.user_name,
+          password: hashedPassword,
+          role: userData.role
+        });
+
+        await user.save();
+        summary.users_created.push(user.user_name);
+      } else {
+        summary.users_existing.push(user.user_name);
+      }
+
+      userMap[user.user_name] = user;
+    }
+
+    // -----------------------------
+    // 2️⃣ FACULTY
+    // -----------------------------
+    for (const facultyData of faculties_entries) {
+      const user = userMap[facultyData.email];
+
+      if (!user) {
+        console.warn(`User not found for faculty email: ${facultyData.email}`);
+        continue;
+      }
+
+      let faculty = await Faculty.findOne({ user_id: user._id });
+
+      if (!faculty) {
+        faculty = new Faculty({
+          user_id: user._id,
+          name: facultyData.name,
+          email: facultyData.email
+        });
+
+        await faculty.save();
+        summary.faculty_created.push(facultyData.email);
+      } else {
+        summary.faculty_existing.push(facultyData.email);
+      }
+    }
+
+    return res.status(201).json({
+      message: "Users and Faculty processed successfully",
+      summary
+    });
+
+  } catch (error) {
+    console.error("Faculty setup error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.post("/api/admin/ensure-course-masters", async (req, res) => {
+  try {
+    const { courses_entries } = req.body;
+
+    if (!Array.isArray(courses_entries)) {
+      return res.status(400).json({
+        message: "courses_entries must be an array"
+      });
+    }
+
+    let created = [];
+    let skipped = [];
+
+    for (const course of courses_entries) {
+      if (!course.course_code || !course.course_name) {
+        continue;
+      }
+
+      const existing = await CourseMaster.findOne({
+        course_code: course.course_code
+      });
+
+      if (existing) {
+        skipped.push(course.course_code);
+        continue;
+      }
+
+      const newCourse = await CourseMaster.create({
+        course_code: course.course_code,
+        course_name: course.course_name,
+        credits: course.credits ?? 0
+      });
+
+      created.push(newCourse.course_code);
+    }
+
+    return res.status(200).json({
+      message: "Course master check completed",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      created,
+      skipped
+    });
+  } catch (error) {
+    console.error("Error ensuring course masters:", error);
+    return res.status(500).json({
+      message: "Server error while ensuring course masters"
+    });
+  }
+});
+
+
+app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
+  try {
+    const { batch_info, courses_entries } = req.body;
+
+    if (!batch_info || !Array.isArray(courses_entries)) {
+      return res.status(400).json({
+        message: "batch_info or courses_entries missing/invalid"
+      });
+    }
+
+    const { yr, sem, academic_yr, stream } = batch_info;
+
+    // 1️⃣ Resolve yr_sem_id
+    const yrSem = await YrSem.findOne({
+      yr: yr,
+      sem: sem,
+      academic_yr: academic_yr,
+      stream: stream
+    });
+
+    if (!yrSem) {
+      return res.status(404).json({
+        message: "yr_sem not found for given batch_info"
+      });
+    }
+
+    const yr_sem_id = yrSem._id;
+
+    let created = [];
+    let skipped = [];
+    let missing_courses = [];
+
+    // 2️⃣ Process each course
+    for (const course of courses_entries) {
+      if (!course.course_code) continue;
+
+      const courseMaster = await CourseMaster.findOne({
+        course_code: course.course_code
+      });
+
+      if (!courseMaster) {
+        missing_courses.push(course.course_code);
+        continue;
+      }
+
+      // 3️⃣ Check if subject offering already exists
+      const exists = await SubjectOffering.findOne({
+        course_master_id: courseMaster._id,
+        yr_sem_id : yr_sem_id
+      });
+
+      if (exists) {
+        skipped.push(course.course_code);
+        continue;
+      }
+
+      // 4️⃣ Create subject offering
+      await SubjectOffering.create({
+        course_master_id: courseMaster._id,
+        yr_sem_id,
+        is_active: true
+      });
+
+      created.push(course.course_code);
+    }
+
+    return res.status(201).json({
+      message: "Subject offerings processed successfully",
+      yr_sem_id,
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_courses_count: missing_courses.length,
+      created,
+      skipped,
+      missing_courses
+    });
+
+  } catch (error) {
+    console.error("Error ensuring subject offerings:", error);
+    res.status(500).json({
+      message: "Server error while ensuring subject offerings"
+    });
+  }
+});
+
+app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
+  try {
+    const { batch_info, courses_entries } = req.body;
+
+    if (!batch_info || !Array.isArray(courses_entries)) {
+      return res.status(400).json({
+        message: "batch_info or courses_entries missing/invalid"
+      });
+    }
+
+    const { yr, sem, academic_yr, stream } = batch_info;
+
+    // 1️⃣ Resolve yr_sem_id
+    const yrSem = await YrSem.findOne({
+      yr: yr,
+      sem: sem,
+      academic_yr: academic_yr,
+      stream: stream
+    });
+
+    if (!yrSem) {
+      return res.status(404).json({
+        message: "yr_sem not found"
+      });
+    }
+
+    const yr_sem_id = yrSem._id;
+
+    let created = [];
+    let skipped = [];
+    let missing = [];
+
+    // 2️⃣ Process each course entry
+    for (const entry of courses_entries) {
+      const { course_code, faculty_name } = entry;
+
+      if (!course_code || !faculty_name) continue;
+
+      // 🔹 Faculty
+      const faculty = await Faculty.findOne({ name: faculty_name });
+      if (!faculty) {
+        missing.push({ course_code, reason: "faculty not found" });
+        continue;
+      }
+
+      // 🔹 Course Master
+      const courseMaster = await CourseMaster.findOne({
+        course_code: course_code
+      });
+
+      if (!courseMaster) {
+        missing.push({ course_code, reason: "course_master not found" });
+        continue;
+      }
+
+      // 🔹 Subject Offering
+      const subjectOffering = await SubjectOffering.findOne({
+        course_master_id: courseMaster._id,
+        yr_sem_id
+      });
+
+      if (!subjectOffering) {
+        missing.push({ course_code, reason: "subject_offering not found" });
+        continue;
+      }
+
+      // 🔹 Faculty Assignment
+      const exists = await FacultyAssignment.findOne({
+        faculty_id: faculty._id,
+        subject_offering_id: subjectOffering._id
+      });
+
+      if (exists) {
+        skipped.push(course_code);
+        continue;
+      }
+
+      await FacultyAssignment.create({
+        faculty_id: faculty._id,
+        subject_offering_id: subjectOffering._id,
+        start_date: new Date()
+      });
+
+      created.push(course_code);
+    }
+
+    return res.status(201).json({
+      message: "Faculty assignments processed successfully",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_count: missing.length,
+      created,
+      skipped,
+      missing
+    });
+
+  } catch (error) {
+    console.error("Error ensuring faculty assignments:", error);
+    res.status(500).json({
+      message: "Server error while ensuring faculty assignments"
+    });
+  }
+});
+
+app.post("/api/admin/ensure-timetable", async (req, res) => {
+  try {
+    const { batch_info, timetable_entries } = req.body;
+
+    if (!batch_info || !Array.isArray(timetable_entries)) {
+      return res.status(400).json({
+        message: "batch_info or timetable_entries missing/invalid"
+      });
+    }
+
+    const { yr, sem, academic_yr, stream } = batch_info;
+
+    // 1️⃣ Resolve yr_sem_id
+    const yrSem = await YrSem.findOne({
+      yr: yr,
+      sem: sem,
+      academic_yr: academic_yr,
+      stream: stream
+    });
+
+    if (!yrSem) {
+      return res.status(404).json({
+        message: "yr_sem not found"
+      });
+    }
+
+    const yr_sem_id = yrSem._id;
+
+    // 2️⃣ Day mapping
+    const dayMap = {
+      Monday: "Mon",
+      Tuesday: "Tue",
+      Wednesday: "Wed",
+      Thursday: "Thu",
+      Friday: "Fri",
+      Saturday: "Sat",
+      Sunday: "Sun"
+    };
+
+    let created = [];
+    let skipped = [];
+    let missing = [];
+
+    // 3️⃣ Process timetable entries
+    for (const tt of timetable_entries) {
+      const {
+        day_of_week,
+        session_number,
+        start_time,
+        end_time,
+        course_code,
+        location
+      } = tt;
+
+      const mappedDay = dayMap[day_of_week];
+      if (!mappedDay) {
+        missing.push({ course_code, reason: "invalid day" });
+        continue;
+      }
+
+      // 🔹 Course Master
+      const courseMaster = await CourseMaster.findOne({ course_code });
+      if (!courseMaster) {
+        missing.push({ course_code, reason: "course_master not found" });
+        continue;
+      }
+
+      // 🔹 Subject Offering
+      const subjectOffering = await SubjectOffering.findOne({
+        course_master_id: courseMaster._id,
+        yr_sem_id
+      });
+
+      if (!subjectOffering) {
+        missing.push({ course_code, reason: "subject_offering not found" });
+        continue;
+      }
+
+      // 🔹 Faculty Assignment
+      const facultyAssignment = await FacultyAssignment.findOne({
+        subject_offering_id: subjectOffering._id
+      });
+
+      if (!facultyAssignment) {
+        missing.push({ course_code, reason: "faculty_assignment not found" });
+        continue;
+      }
+
+      // 🔹 Check unique slot
+      const exists = await TimeTable.findOne({
+        yr_sem_id,
+        day_of_week: mappedDay,
+        session_no: session_number
+      });
+
+      if (exists) {
+        skipped.push({
+          day_of_week: mappedDay,
+          session_number
+        });
+        continue;
+      }
+
+      // 🔹 Create timetable entry
+      await TimeTable.create({
+        yr_sem_id,
+        day_of_week: mappedDay,
+        session_no: session_number,
+        start_time,
+        end_time,
+        subject_offering_id: subjectOffering._id,
+        faculty_id: facultyAssignment.faculty_id,
+        location
+      });
+
+      created.push({
+        day_of_week: mappedDay,
+        session_number,
+        course_code
+      });
+    }
+
+    return res.status(201).json({
+      message: "Timetable processed successfully",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_count: missing.length,
+      created,
+      skipped,
+      missing
+    });
+
+  } catch (error) {
+    console.error("Error ensuring timetable:", error);
+    res.status(500).json({
+      message: "Server error while ensuring timetable"
+    });
+  }
+});
+
+
+
 app.listen(3001, () => {
   console.log("Server is running on port 3001");
 });
