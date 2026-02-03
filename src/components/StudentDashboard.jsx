@@ -1,230 +1,194 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { HiOutlineLogout } from "react-icons/hi";
-import { useNavigate } from "react-router-dom";
+import { 
+  HiOutlineCalendar, 
+  HiOutlineClipboardCheck, 
+  HiOutlineBookOpen, 
+  HiOutlineArrowRight,
+  HiOutlineLogout,
+  HiOutlineUser
+} from "react-icons/hi";
 
-function StudentDashboard() {
+const StudentDashboard = () => {
   const { auth, logout } = useAuth();
-  const [timetable, setTimetable] = useState([]);
-  const [subjectAttendance, setSubjectAttendance] = useState([]);
-  const [notes, setNotes] = useState({}); // { subjectId: [note1, note2] }
-  const [loadingTimetable, setLoadingTimetable] = useState(true);
-  const [loadingAttendance, setLoadingAttendance] = useState(true);
   const navigate = useNavigate();
-  const [feedbackAllowed, setFeedbackAllowed] = useState(false);
+  const [timetable, setTimetable] = useState([]);
+  const [studentInfo, setStudentInfo] = useState(null); 
+  const [loading, setLoading] = useState(true);
+
+  // --- CORRECTED TIME FORMATTING LOGIC ---
+  const formatTime = (timeString) => {
+    if (!timeString) return "";
+    
+    let [hours, minutes] = timeString.split(':');
+    let h = parseInt(hours);
+    
+    /** * FIX: If the hour is between 1 and 7, it's an afternoon class (PM).
+     * If it's 12 or higher (13, 14, etc.), it's also PM.
+     */
+    const ampm = (h >= 12 || (h >= 1 && h <= 7)) ? 'PM' : 'AM';
+    
+    // Convert to 12-hour display format
+    let displayHours = h % 12;
+    displayHours = displayHours ? displayHours : 12; 
+    
+    return `${displayHours}:${minutes} ${ampm}`;
+  };
 
   useEffect(() => {
-    if (!auth.studentId) return;
-
-    const fetchTimetable = async () => {
+    const fetchDashboardData = async () => {
       try {
-        setLoadingTimetable(true);
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${auth.studentId}`
         );
-        setTimetable(response.data.timetableData || []);
-      } catch (err) {
-        console.error("Error fetching timetable", err);
-      } finally {
-        setLoadingTimetable(false);
-      }
-    };
-
-    const fetchAttendanceAndNotes = async () => {
-      try {
-        setLoadingAttendance(true);
-        // Fetch Attendance (which now includes subject_offering_id)
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/attendance/${auth.studentId}`
-        );
-        const subjects = response.data.subjectAttendance || [];
-        setSubjectAttendance(subjects);
         
-        // Fetch Notes for each subject
-        const notesData = {};
-        await Promise.all(subjects.map(async (subj) => {
-           try {
-              if(!subj.subject_offering_id) return;
-              const res = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/api/notes/${subj.subject_offering_id}`
-              );
-              notesData[subj.subject_offering_id] = res.data;
-           } catch(e) {
-             console.error(`Error fetching notes for ${subj.class_name}`, e);
-           }
-        }));
-        setNotes(notesData);
+        console.log("Dashboard Data:", response.data);
 
-      } catch (err) {
-        console.error("Error fetching attendance", err);
+        setTimetable(response.data.timetableData || []);
+        const profile = response.data.studentDetails || response.data.student || null;
+        setStudentInfo(profile);
+        
+      } catch (error) {
+        console.error("Error fetching student dashboard data:", error);
       } finally {
-        setLoadingAttendance(false);
+        setLoading(false);
       }
     };
 
-    fetchTimetable();
-    fetchAttendanceAndNotes();
+    if (auth.studentId) {
+      fetchDashboardData();
+    }
   }, [auth.studentId]);
 
-  useEffect(() => {
-    if (!auth.studentId) return;
+  const getAcademicYear = (rollNo) => {
+    if (!rollNo || typeof rollNo !== 'string') return "";
+    const joinYear = parseInt(rollNo.substring(0, 2));
+    const currentYearShort = 26; 
+    const diff = currentYearShort - joinYear;
 
-    const fetchFeedbackEligibility = async () => {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/feedback/eligibility/${auth.studentId}`
-        );
-        setFeedbackAllowed(res.data.feedbackAllowed);
-      } catch (err) {
-        console.error("Error fetching feedback eligibility", err);
-      }
+    const labels = {
+      1: "1st year",
+      2: "2nd year",
+      3: "3rd year",
+      4: "4th year"
     };
 
-    fetchFeedbackEligibility();
-  }, [auth.studentId]);
+    return labels[diff] || "";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-lg font-bold text-blue-600 animate-pulse">Syncing Academic Profile...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-2xl font-bold text-center text-blue-600 mb-8">
-        Student Dashboard
-      </h1>
-
-      <button
-        onClick={logout}
-        className="absolute top-4 right-4 p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition"
-      >
-        <HiOutlineLogout className="w-6 h-6" />
-      </button>
-
-      {/* Timetable Section */}
-      <h2 className="text-xl font-semibold mb-4">Timetable for Today</h2>
-      {loadingTimetable ? (
-        <p>Loading timetable...</p>
-      ) : timetable.length === 0 ? (
-        <p className="text-center text-gray-600">No classes found for today.</p>
-      ) : (
-        <div className="space-y-4">
-          {(() => {
-            const sortedTimetable = [...timetable].sort((a, b) => a.session_no - b.session_no);
-            return sortedTimetable.map((entry, index) => (
-            <div
-              key={index}
-              className="flex justify-between items-center p-4 bg-white shadow rounded-lg"
-            >
-              <div>
-                <h3 className="text-lg font-medium">{entry.class_name}</h3>
-                <p className="text-gray-600">{entry.class_code}</p>
-                <p className="text-gray-600">Faculty: {entry.faculty_name}</p>
-              </div>
-              <p>
-                Status:{" "}
-                <span
-                  className={`font-bold ${
-                    entry.attendance_status === "Present"
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }`}
-                >
-                  {entry.attendance_status}
-                </span>
-              </p>
+    <div className="min-h-screen bg-[#f8f9fa] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* --- HEADER (CLEANED - NO TABLE GROUPING) --- */}
+        <header className="flex justify-between items-center mb-10 py-2">
+          <div className="flex items-center space-x-4">
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md">
+              <HiOutlineUser className="w-7 h-7" />
             </div>
-            ));
-          })()}
-        </div>
-      )}
+            
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-gray-900 leading-none">
+                {studentInfo?.student_id_no || "Roll No Not Found"}
+              </span>
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide mt-1">
+                {studentInfo?.branch_name || "Branch"} • {getAcademicYear(studentInfo?.student_id_no)}
+              </span>
+            </div>
+          </div>
 
-      {/* Attendance Section */}
-      <h2 className="text-xl font-semibold mt-8 mb-4">Attendance</h2>
-      {loadingAttendance ? (
-        <p>Loading attendance...</p>
-      ) : subjectAttendance.length === 0 ? (
-        <p className="text-center text-gray-600">
-          No attendance records found.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300 bg-white shadow-sm rounded-lg overflow-hidden">
-            <thead className="bg-gray-200">
-              <tr>
-                <th className="border p-3 text-left">Class</th>
-                <th className="border p-3 text-left">Code</th>
-                <th className="border p-3 text-center">Present</th>
-                <th className="border p-3 text-center">Absent</th>
-                <th className="border p-3 text-center">Total</th>
-                <th className="border p-3 text-center">Percentage</th>
-                <th className="border p-3 text-center">Feedback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjectAttendance.map((subject, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="border p-3 font-medium">{subject.class_name}</td>
-                  <td className="border p-3">{subject.class_code}</td>
-                  <td className="border p-3 text-center text-green-600 font-bold">{subject.present_count}</td>
-                  <td className="border p-3 text-center text-red-600">{subject.total_count - subject.present_count}</td>
-                  <td className="border p-3 text-center">{subject.total_count}</td>
-                  <td className="border p-3 text-center font-bold">
-                    {subject.percentage}%
-                  </td>
-                  <td className="border p-3 text-center">
-                    {feedbackAllowed ? (
-                      <button
-                        onClick={() =>
-                          navigate(`/student/feedback/${subject.subject_offering_id}`)
-                        }
-                        className="text-blue-600 underline"
-                      >
-                        Give Feedback
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 italic">
-                        Available on semester end date
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+          <button 
+            onClick={logout}
+            className="flex items-center space-x-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white transition-all border border-red-100 uppercase"
+          >
+            <span>LOGOUT</span>
+            <HiOutlineLogout className="w-4 h-4" />
+          </button>
+        </header>
 
-      {/* Class Notes Section */}
-      <h2 className="text-xl font-semibold mt-8 mb-4">Class Resources / Notes</h2>
-      <div className="space-y-6">
-        {subjectAttendance.map((subject) => {
-           const subjectNotes = notes[subject.subject_offering_id] || [];
-           if (subjectNotes.length === 0) return null;
-           
-           return (
-             <div key={subject.subject_offering_id} className="bg-white p-6 shadow rounded-lg">
-                <h3 className="text-lg font-bold text-blue-700 mb-2">{subject.class_name} ({subject.class_code})</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {subjectNotes.map(note => (
-                    <a 
-                      key={note._id} 
-                      href={note.file_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block p-4 border rounded hover:shadow-md transition bg-gray-50"
-                    >
-                       <h4 className="font-semibold text-gray-800">{note.title}</h4>
-                       {note.description && <p className="text-sm text-gray-600 mt-1">{note.description}</p>}
-                       <p className="text-xs text-blue-500 mt-2">Added by {note.faculty_id?.name || 'Faculty'} on {new Date(note.upload_date).toLocaleDateString()}</p>
-                    </a>
-                  ))}
+        {/* Welcome Section */}
+        <div className="mb-8 px-2">
+          <h1 className="text-2xl font-black text-gray-800">Student Dashboard</h1>
+          <p className="text-gray-500 font-medium">
+            Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name || "Student"}</span>
+          </p>
+        </div>
+
+        {/* Timetable Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {timetable.length > 0 ? (
+            timetable.map((course, index) => (
+              <div 
+                key={index} 
+                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="bg-blue-50 w-11 h-11 rounded-xl flex items-center justify-center text-blue-600">
+                    <HiOutlineBookOpen className="w-6 h-6" />
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    course.attendance_status === "Present" 
+                      ? "bg-green-100 text-green-700" 
+                      : course.attendance_status === "Absent" 
+                      ? "bg-red-100 text-red-700" 
+                      : "bg-gray-100 text-gray-400"
+                  }`}>
+                    {course.attendance_status || "Not Marked"}
+                  </span>
                 </div>
-             </div>
-           );
-        })}
-        {Object.keys(notes).length === 0 && !loadingAttendance && (
-           <p className="text-gray-500 italic">No resources available.</p>
-        )}
+
+                <h3 className="text-lg font-bold text-gray-800 leading-tight">{course.class_name}</h3>
+                <span className="inline-block mt-1 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase">
+                  {course.class_code}
+                </span>
+
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-700 leading-none">{course.day}</span>
+                      <span className="text-[11px] text-gray-400 mt-1 font-semibold italic">
+                        {formatTime(course.start_time)} - {formatTime(course.end_time)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <HiOutlineClipboardCheck className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm font-bold text-gray-600 truncate">
+                      Faculty: {course.faculty_name}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigate(`/student/subject-details/${course.subject_offering_id}`)}
+                  className="w-full mt-8 flex items-center justify-center bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  VIEW DETAILS
+                  <HiOutlineArrowRight className="ml-2 w-4 h-4" />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full bg-white p-20 rounded-3xl text-center border-2 border-dashed border-gray-100">
+              <p className="text-gray-400 font-bold italic">No classes found for your profile today.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default StudentDashboard;

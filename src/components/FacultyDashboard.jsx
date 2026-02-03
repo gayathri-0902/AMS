@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { HiOutlineLogout } from "react-icons/hi";
+import { HiOutlineLogout, HiOutlineBookOpen, HiOutlineClipboardList } from "react-icons/hi";
 
 function FacultyDashboard() {
   const { auth, logout } = useAuth();
@@ -16,6 +16,15 @@ function FacultyDashboard() {
   // Notes State
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState({ title: "", description: "", file_url: "" });
+
+  // Assignment State
+  const [assignments, setAssignments] = useState([]);
+  const [newAssignment, setNewAssignment] = useState({ 
+    title: "", 
+    instructions: "", 
+    file_url: "", 
+    due_date: "" 
+  });
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -39,24 +48,24 @@ function FacultyDashboard() {
     setAttendanceMarked(false);
     setAttendance({});
     
-    // Fetch Students
     try {
       const studentResponse = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/api/faculty-dashboard/students/${cls.section_id}`
       );
       setStudents(studentResponse.data);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-    }
 
-    // Fetch Notes (using cls.class_id which maps to subject_offering_id)
-    try {
-       const notesResponse = await axios.get(
+      const notesResponse = await axios.get(
          `${import.meta.env.VITE_API_BASE_URL}/api/notes/${cls.class_id}`
-       );
-       setNotes(notesResponse.data);
+      );
+      setNotes(notesResponse.data);
+
+      const assignResponse = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/assignments/${cls.class_id}`
+      );
+      setAssignments(assignResponse.data);
+
     } catch (error) {
-       console.error("Error fetching notes:", error);
+      console.error("Error fetching class details:", error);
     }
   };
 
@@ -82,9 +91,7 @@ function FacultyDashboard() {
         classId: selectedClass.class_id,
         sessionNo : selectedClass.session_no,
         attendanceData: attendance,
-        
       });
-
       setAttendanceMarked(true);
       setIsModalVisible(true); 
       setTimeout(() => setIsModalVisible(false), 2000); 
@@ -109,196 +116,162 @@ function FacultyDashboard() {
       alert("Note added successfully");
       setNewNote({ title: "", description: "", file_url: "" });
       
-      // Refresh notes
-      const notesResponse = await axios.get(
-         `${import.meta.env.VITE_API_BASE_URL}/api/notes/${selectedClass.class_id}`
-       );
-       setNotes(notesResponse.data);
-
+      const notesResponse = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/notes/${selectedClass.class_id}`);
+      setNotes(notesResponse.data);
     } catch (error) {
       console.error("Error adding note:", error);
-      alert("Failed to add note");
     }
   };
 
-  const toggleFormVisibility = () => {
-    setIsFormVisible((prevState) => !prevState);
+  const handleAssignmentChange = (e) => {
+    setNewAssignment({ ...newAssignment, [e.target.name]: e.target.value });
+  };
+
+  const handleAddAssignment = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        subject_offering_id: selectedClass.class_id,
+        ...newAssignment
+      };
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/faculty/assignments`, payload);
+      alert("Assignment document posted successfully!");
+      setNewAssignment({ title: "", instructions: "", file_url: "", due_date: "" });
+      
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/assignments/${selectedClass.class_id}`);
+      setAssignments(res.data);
+    } catch (error) {
+      console.error("Error adding assignment:", error);
+      alert("Failed to post assignment");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-2xl font-bold text-center text-blue-600 mb-8">Faculty Dashboard</h1>
-      <button
-        onClick={logout}
-        className="absolute top-4 right-4 p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition"
-      >
-        <HiOutlineLogout className="w-6 h-6" />
-      </button>
+      <header className="relative flex justify-center items-center mb-8">
+        <h1 className="text-3xl font-extrabold text-blue-700">Faculty Dashboard</h1>
+        <button onClick={logout} className="absolute right-0 p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition shadow-lg">
+          <HiOutlineLogout className="w-6 h-6" />
+        </button>
+      </header>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Today's Schedule</h2>
-        <div className="space-y-4">
+      {/* Schedule Selection */}
+      <div className="mb-10">
+        <h2 className="text-xl font-bold mb-4 text-gray-800 border-b-2 border-blue-200 pb-2">Today's Schedule</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {classes.length > 0 ? (
             classes.map((cls) => (
-              <div
-                key={cls.class_id}
-                className="flex justify-between items-center p-4 bg-white shadow rounded-lg"
-              >
-                <div>
-                  <h3 className="text-lg font-medium">{cls.class_name}</h3>
-                  <p className="text-gray-600">{cls.section_name}</p>
-                </div>
-                <button
-                  onClick={() => handleClassSelection(cls)}
-                  className={`px-4 py-2 rounded-lg hover:bg-blue-600 ${
-                    selectedClass?.class_id === cls.class_id
-                      ? "bg-blue-700 text-white"
-                      : "bg-blue-500 text-white"
-                  }`}
-                >
-                  Manage Class
+              <div key={cls.class_id} className={`p-5 bg-white shadow-md rounded-xl border-l-8 transition ${selectedClass?.class_id === cls.class_id ? "border-blue-600 scale-105" : "border-gray-300 hover:border-blue-400"}`}>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">{cls.class_name}</h3>
+                <p className="text-gray-500 text-sm font-semibold">{cls.section_name}</p>
+                <p className="text-blue-600 text-xs mt-2 uppercase tracking-wider">Session {cls.session_no}</p>
+                <button onClick={() => handleClassSelection(cls)} className={`mt-4 w-full py-2 rounded-lg font-bold transition ${selectedClass?.class_id === cls.class_id ? "bg-blue-700 text-white" : "bg-blue-100 text-blue-700 hover:bg-blue-200"}`}>
+                  {selectedClass?.class_id === cls.class_id ? "Currently Managing" : "Manage Class"}
                 </button>
               </div>
             ))
           ) : (
-            <p>No classes found for today.</p>
+            <p className="text-gray-500 italic">No classes scheduled for today.</p>
           )}
         </div>
       </div>
 
-      {classes.length > 0 && (
-        <button
-          onClick={toggleFormVisibility}
-          className="mb-4 px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-        >
-          {isFormVisible ? "Hide" : "Show"} Class Details
-        </button>
-      )}
-
       {selectedClass && isFormVisible && (
-        <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
           {/* Attendance Section */}
-          <div className="p-6 bg-white shadow rounded-lg">
-            <h3 className="text-lg font-medium mb-4">Attendance: {selectedClass.class_name}</h3>
-            
-            <div className="flex justify-between mb-4">
-              <span className="text-gray-600">Mark attendance for today's session.</span>
-              <button
-                onClick={handleMarkAllPresent}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-              >
-                Mark All Present
-              </button>
+          <div className="p-6 bg-white shadow-xl rounded-2xl h-fit border border-gray-200">
+            <h3 className="text-xl font-bold mb-5 flex items-center text-gray-800">
+               <HiOutlineClipboardList className="mr-3 text-blue-600 w-7 h-7" /> Attendance: {selectedClass.class_name}
+            </h3>
+            <div className="flex gap-2 mb-4">
+                <button onClick={handleMarkAllPresent} className="flex-1 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition shadow-sm">
+                    Mark All Present
+                </button>
             </div>
-
-            <ul className="space-y-2 mb-6 max-h-64 overflow-y-auto">
-              {students.length > 0 ? (
-                students.map((student) => (
-                  <li
-                    key={student._id}
-                    className="flex justify-between items-center p-3 bg-gray-50 rounded shadow-sm"
-                  >
-                    <div>
-                      <span className="font-bold mr-2">{student.student_id_no}</span>
-                      <span>{student.student_name}</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={attendance[student._id] === "Present"}
-                      onChange={(e) => handleCheckboxChange(student._id, e.target.checked)}
-                      className="w-5 h-5 accent-green-600"
-                    />
-                  </li>
-                ))
-              ) : (
-                <li className="text-gray-500 italic">No students in this class.</li>
-              )}
-            </ul>
-
-            <button
-              onClick={handleMarkAttendance}
-              className={`w-full py-2 rounded-lg text-white font-bold ${
-                attendanceMarked ? "bg-green-600 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-              }`}
-              disabled={attendanceMarked}
-            >
-              {attendanceMarked ? "Attendance Submitted" : "Submit Attendance"}
+            <div className="space-y-2 mb-6 max-h-[500px] overflow-y-auto pr-2 border-t border-b py-4">
+              {students.map((student) => (
+                <div key={student._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                  <span className="text-sm font-semibold text-gray-700"><b className="mr-3 text-blue-600">{student.student_id_no}</b> {student.student_name}</span>
+                  <input type="checkbox" checked={attendance[student._id] === "Present"} onChange={(e) => handleCheckboxChange(student._id, e.target.checked)} className="w-6 h-6 rounded-md accent-green-600 cursor-pointer" />
+                </div>
+              ))}
+            </div>
+            <button onClick={handleMarkAttendance} className={`w-full py-4 rounded-xl text-lg font-black transition-all ${attendanceMarked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 hover:shadow-lg text-white"}`} disabled={attendanceMarked}>
+              {attendanceMarked ? "✓ ATTENDANCE SUBMITTED" : "SUBMIT ATTENDANCE"}
             </button>
           </div>
 
-          {/* Class Notes Section */}
-          <div className="p-6 bg-white shadow rounded-lg">
-             <h3 className="text-lg font-medium mb-4">Class Resources / Notes</h3>
-             
-             {/* Add Note Form */}
-             <form onSubmit={handleAddNote} className="mb-6 p-4 bg-gray-50 rounded border">
-               <h4 className="font-semibold mb-2">Add New Resource</h4>
-               <div className="grid grid-cols-1 gap-3">
-                 <input
-                   type="text"
-                   name="title"
-                   placeholder="Title (e.g. Lecture 1 Slides)"
-                   value={newNote.title}
-                   onChange={handleNoteChange}
-                   className="p-2 border rounded w-full"
-                   required
-                 />
-                 <input
-                   type="text"
-                   name="description"
-                   placeholder="Description (Optional)"
-                   value={newNote.description}
-                   onChange={handleNoteChange}
-                   className="p-2 border rounded w-full"
-                 />
-                 <input
-                   type="url"
-                   name="file_url"
-                   placeholder="Link (Google Drive, YouTube, etc.)"
-                   value={newNote.file_url}
-                   onChange={handleNoteChange}
-                   className="p-2 border rounded w-full"
-                   required
-                 />
-                 <button type="submit" className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700">
-                   Add Note
-                 </button>
+          {/* Resources & Assignments Section */}
+          <div className="space-y-8">
+            
+            {/* Class Resources (Notes) - Conflict Resolved by using specific side-border colors */}
+            <div className="p-6 bg-white shadow-xl rounded-2xl border-t-8 border-purple-500 border-x border-x-gray-200 border-b border-b-gray-200">
+               <h3 className="text-xl font-bold mb-4 flex items-center text-purple-700">
+                 <HiOutlineBookOpen className="mr-3 w-7 h-7" /> Class Resources
+               </h3>
+               <form onSubmit={handleAddNote} className="space-y-3 mb-6 bg-purple-50 p-5 rounded-xl">
+                 <input type="text" name="title" placeholder="Resource Title" value={newNote.title} onChange={handleNoteChange} className="p-3 border rounded-lg w-full text-sm focus:ring-2 focus:ring-purple-400 outline-none" required />
+                 <input type="url" name="file_url" placeholder="Document Link" value={newNote.file_url} onChange={handleNoteChange} className="p-3 border rounded-lg w-full text-sm focus:ring-2 focus:ring-purple-400 outline-none" required />
+                 <button type="submit" className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition">Add Resource</button>
+               </form>
+               <div className="max-h-48 overflow-y-auto space-y-2">
+                  {notes.map(note => (
+                    <div key={note._id} className="p-3 border border-purple-100 rounded-lg bg-white flex justify-between items-center shadow-sm">
+                       <span className="text-sm font-bold text-gray-700 truncate mr-4">{note.title}</span>
+                       <a href={note.file_url} target="_blank" rel="noreferrer" className="bg-purple-100 text-purple-700 px-3 py-1 rounded-md text-xs font-black uppercase hover:bg-purple-200 transition">View</a>
+                    </div>
+                  ))}
                </div>
-             </form>
+            </div>
 
-             {/* List Notes */}
-             <div className="space-y-2">
-                {notes.length > 0 ? (
-                   notes.map(note => (
-                     <div key={note._id} className="p-3 border rounded flex justify-between items-center bg-gray-50 hover:bg-white transition">
-                        <div>
-                           <h5 className="font-bold text-blue-800">{note.title}</h5>
-                           <p className="text-sm text-gray-600">{note.description}</p>
-                           <span className="text-xs text-gray-400">Added: {new Date(note.upload_date).toLocaleDateString()}</span>
-                        </div>
-                        <a 
-                          href={note.file_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline text-sm font-semibold"
-                        >
-                          View Link
-                        </a>
-                     </div>
-                   ))
-                ) : (
-                  <p className="text-gray-500 italic">No notes added yet for this class.</p>
-                )}
-             </div>
+            {/* Assignments Section - Conflict Resolved by using specific side-border colors */}
+            <div className="p-6 bg-white shadow-xl rounded-2xl border-t-8 border-orange-500 border-x border-x-gray-200 border-b border-b-gray-200">
+               <h3 className="text-xl font-bold mb-4 flex items-center text-orange-600">
+                 <HiOutlineClipboardList className="mr-3 w-7 h-7" /> Post Assignment
+               </h3>
+               <form onSubmit={handleAddAssignment} className="space-y-3 mb-6 bg-orange-50 p-5 rounded-xl">
+                 <input type="text" name="title" placeholder="Assignment Title" value={newAssignment.title} onChange={handleAssignmentChange} className="p-3 border rounded-lg w-full text-sm focus:ring-2 focus:ring-orange-400 outline-none" required />
+                 <textarea name="instructions" placeholder="Brief instructions..." value={newAssignment.instructions} onChange={handleAssignmentChange} className="p-3 border rounded-lg w-full text-sm h-20 outline-none" />
+                 
+                 <input type="url" name="file_url" placeholder="Assignment Document Link" value={newAssignment.file_url} onChange={handleAssignmentChange} className="p-3 border rounded-lg w-full text-sm focus:ring-2 focus:ring-orange-400 outline-none" required />
+                 
+                 <div className="flex flex-col">
+                   <label className="text-xs font-black text-orange-700 mb-1 ml-1 uppercase">Due Date</label>
+                   <input type="date" name="due_date" value={newAssignment.due_date} onChange={handleAssignmentChange} className="p-3 border rounded-lg w-full text-sm focus:ring-2 focus:ring-orange-400 outline-none" required />
+                 </div>
+                 <button type="submit" className="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition">Post Assignment</button>
+               </form>
+               <div className="max-h-48 overflow-y-auto space-y-2">
+                  {assignments.map(a => (
+                    <div key={a._id} className="p-4 border border-orange-100 rounded-lg bg-white shadow-sm">
+                       <div className="flex justify-between items-start mb-2">
+                         <h4 className="text-sm font-black text-gray-800">{a.title}</h4>
+                         <span className="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-md font-black uppercase">
+                           Due: {new Date(a.due_date).toLocaleDateString()}
+                         </span>
+                       </div>
+                       <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">{a.instructions}</p>
+                       {a.file_url && (
+                         <a href={a.file_url} target="_blank" rel="noreferrer" className="text-blue-600 text-xs font-bold underline decoration-2 underline-offset-4">
+                           View Assignment Doc
+                         </a>
+                       )}
+                    </div>
+                  ))}
+               </div>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* Modal */}
+      {/* Success Modal */}
       {isModalVisible && (
-        <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold text-green-600">Attendance Marked Successfully!</h3>
+        <div className="fixed inset-0 flex justify-center items-center bg-black/60 backdrop-blur-sm z-50">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl transform transition-all animate-bounce">
+            <h3 className="text-2xl font-black text-green-600 text-center">✓ Attendance Marked!</h3>
+            <p className="text-gray-500 text-center mt-2">The session records have been updated.</p>
           </div>
         </div>
       )}

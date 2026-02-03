@@ -3,6 +3,7 @@ import LoginPage from "./components/LoginPage";
 import AdminDashboard from "./components/AdminDashboard";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
+import SubjectDetails from "./components/SubjectDetails"; 
 import { useAuth } from "./context/AuthContext";
 import FeedbackPage from "./components/FeedbackPage";
 
@@ -44,7 +45,15 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Added the route below */}
+        <Route
+          path="/student/subject-details/:id"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <SubjectDetails />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/student/feedback/:subjectOfferingId"
           element={
@@ -53,6 +62,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
