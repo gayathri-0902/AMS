@@ -1,157 +1,155 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { HiOutlineLogout, HiOutlineUserCircle, HiOutlineChartBar, HiOutlineAcademicCap } from "react-icons/hi";
-import { MdOutlineFingerprint } from "react-icons/md";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import { 
+  HiOutlineLogout, 
+  HiOutlineUser, 
+  HiOutlineBookOpen, 
+  HiOutlineChartBar,
+  HiOutlineArrowRight
+} from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 
 const ParentDashboard = () => {
-  const { parentId } = useParams();
+  const { auth, logout } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     const fetchParentData = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/parent/dashboard/${parentId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch dashboard data. Please ensure your child is linked to your account.");
-        }
-        const result = await response.json();
-        setData(result);
+        // Replace this with your actual endpoint for fetching linked students
+        const response = await axios.get(`${API_BASE}/api/parent/children/${auth.userId}`);
+        setChildren(response.data || []);
+        setLoading(false);
       } catch (err) {
-        setError(err.message);
-      } finally {
+        console.error("Fetch error:", err);
+        setError("Unable to connect to the server. Please check your connection.");
         setLoading(false);
       }
     };
 
-    if (parentId) {
-      fetchParentData();
-    }
-  }, [parentId]);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+    if (auth?.userId) fetchParentData();
+  }, [auth?.userId, API_BASE]);
 
   if (loading) return (
-    <div className="flex flex-col justify-center items-center h-screen bg-[#f0f2f5] font-antiqua">
-       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-       <p className="text-xl text-gray-600">Loading Dashboard...</p>
+    <div className="min-h-screen flex items-center justify-center font-antiqua text-blue-600 font-bold">
+      Loading Dashboard...
     </div>
   );
-  
+
+  // Error State matching your screenshot's "NetworkError" style but cleaner
   if (error) return (
-    <div className="flex flex-col justify-center items-center h-screen bg-[#f0f2f5] font-antiqua p-6 text-center">
-      <div className="bg-white p-10 rounded-[32px] shadow-lg max-w-md">
-        <p className="text-xl font-bold text-red-600 mb-6">{error}</p>
+    <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4">
+      <div className="bg-white p-12 rounded-[40px] shadow-2xl flex flex-col items-center max-w-md w-full">
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 text-4xl font-bold">!</div>
+        <h3 className="text-2xl font-bold text-gray-800 text-center mb-2">Connection Error</h3>
+        <p className="text-gray-500 text-center mb-8">{error}</p>
         <button 
-          onClick={handleLogout} 
-          className="w-full bg-[#3b82f6] text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition shadow-md"
+          onClick={() => window.location.reload()}
+          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg"
         >
-          Back to Login
+          Try Again
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] p-6 md:p-8 font-antiqua">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
+      <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
-          <div className="flex items-center gap-5 mb-4 md:mb-0">
-            <div className="bg-blue-50 p-4 rounded-2xl text-blue-600">
-              <HiOutlineUserCircle size={40} />
+        {/* --- HEADER: Individual Elements --- */}
+        <div className="flex justify-between items-start mb-10">
+          <div className="flex items-center space-x-4 p-2">
+            <div className="h-14 w-14 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg">
+              <HiOutlineUser className="w-8 h-8" />
             </div>
-            <div>
-              <h1 className="text-[32px] text-gray-800 leading-tight">Parent Dashboard</h1>
-              <p className="text-[#64748b] text-lg">
-                Child: <span className="text-[#3b82f6] font-bold">{data.studentDetails.student_name}</span>
+            <div className="text-left">
+              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
+                {auth?.name || "Parent Account"}
+              </h2>
+              <p className="text-sm font-bold text-teal-600 uppercase mt-1 tracking-widest">
+                Parent Portal • 2026
               </p>
             </div>
           </div>
+
           <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
+            onClick={logout}
+            className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
           >
-            <span className="text-lg">Logout</span>
-            <HiOutlineLogout size={22} className="group-hover:translate-x-1 transition-transform" />
+            <span>LOGOUT</span>
+            <HiOutlineLogout size={20} />
           </button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border-b-8 border-blue-500 flex flex-col items-center text-center">
-            <MdOutlineFingerprint size={32} className="text-blue-500 mb-3" />
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Roll Number</h3>
-            <p className="text-2xl text-gray-800">{data.studentDetails.student_id_no}</p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30_rgb(0,0,0,0.03)] border-b-8 border-green-500 flex flex-col items-center text-center">
-            <HiOutlineAcademicCap size={32} className="text-green-500 mb-3" />
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Branch / Stream</h3>
-            <p className="text-2xl text-gray-800">{data.studentDetails.branch_name}</p>
-          </div>
-
-          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border-b-8 border-purple-500 flex flex-col items-center text-center">
-            <HiOutlineChartBar size={32} className="text-purple-500 mb-3" />
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Overall Attendance</h3>
-            <p className={`text-3xl font-bold ${data.attendanceStats.percentage < 75 ? 'text-red-500' : 'text-green-600'}`}>
-              {data.attendanceStats.percentage}%
-            </p>
-          </div>
+        {/* --- TITLES --- */}
+        <div className="mb-10 text-left px-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">Parent Dashboard</h1>
+          <p className="text-xl text-gray-500 mt-1">
+            Monitoring student <span className="text-teal-600 font-bold">Academic Progress</span>
+          </p>
         </div>
 
-        {/* Recent Attendance Table */}
-        <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-white">
-          <div className="p-8 border-b border-gray-50 bg-gray-50/50">
-            <h2 className="text-2xl text-gray-800">Recent Class Activity</h2>
-            <p className="text-sm text-gray-500 mt-1 uppercase tracking-wider">Latest updates from the classroom</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white text-gray-400 uppercase text-xs font-bold tracking-widest">
-                  <th className="p-6 border-b">Subject</th>
-                  <th className="p-6 border-b">Date</th>
-                  <th className="p-6 border-b">Session</th>
-                  <th className="p-6 border-b text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {data.recentAttendance.length > 0 ? (
-                  data.recentAttendance.map((record, index) => (
-                    <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="p-6 font-medium text-gray-700 text-lg">{record.class_name}</td>
-                      <td className="p-6 text-[#64748b]">{record.date}</td>
-                      <td className="p-6 text-[#64748b] font-bold">Session {record.session_no}</td>
-                      <td className="p-6 text-center">
-                        <span className={`px-4 py-2 rounded-xl text-sm font-bold inline-block min-w-[100px] shadow-sm ${
-                          record.status === "Present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                        }`}>
-                          {record.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" className="p-12 text-center text-gray-400 text-xl italic">
-                      No attendance records found yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        {/* --- LINKED STUDENTS SECTION --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
+          {children.length > 0 ? (
+            children.map((child, index) => (
+              <div 
+                key={index} 
+                className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 hover:shadow-2xl transition-all duration-300 text-left"
+              >
+                <div className="flex justify-between items-start mb-8">
+                  <div className="bg-teal-50 w-14 h-14 rounded-2xl flex items-center justify-center text-teal-600">
+                    <HiOutlineChartBar className="w-8 h-8" />
+                  </div>
+                  <span className="bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                    Linked Student
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-800 leading-tight mb-1">
+                  {child.student_name}
+                </h3>
+                <p className="text-teal-600 text-xs font-bold uppercase tracking-widest mb-6">
+                  {child.student_id_no} • {child.branch_name}
+                </p>
+
+                <div className="space-y-4 pt-4 border-t border-gray-50">
+                   <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">Overall Attendance</span>
+                      <span className="text-gray-800 font-bold">{child.attendance_percentage || "0.00"}%</span>
+                   </div>
+                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-teal-500 h-full transition-all duration-1000" 
+                        style={{ width: `${child.attendance_percentage || 0}%` }}
+                      ></div>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={() => navigate(`/parent/student-details/${child.student_id}`)}
+                  className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold flex items-center justify-center hover:bg-teal-600 transition-all shadow-lg"
+                >
+                  VIEW FULL REPORT <HiOutlineArrowRight className="ml-2 w-5 h-5" />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full bg-white rounded-[40px] p-20 text-center border-2 border-dashed border-gray-200">
+               <p className="text-gray-400 text-xl italic">No students linked to this account yet.</p>
+            </div>
+          )}
         </div>
 
-        <footer className="mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
-          © 2026 Campus Management System
+        <footer className="mt-10 mb-8 text-center text-gray-400 text-sm italic">
+          © 2026 Campus Management System • Parent Access
         </footer>
       </div>
     </div>
