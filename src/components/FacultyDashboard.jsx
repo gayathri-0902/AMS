@@ -8,7 +8,9 @@ import {
   HiOutlineClipboardList, 
   HiOutlineUser, 
   HiOutlineCloudUpload,
-  HiOutlineDocumentText
+  HiOutlineDocumentText,
+  HiOutlineCalendar,
+  HiOutlineClock
 } from "react-icons/hi";
 
 function FacultyDashboard() {
@@ -40,6 +42,16 @@ function FacultyDashboard() {
   });
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+  // Formatting Helper
+  const formatTime = (timeString) => {
+    if (!timeString) return "";
+    let [hours, minutes] = timeString.split(':');
+    let h = parseInt(hours);
+    const ampm = (h >= 12) ? 'PM' : 'AM';
+    let displayHours = h % 12 || 12; 
+    return `${displayHours}:${minutes} ${ampm}`;
+  };
 
   // 3. FETCH CLASSES
   useEffect(() => {
@@ -132,7 +144,6 @@ function FacultyDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  // 5. CRITICAL GUARD
   if (!auth || (Object.keys(auth).length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center font-bold text-blue-600 bg-gray-50 font-antiqua">
@@ -142,63 +153,79 @@ function FacultyDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua">
+    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- HEADER --- */}
-        <header className="flex justify-between items-center mb-10">
-          <div className="flex items-center space-x-4">
-            <div className="h-14 w-14 rounded-2xl bg-[#3b82f6] flex items-center justify-center text-white shadow-lg shadow-blue-100">
+        {/* --- HEADER: Individual Elements --- */}
+        <div className="flex justify-between items-start mb-10">
+          <div className="flex items-center space-x-4 p-2">
+            <div className="h-14 w-14 rounded-2xl bg-[#3b82f6] flex items-center justify-center text-white shadow-lg">
               <HiOutlineUser className="w-8 h-8" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-normal text-[#2b2b2b]">
+            <div className="text-left">
+              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
                 {auth?.name || auth?.facultyName || "Faculty Member"}
-              </span>
-              <span className="text-xs font-bold text-[#3b82f6] uppercase tracking-wider">
+              </h2>
+              <p className="text-sm font-bold text-[#3b82f6] uppercase mt-1 tracking-widest">
                 ID: {urlFacultyId || auth?.facultyId}
-              </span>
+              </p>
             </div>
           </div>
           
           <button 
             onClick={logout} 
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
+            className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
           >
-            <span className="text-[17px]">Logout</span>
-            <HiOutlineLogout size={20} className="group-hover:translate-x-1 transition-transform" />
+            <span>LOGOUT</span>
+            <HiOutlineLogout size={20} />
           </button>
-        </header>
+        </div>
 
         {/* --- WELCOME TITLE --- */}
-        <div className="mb-10">
-          <h1 className="text-[36px] text-[#2b2b2b] leading-tight">Faculty Dashboard</h1>
-          <p className="text-[#64748b] text-xl">
+        <div className="mb-10 text-left px-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">Faculty Dashboard</h1>
+          <p className="text-xl text-gray-500 mt-1">
             Welcome back, <span className="text-[#3b82f6] font-bold">{auth?.name?.split(' ')[0] || "Professor"}</span>
           </p>
         </div>
 
         {/* --- SCHEDULE CARDS --- */}
         <div className="mb-10">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Today's Academic Schedule</h2>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">Today's Academic Schedule</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {classes.map((cls) => (
               <div 
                 key={cls.class_id} 
                 onClick={() => handleClassSelection(cls)}
-                className={`bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-2 cursor-pointer transition-all duration-300 ${selectedClass?.class_id === cls.class_id ? "border-blue-500 shadow-xl scale-[1.02]" : "border-transparent hover:border-blue-200"}`}
+                className={`bg-white rounded-[40px] p-8 shadow-sm border-2 cursor-pointer transition-all duration-300 relative group ${selectedClass?.class_id === cls.class_id ? "border-blue-500 shadow-xl" : "border-transparent hover:border-blue-200"}`}
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${selectedClass?.class_id === cls.class_id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-500'}`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${selectedClass?.class_id === cls.class_id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-500'}`}>
                     <HiOutlineBookOpen className="w-8 h-8" />
                   </div>
-                  <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">Session {cls.session_no}</span>
+                  <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">Session {cls.session_no}</span>
                 </div>
-                <h3 className="text-2xl text-gray-800 mb-1">{cls.class_name}</h3>
-                <p className="text-sm font-bold text-[#3b82f6] uppercase tracking-widest mb-6">{cls.section_name}</p>
-                
-                <div className="w-full bg-[#1e293b] text-white py-4 rounded-2xl text-center text-xs font-bold uppercase tracking-wide">
-                   {cls.day} • {cls.start_time} - {cls.end_time || 'Next Slot'}
+
+                <h3 className="text-2xl font-bold text-gray-800 leading-tight mb-1">{cls.class_name}</h3>
+                <span className="inline-block bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
+                   {cls.section_name}
+                </span>
+
+                {/* --- DATE AND TIME UNDER SECTION --- */}
+                <div className="mt-8 space-y-3">
+                  <div className="flex items-center space-x-3 text-gray-600">
+                    <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm leading-none">{cls.day}</p>
+                      <p className="text-[11px] text-gray-400 mt-1 uppercase">Current Schedule</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 text-gray-600">
+                    <HiOutlineClock className="w-5 h-5 text-gray-400" />
+                    <p className="text-sm font-bold text-gray-700">
+                       {formatTime(cls.start_time)} - {formatTime(cls.end_time || 'Next Slot')}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -209,18 +236,18 @@ function FacultyDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 animate-in slide-in-from-bottom-4 duration-500">
             
             {/* --- ATTENDANCE SECTION --- */}
-            <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+            <div className="bg-white rounded-[40px] p-10 shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl text-gray-800">Attendance Marking</h3>
+                <h3 className="text-2xl font-bold text-gray-800">Attendance Marking</h3>
                 <button 
                    onClick={handleMarkAllPresent}
-                   className="text-xs font-bold text-green-600 uppercase border-b-2 border-green-600 hover:text-green-700 transition-colors"
+                   className="text-xs font-bold text-green-600 uppercase border-b-2 border-green-600 hover:text-green-700 transition-colors tracking-widest"
                 >Mark All Present</button>
               </div>
               <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 mb-8 border-t border-gray-100 pt-6">
                 {students.map((student) => (
                   <div key={student._id} className="flex justify-between items-center p-5 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-100 transition-all">
-                    <span className="text-[17px] text-gray-700">{student.student_name}</span>
+                    <span className="text-[17px] text-gray-700 font-medium">{student.student_name}</span>
                     <input 
                       type="checkbox" 
                       checked={attendance[student._id] === "Present"} 
@@ -233,7 +260,7 @@ function FacultyDashboard() {
               <button 
                 onClick={handleMarkAttendance} 
                 disabled={attendanceMarked}
-                className={`w-full py-5 rounded-2xl text-lg transition-all ${attendanceMarked ? "bg-green-100 text-green-700" : "bg-[#3b82f6] text-white shadow-lg hover:bg-blue-600 active:scale-[0.98]"}`}
+                className={`w-full py-5 rounded-2xl text-lg font-bold transition-all ${attendanceMarked ? "bg-green-100 text-green-700 shadow-none cursor-default" : "bg-[#3b82f6] text-white shadow-lg hover:bg-blue-700 active:scale-[0.98]"}`}
               >
                 {attendanceMarked ? "✓ Attendance Successfully Submitted" : "Submit Attendance Record"}
               </button>
@@ -242,24 +269,24 @@ function FacultyDashboard() {
             {/* --- RESOURCES & ASSIGNMENTS --- */}
             <div className="space-y-8">
               {/* Resources */}
-              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-t-8 border-purple-500">
-                 <h3 className="text-2xl mb-6 flex items-center text-gray-800">
+              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-purple-500 border-x border-b border-gray-100">
+                 <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
                    <HiOutlineCloudUpload className="mr-3 text-purple-600 w-8 h-8" /> Upload Resources
                  </h3>
-                 <div onClick={() => noteFileRef.current.click()} className="border-2 border-dashed border-purple-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 cursor-pointer mb-6 hover:bg-purple-50 transition-colors">
+                 <div onClick={() => noteFileRef.current.click()} className="border-2 border-dashed border-purple-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 cursor-pointer mb-6 hover:bg-purple-50 transition-colors group">
                    <input type="file" ref={noteFileRef} className="hidden" onChange={(e) => {setSelectedNoteFile(e.target.files[0]); setNewNote({...newNote, title: e.target.files[0]?.name})}} />
-                   <HiOutlineDocumentText className="w-12 h-12 text-purple-300 mb-2" />
+                   <HiOutlineDocumentText className="w-12 h-12 text-purple-300 mb-2 group-hover:scale-110 transition-transform" />
                    <p className="text-sm font-bold text-purple-400 uppercase tracking-widest text-center">{selectedNoteFile ? selectedNoteFile.name : "Choose File to Upload"}</p>
                  </div>
                  <form onSubmit={handleAddNote}>
                     <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({...newNote, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
-                    <button type="submit" className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg shadow-lg hover:bg-purple-700 transition-all">Publish Resource</button>
+                    <button type="submit" className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-purple-700 transition-all uppercase tracking-widest">Publish Resource</button>
                  </form>
               </div>
 
               {/* Assignment */}
-              <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-t-8 border-orange-500">
-                 <h3 className="text-2xl mb-6 flex items-center text-gray-800">
+              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-orange-500 border-x border-b border-gray-100">
+                 <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
                    <HiOutlineClipboardList className="mr-3 text-orange-600 w-8 h-8" /> Assign New Task
                  </h3>
                  <form onSubmit={handleAddAssignment}>
@@ -269,7 +296,7 @@ function FacultyDashboard() {
                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
                        <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-orange-400 transition-all" required />
                     </div>
-                    <button type="submit" className="w-full bg-orange-500 text-white py-5 rounded-2xl text-lg shadow-lg hover:bg-orange-600 transition-all">Post Assignment</button>
+                    <button type="submit" className="w-full bg-orange-500 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-orange-600 transition-all uppercase tracking-widest">Post Assignment</button>
                  </form>
               </div>
             </div>
@@ -281,10 +308,10 @@ function FacultyDashboard() {
       {/* --- SUCCESS MODAL --- */}
       {isModalVisible && (
         <div className="fixed inset-0 flex justify-center items-center bg-black/40 backdrop-blur-sm z-50 p-4">
-          <div className="bg-white p-12 rounded-[40px] shadow-2xl animate-in zoom-in duration-300 flex flex-col items-center">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 text-4xl">✓</div>
-            <h3 className="text-3xl text-gray-800 text-center">Attendance Logged</h3>
-            <p className="text-[#64748b] text-center text-lg mt-2">Class records have been updated.</p>
+          <div className="bg-white p-12 rounded-[50px] shadow-2xl animate-in zoom-in duration-300 flex flex-col items-center border border-gray-100">
+            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 text-4xl font-bold shadow-inner shadow-green-200/50">✓</div>
+            <h3 className="text-3xl font-bold text-gray-800 text-center">Attendance Logged</h3>
+            <p className="text-[#64748b] text-center text-lg mt-2 font-medium">Class records have been updated.</p>
           </div>
         </div>
       )}
