@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
 
-// Models
+// --- Models ---
 const User = require("./models/User");
 const Admin = require("./models/Admin");
 const Faculty = require("./models/Faculty");
@@ -27,6 +27,7 @@ dotenv.config();
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 
+// --- Middleware ---
 app.use(
   cors({
     origin: ["http://localhost:5173"],
@@ -37,6 +38,7 @@ app.use(
 
 app.use(express.json());
 
+// --- Database Connection ---
 if (!MONGO_URI) {
   console.error("MONGO_URI is not set in the environment variables.");
   process.exit(1);
@@ -80,11 +82,15 @@ app.post("/api/login", async (req, res) => {
       if (admin) responseData.adminId = admin._id;
     } else if (user.role === "faculty") {
       const faculty = await Faculty.findOne({ user_id: user._id });
-      if (faculty) responseData.facultyId = faculty._id;
+      if (faculty) {
+        responseData.facultyId = faculty._id;
+        responseData.name = faculty.name;
+      }
     } else if (user.role === "student") {
       const student = await Student.findOne({ user_id: user._id });
       if (student) {
         responseData.studentId = student._id;
+        responseData.name = student.name;
         const enrollment = await StudentEnrollment.findOne({
           student_id: student._id,
           status: "active",
@@ -92,6 +98,12 @@ app.post("/api/login", async (req, res) => {
         if (enrollment) {
           responseData.sectionId = enrollment.yr_sem_id;
         }
+      }
+    } else if (user.role === "parent") {
+      const parent = await Parent.findOne({ user_id: user._id });
+      if (parent) {
+        responseData.parentId = parent._id;
+        responseData.name = parent.name;
       }
     }
     return res.status(200).json(responseData);
@@ -231,8 +243,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
         session_no: entry.session_no,
         day: entry.day_of_week,
-        start_time: entry.start_time, // Added for UI differentiation
-        end_time: entry.end_time,     // Added for UI differentiation
+        start_time: entry.start_time,
+        end_time: entry.end_time,
         attendance_status: attendanceMap[key] || "Not Marked",
       };
     });
@@ -253,7 +265,56 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
   }
 });
 
-// 5. Overall Attendance
+// 5. Parent Dashboard Route
+app.get("/api/parent/dashboard/:parentId", async (req, res) => {
+  try {
+    const { parentId } = req.params;
+    const mapping = await ParentStudentMap.findOne({ parent_id: parentId }).populate("student_id");
+    if (!mapping || !mapping.student_id) {
+      return res.status(404).json({ message: "No linked student found" });
+    }
+
+    const student = mapping.student_id;
+    const enrollment = await StudentEnrollment.findOne({ 
+      student_id: student._id, 
+      status: "active" 
+    }).populate("yr_sem_id");
+
+    const records = await Attendance.find({ student_id: student._id })
+      .populate({
+        path: "class_session_id",
+        populate: { path: "subject_offering_id", populate: { path: "course_master_id" } }
+      })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const allRecords = await Attendance.find({ student_id: student._id });
+    const presentCount = allRecords.filter(r => r.status === "Present").length;
+    const percentage = allRecords.length > 0 ? ((presentCount / allRecords.length) * 100).toFixed(1) : 0;
+
+    res.json({
+      studentDetails: {
+        student_name: student.name,
+        student_id_no: student.roll_no,
+        branch_name: enrollment?.yr_sem_id?.stream || "N/A",
+      },
+      attendanceStats: {
+        percentage: percentage,
+        subjectsWithLowAttendance: [] 
+      },
+      recentAttendance: records.map(r => ({
+        class_name: r.class_session_id.subject_offering_id.course_master_id.course_name,
+        date: new Date(r.class_session_id.date).toLocaleDateString(),
+        session_no: r.class_session_id.session_no,
+        status: r.status
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 6. Overall Attendance (Student Perspective)
 app.get("/api/attendance/:studentId", async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -287,7 +348,7 @@ app.get("/api/attendance/:studentId", async (req, res) => {
   }
 });
 
-// 6. Submit Attendance
+// 7. Submit Attendance
 app.post("/api/attendance", async (req, res) => {
   const { classId, attendanceData, sessionNo } = req.body;
   try {
@@ -309,17 +370,20 @@ app.post("/api/attendance", async (req, res) => {
     await Attendance.insertMany(attendanceRecords);
     res.status(200).json({ message: "Attendance marked successfully" });
   } catch (error) {
+    console.error("Error submitting attendance:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// 7. Admin: Create Faculty
+// 8. Admin: Create Faculty
 app.post("/api/admin/faculty", async (req, res) => {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ user_name: email });
     if (user) return res.status(400).json({ message: "User already exists" });
-    user = new User({ user_name: email, password, role: "faculty" });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    user = new User({ user_name: email, password: hashedPassword, role: "faculty" });
     await user.save();
     const faculty = new Faculty({ user_id: user._id, name, email });
     await faculty.save();
@@ -327,7 +391,7 @@ app.post("/api/admin/faculty", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 8. Admin: Create Student
+// 9. Admin: Create Student
 app.post("/api/admin/student", async (req, res) => {
   const { name, roll_no, email, stream, yr, sem, academic_yr, password } = req.body;
   try {
@@ -338,7 +402,9 @@ app.post("/api/admin/student", async (req, res) => {
       yrSem = new YrSem({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
       await yrSem.save();
     }
-    user = new User({ user_name: email, password, role: "student" });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    user = new User({ user_name: email, password: hashedPassword, role: "student" });
     await user.save();
     const student = new Student({ user_id: user._id, name, yr_sem_id: yrSem._id, roll_no, email });
     await student.save();
@@ -348,7 +414,7 @@ app.post("/api/admin/student", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 9. Admin: Create Schedule
+// 10. Admin: Create Schedule
 app.post("/api/admin/schedule", async (req, res) => {
   const { course_code, faculty_email, stream, yr, sem, academic_yr, day, start_time, end_time, location, session_no } = req.body;
   try {
@@ -371,13 +437,15 @@ app.post("/api/admin/schedule", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 10. Admin: Parent and Mapping
+// 11. Admin: Parent and Mapping
 app.post("/api/admin/parent", async (req, res) => {
   const { name, email, password, phno } = req.body;
   try {
     let user = await User.findOne({ user_name: email });
     if (user) return res.status(400).json({ message: "User already exists" });
-    user = new User({ user_name: email, password, role: "parent" });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    user = new User({ user_name: email, password: hashedPassword, role: "parent" });
     await user.save();
     const parent = new Parent({ user_id: user._id, name, phno });
     await parent.save();
@@ -398,7 +466,7 @@ app.post("/api/admin/parent/map", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 11. Notes Routes
+// 12. Notes Routes
 app.post("/api/notes", async (req, res) => {
   const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
   try {
@@ -415,7 +483,7 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 12. Assignment Routes
+// 13. Assignment Routes
 app.post("/api/faculty/assignments", async (req, res) => {
   const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
   try {
@@ -432,7 +500,7 @@ app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 13. Feedback Routes
+// 14. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
   try {
     const enrollment = await StudentEnrollment.findOne({ student_id: req.params.studentId });
@@ -451,7 +519,7 @@ app.post("/api/feedback", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 14. Admin Utility: Excel Bulk Setup Routes
+// 15. Admin Utility: Excel Bulk Setup Routes
 app.post("/api/admin/setup-faculty", async (req, res) => {
   try {
     const { users_entries, faculties_entries } = req.body;
@@ -547,6 +615,8 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-app.listen(3001, () => {
-  console.log("Server is running on port 3001");
+// --- Server Startup ---
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
