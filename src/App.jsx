@@ -2,12 +2,13 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
-// Components - Ensure these files exist in your src/components folder
+// Components 
 import LoginPage from "./components/LoginPage";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import ParentDashboard from "./components/ParentDashboard"; 
+import SubjectDetails from "./components/SubjectDetails";
 
 /**
  * HELPER: Determines the correct URL for a user based on their role and stored IDs.
@@ -16,7 +17,6 @@ import ParentDashboard from "./components/ParentDashboard";
 const getDashboardPath = (auth) => {
   if (!auth || !auth.isAuthenticated) return "/login";
   
-  // Debugging: This will show you in the browser console if parentId is missing
   console.log("Routing logic checking Auth state:", auth);
 
   switch (auth.role) {
@@ -107,7 +107,7 @@ function App() {
           } 
         />
 
-        {/* 3. Student Dashboard (Protected) */}
+        {/* 3. Student Dashboard & Sub-routes (Protected) */}
         <Route 
           path="/student-dashboard/:studentId" 
           element={
@@ -117,7 +117,16 @@ function App() {
           } 
         />
 
-        {/* 4. Admin Dashboard (Protected - Note: Admin usually doesn't need an ID in URL) */}
+        <Route 
+          path="/student/subject-details/:id" 
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <SubjectDetails />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* 4. Admin Dashboard (Protected) */}
         <Route 
           path="/admin-dashboard" 
           element={
@@ -140,7 +149,7 @@ function App() {
         {/* 6. Root Redirects */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         
-        {/* 7. 404 Catch-All - Redirects unknown URLs back to Login or Dashboard */}
+        {/* 7. 404 Catch-All */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>

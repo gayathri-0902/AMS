@@ -54,11 +54,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5] p-6 font-serif">
-      {/* BOX UPDATE: 
-          max-w-[520px] makes it wider for a horizontal desktop feel.
-          Removed min-height to prevent vertical stretching.
-      */}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5] p-6 font-antiqua">
       <div className="w-full max-w-[520px] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.06)] rounded-[32px] p-12 flex flex-col items-center">
         
         <div className="mb-6">
@@ -69,7 +65,7 @@ function LoginPage() {
           />
         </div>
 
-        <h1 className="text-[30px] font-normal text-[#2b2b2b] mb-10 capitalize text-center leading-tight">
+        <h1 className="text-[30px] text-[#2b2b2b] mb-10 capitalize text-center leading-tight">
           Attendance Management System
         </h1>
 
@@ -102,7 +98,7 @@ function LoginPage() {
               }
               value={credentials.identifier}
               onChange={handleInputChange}
-              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] font-normal placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-serif"
+              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               required
             />
             <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-80">
@@ -117,7 +113,7 @@ function LoginPage() {
               placeholder="Password"
               value={credentials.password}
               onChange={handleInputChange}
-              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] font-normal placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-serif"
+              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               required
             />
             <button
@@ -131,7 +127,7 @@ function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl font-normal text-[20px] shadow-lg shadow-blue-100 hover:bg-[#2563eb] active:scale-[0.98] transition-all disabled:opacity-70 font-serif mt-4"
+            className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl text-[20px] shadow-lg shadow-blue-100 hover:bg-[#2563eb] active:scale-[0.98] transition-all disabled:opacity-70 mt-4"
             disabled={loading}
           >
             {loading ? "Verifying..." : "Login"}
@@ -143,7 +139,7 @@ function LoginPage() {
         </div>
       </div>
 
-      <footer className="mt-10 text-[15px] text-[#94a3b8] font-normal italic">
+      <footer className="mt-10 text-[15px] text-[#94a3b8] italic">
         © 2026 Campus Management System
       </footer>
     </div>

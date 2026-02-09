@@ -1,10 +1,11 @@
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
+/* Logo & Default Vite Styles */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -19,12 +20,8 @@
 }
 
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -39,4 +36,70 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* --- Student Dashboard Layout Fixes --- */
+
+/* Standardizing the Font globally */
+.font-antiqua {
+  font-family: 'Book Antiqua', Palatino, 'Palatino Linotype', 'Palatino LT STD', Georgia, serif;
+}
+
+/* Floating AI Button Logic */
+.fixed.bottom-10.right-10 {
+  position: fixed;
+  bottom: 2.5rem; /* 40px */
+  right: 2.5rem;  /* 40px */
+  z-index: 1000;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* Individual Header Elements (No white bar) */
+/* This ensures the two separate blocks stay at the edges */
+.flex.justify-between.items-start {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Subject Details Table Styling */
+table {
+  width: 100%;
+  border-spacing: 0;
+  background-color: white;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f9fafb; /* Gray-50 */
+}
+
+/* Custom Scrollbar for Attendance Table */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .fixed.bottom-10.right-10 {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    padding: 0.75rem 1.25rem;
+  }
+
+  /* Stack header elements on very small screens if needed */
+  @media (max-width: 480px) {
+    .flex.justify-between.items-start {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+  }
 }

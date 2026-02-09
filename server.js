@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
+const { exec } = require('child_process'); // For automated port management
 
 // --- Models ---
 const User = require("./models/User");
@@ -26,11 +27,20 @@ const Assignment = require("./models/Assignment");
 dotenv.config();
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 3002;
+
+// --- Automated Port Management (Linux Fix) ---
+// This prevents the "Address already in use" crash you experienced
+if (process.env.NODE_ENV !== 'production') {
+  exec(`fuser -k ${PORT}/tcp`, (err) => {
+    if (!err) console.log(`Cleared stale processes on port ${PORT}`);
+  });
+}
 
 // --- Middleware ---
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173"], // Matches your Vite frontend port
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -55,28 +65,37 @@ mongoose
 app.post("/api/login", async (req, res) => {
   const { body } = req;
   try {
+    // Search by username primarily
     let user = await User.findOne({ user_name: body.identifier });
+    
+    // Fallback for students using Roll Number
     if (!user && body.role === "student") {
       const student = await Student.findOne({ roll_no: body.identifier });
       if (student) {
         user = await User.findById(student.user_id);
       }
     }
+    
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+    
     const isMatch = await bcrypt.compare(body.password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+    
     if (body.role && user.role !== body.role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
+    
     const responseData = {
       message: `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} login successful`,
       role: user.role,
       userId: user._id,
     };
+
+    // Role-specific data fetching
     if (user.role === "admin") {
       const admin = await Admin.findOne({ user_id: user._id });
       if (admin) responseData.adminId = admin._id;
@@ -130,7 +149,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
       .sort({ session_no: 1 });
 
     if (!timetableEntries.length) {
-      return res.status(200).json({ message: "No classes found for this faculty on this day." });
+      return res.status(200).json({ message: "No classes found for today." });
     }
     const result = timetableEntries.map((entry) => {
       const subject = entry.subject_offering_id;
@@ -149,7 +168,6 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     });
     res.json(result);
   } catch (error) {
-    console.error("Error fetching faculty dashboard data:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -162,9 +180,11 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
       yr_sem_id: sectionId,
       status: "active",
     }).populate("student_id").sort({ "student_id.roll_no": 1 });
+    
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ message: "No students found in this section." });
     }
+    
     const students = enrollments.map((enrollment) => {
       const student = enrollment.student_id;
       if (!student) return null;
@@ -174,10 +194,10 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
         student_id_no: student.roll_no || "N/A",
       };
     }).filter((s) => s !== null);
+    
     students.sort((a, b) => a.student_id_no.localeCompare(b.student_id_no));
     res.json(students);
   } catch (error) {
-    console.error("Error fetching students:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -260,8 +280,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       timetableData 
     });
   } catch (error) {
-    console.error("Dashboard Error:", error);
-    res.status(500).json({ message: "Server error while loading" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -354,6 +373,7 @@ app.post("/api/attendance", async (req, res) => {
   try {
     const assignment = await FacultyAssignment.findOne({ subject_offering_id: classId });
     const facultyId = assignment ? assignment.faculty_id : null;
+    
     const session = new ClassSession({
       subject_offering_id: classId,
       faculty_id: facultyId,
@@ -361,16 +381,18 @@ app.post("/api/attendance", async (req, res) => {
       is_conducted: true,
       session_no : sessionNo
     });
+    
     await session.save();
+    
     const attendanceRecords = Object.keys(attendanceData).map((studentId) => ({
       class_session_id: session._id,
       student_id: studentId,
       status: attendanceData[studentId],
     }));
+    
     await Attendance.insertMany(attendanceRecords);
     res.status(200).json({ message: "Attendance marked successfully" });
   } catch (error) {
-    console.error("Error submitting attendance:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -397,41 +419,69 @@ app.post("/api/admin/student", async (req, res) => {
   try {
     let user = await User.findOne({ user_name: email });
     if (user) return res.status(400).json({ message: "User already exists" });
+    
     let yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
     if (!yrSem) {
       yrSem = new YrSem({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
       await yrSem.save();
     }
+    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     user = new User({ user_name: email, password: hashedPassword, role: "student" });
     await user.save();
+    
     const student = new Student({ user_id: user._id, name, yr_sem_id: yrSem._id, roll_no, email });
     await student.save();
-    const enrollment = new StudentEnrollment({ student_id: student._id, yr_sem_id: yrSem._id, academic_yr, status: "active", start_date: new Date() });
+    
+    const enrollment = new StudentEnrollment({ 
+      student_id: student._id, 
+      yr_sem_id: yrSem._id, 
+      academic_yr, 
+      status: "active", 
+      start_date: new Date() 
+    });
     await enrollment.save();
+    
     res.status(201).json({ message: "Student created successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
 // 10. Admin: Create Schedule
 app.post("/api/admin/schedule", async (req, res) => {
-  const { course_code, faculty_email, stream, yr, sem, academic_yr, day, start_time, end_time, location, session_no } = req.body;
+  const { course_code, faculty_email, stream, yr, sem, day, start_time, end_time, location, session_no } = req.body;
   try {
     const faculty = await Faculty.findOne({ email: faculty_email });
     const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream });
     if (!faculty || !yrSem) return res.status(404).json({ message: "Faculty or Section not found" });
 
     let course = await CourseMaster.findOne({ course_code });
-    if (!course) { course = new CourseMaster({ course_code, course_name: course_code, credits: 3 }); await course.save(); }
+    if (!course) { 
+      course = new CourseMaster({ course_code, course_name: course_code, credits: 3 }); 
+      await course.save(); 
+    }
 
     let subjectOffering = await SubjectOffering.findOne({ course_master_id: course._id, yr_sem_id: yrSem._id });
-    if (!subjectOffering) { subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true }); await subjectOffering.save(); }
+    if (!subjectOffering) { 
+      subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true }); 
+      await subjectOffering.save(); 
+    }
 
     const assignment = await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id });
-    if (!assignment) { await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save(); }
+    if (!assignment) { 
+      await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save(); 
+    }
 
-    const timetable = new TimeTable({ yr_sem_id: yrSem._id, day_of_week: day, session_no: Number(session_no), start_time, end_time, subject_offering_id: subjectOffering._id, faculty_id: faculty._id, location });
+    const timetable = new TimeTable({ 
+      yr_sem_id: yrSem._id, 
+      day_of_week: day, 
+      session_no: Number(session_no), 
+      start_time, 
+      end_time, 
+      subject_offering_id: subjectOffering._id, 
+      faculty_id: faculty._id, 
+      location 
+    });
     await timetable.save();
     res.status(201).json({ message: "Schedule created successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -470,7 +520,15 @@ app.post("/api/admin/parent/map", async (req, res) => {
 app.post("/api/notes", async (req, res) => {
   const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
   try {
-    const note = new ClassNotes({ subject_offering_id, faculty_id, title, description, file_url, upload_date: new Date(), is_visible: true });
+    const note = new ClassNotes({ 
+      subject_offering_id, 
+      faculty_id, 
+      title, 
+      description, 
+      file_url, 
+      upload_date: new Date(), 
+      is_visible: true 
+    });
     await note.save();
     res.status(201).json({ message: "Note added successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -478,7 +536,10 @@ app.post("/api/notes", async (req, res) => {
 
 app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   try {
-    const notes = await ClassNotes.find({ subject_offering_id: req.params.subjectOfferingId, is_visible: true }).populate("faculty_id", "name").sort({ upload_date: -1 });
+    const notes = await ClassNotes.find({ 
+      subject_offering_id: req.params.subjectOfferingId, 
+      is_visible: true 
+    }).populate("faculty_id", "name").sort({ upload_date: -1 });
     res.json(notes);
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
@@ -487,7 +548,14 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
 app.post("/api/faculty/assignments", async (req, res) => {
   const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
   try {
-    const assignment = new Assignment({ subject_offering_id, title, instructions, file_url, due_date: new Date(due_date), is_active: true });
+    const assignment = new Assignment({ 
+      subject_offering_id, 
+      title, 
+      instructions, 
+      file_url, 
+      due_date: new Date(due_date), 
+      is_active: true 
+    });
     await assignment.save();
     res.status(201).json({ message: "Assignment posted successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -495,7 +563,10 @@ app.post("/api/faculty/assignments", async (req, res) => {
 
 app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
   try {
-    const assignments = await Assignment.find({ subject_offering_id: req.params.subjectOfferingId, is_active: true }).sort({ due_date: 1 });
+    const assignments = await Assignment.find({ 
+      subject_offering_id: req.params.subjectOfferingId, 
+      is_active: true 
+    }).sort({ due_date: 1 });
     res.json(assignments);
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
@@ -615,8 +686,64 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
+// --- NEW ROUTE: 16. Detailed Course View for Student ---
+app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
+  const { studentId, subjectOfferingId } = req.params;
+  try {
+    // 1. Get Subject Info
+    const subject = await SubjectOffering.findById(subjectOfferingId).populate("course_master_id");
+    if (!subject) return res.status(404).json({ message: "Subject not found" });
+
+    // 2. Calculate Attendance for this specific subject
+    const sessions = await ClassSession.find({ subject_offering_id: subjectOfferingId });
+    const records = await Attendance.find({
+      student_id: studentId,
+      class_session_id: { $in: sessions.map(s => s._id) },
+    });
+    
+    const present = records.filter(r => r.status === "Present").length;
+    const attendanceStats = {
+      present_count: present,
+      total_count: records.length,
+      percentage: records.length > 0 ? ((present / records.length) * 100).toFixed(2) : "0.00"
+    };
+
+    // 3. Get Notes
+    const notes = await ClassNotes.find({ 
+      subject_offering_id: subjectOfferingId, 
+      is_visible: true 
+    }).sort({ upload_date: -1 });
+
+    // 4. Get Assignments
+    const assignments = await Assignment.find({ 
+      subject_offering_id: subjectOfferingId, 
+      is_active: true 
+    }).sort({ due_date: 1 });
+
+    res.json({
+      course_name: subject.course_master_id.course_name,
+      course_code: subject.course_master_id.course_code,
+      attendanceStats,
+      notes,
+      assignments
+    });
+  } catch (error) {
+    console.error("Error in course-details route:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // --- Server Startup ---
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
+// Do not use 'const' here because PORT was already declared at line 30
+server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is busy. Please run "fuser -k ${PORT}/tcp"`);
+    process.exit(1);
+  } else {
+    console.error("Server Error:", e);
+  }
 });

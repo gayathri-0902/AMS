@@ -5,172 +5,129 @@ import { useAuth } from "../context/AuthContext";
 import { 
   HiOutlineArrowLeft, 
   HiOutlineBookOpen, 
-  HiOutlineClipboardList, 
-  HiOutlineDownload,
-  HiOutlineCheckCircle
+  HiOutlineDocumentText, 
+  HiOutlineClipboardList,
+  HiOutlineCalendar
 } from "react-icons/hi";
 
 const SubjectDetails = () => {
-  const { id } = useParams(); // subject_offering_id
+  const { id } = useParams();
   const { auth } = useAuth();
   const navigate = useNavigate();
-  
-  const [notes, setNotes] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [attendanceStats, setAttendanceStats] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSubjectData = async () => {
+    const fetchDetails = async () => {
+      if (!auth?.studentId) return;
       try {
-        setLoading(true);
-        // 1. Fetch Notes and Assignments
-        const [notesRes, assignmentsRes, attendanceRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/notes/${id}`),
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/assignments/${id}`),
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/${auth.studentId}`)
-        ]);
-
-        setNotes(notesRes.data);
-        setAssignments(assignmentsRes.data);
-
-        // 2. Filter the overall attendance for just this subject
-        const currentSubjectStats = attendanceRes.data.subjectAttendance.find(
-          (item) => item.subject_offering_id === id
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/student/course-details/${auth.studentId}/${id}`
         );
-        setAttendanceStats(currentSubjectStats);
-
-      } catch (error) {
-        console.error("Error fetching subject details:", error);
+        setData(response.data);
+      } catch (err) {
+        console.error("Error fetching course details:", err);
       } finally {
         setLoading(false);
       }
     };
+    fetchDetails();
+  }, [id, auth?.studentId]);
 
-    if (id && auth.studentId) {
-      fetchSubjectData();
-    }
-  }, [id, auth.studentId]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-lg font-medium text-blue-600 animate-pulse">Loading materials & attendance...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-20 text-center text-blue-600 font-bold">Loading records...</div>;
+  if (!data) return <div className="p-20 text-center">Data not found.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors font-semibold"
-        >
-          <HiOutlineArrowLeft className="mr-2" /> Back to Dashboard
+    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua">
+      <div className="max-w-6xl mx-auto">
+        <button onClick={() => navigate(-1)} className="flex items-center text-blue-600 mb-8 font-bold hover:underline">
+          <HiOutlineArrowLeft className="mr-2" /> BACK TO DASHBOARD
         </button>
 
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Course Materials & Status</h1>
-
-        {/* --- ATTENDANCE SUMMARY SECTION --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 border-l-8 border-l-blue-500">
-          <div className="flex items-center mb-4">
-            <div className="bg-blue-100 p-2 rounded-lg mr-3">
-              <HiOutlineCheckCircle className="text-blue-600 w-6 h-6" />
+        {/* Course Header */}
+        <div className="bg-white rounded-[32px] p-8 shadow-sm mb-10 border border-gray-100">
+          <h1 className="text-3xl font-bold text-gray-800">{data.course_name}</h1>
+          <p className="text-blue-600 font-bold mt-1 uppercase tracking-wider">{data.course_code}</p>
+          
+          <div className="mt-6 flex flex-wrap gap-4">
+            <div className="bg-blue-50 px-6 py-4 rounded-2xl border border-blue-100">
+              <p className="text-xs text-blue-600 font-bold uppercase">Overall Attendance</p>
+              <h2 className="text-2xl font-bold text-blue-800">{data.attendanceStats?.percentage}%</h2>
             </div>
-            <h2 className="text-xl font-bold text-gray-800">My Attendance</h2>
           </div>
-
-          {attendanceStats ? (
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 bg-gray-50 rounded-xl">
-                <p className="text-xs text-gray-500 uppercase font-bold">Present</p>
-                <p className="text-2xl font-black text-green-600">{attendanceStats.present_count}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-xl">
-                <p className="text-xs text-gray-500 uppercase font-bold">Total Classes</p>
-                <p className="text-2xl font-black text-gray-800">{attendanceStats.total_count}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <p className="text-xs text-blue-600 uppercase font-bold">Percentage</p>
-                <p className="text-2xl font-black text-blue-700">{attendanceStats.percentage}%</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500 italic">No attendance data recorded yet.</p>
-          )}
         </div>
 
-        {/* --- ASSIGNMENTS SECTION --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex items-center mb-6">
-            <div className="bg-orange-100 p-2 rounded-lg mr-3">
-              <HiOutlineClipboardList className="text-orange-600 w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800">Assignments</h2>
+        {/* Resources Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold flex items-center text-gray-700">
+              <HiOutlineBookOpen className="mr-2 text-blue-500" /> Faculty Notes
+            </h3>
+            {data.notes?.length > 0 ? data.notes.map(note => (
+              <div key={note._id} className="bg-white p-5 rounded-2xl shadow-sm border border-transparent hover:border-blue-200 transition-all">
+                <h4 className="font-bold">{note.title}</h4>
+                <a href={note.file_url} target="_blank" className="text-blue-600 text-sm font-bold flex items-center mt-2">
+                  <HiOutlineDocumentText className="mr-1" /> DOWNLOAD
+                </a>
+              </div>
+            )) : <div className="bg-white/50 p-6 rounded-2xl border-2 border-dashed text-center text-gray-400 italic">No notes uploaded.</div>}
           </div>
 
           <div className="space-y-4">
-            {assignments.length > 0 ? (
-              assignments.map((a) => (
-                <div key={a._id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h4 className="font-bold text-gray-800">{a.title}</h4>
-                    <p className="text-sm text-gray-600 mb-1">{a.instructions}</p>
-                    <p className="text-xs font-bold text-red-500 uppercase tracking-wider">
-                      Due: {new Date(a.due_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <a 
-                    href={a.file_url} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    <HiOutlineDownload className="mr-2" /> Download
-                  </a>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic text-center py-4">No assignments posted yet.</p>
-            )}
+            <h3 className="text-xl font-bold flex items-center text-gray-700">
+              <HiOutlineClipboardList className="mr-2 text-orange-500" /> Assignments
+            </h3>
+            {data.assignments?.length > 0 ? data.assignments.map(asm => (
+              <div key={asm._id} className="bg-white p-5 rounded-2xl shadow-sm border border-transparent hover:border-orange-200 transition-all">
+                <h4 className="font-bold">{asm.title}</h4>
+                <p className="text-red-500 text-xs font-bold mt-1">Due: {new Date(asm.due_date).toLocaleDateString()}</p>
+              </div>
+            )) : <div className="bg-white/50 p-6 rounded-2xl border-2 border-dashed text-center text-gray-400 italic">No pending assignments.</div>}
           </div>
         </div>
 
-        {/* --- STUDY RESOURCES SECTION --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center mb-6">
-            <div className="bg-purple-100 p-2 rounded-lg mr-3">
-              <HiOutlineBookOpen className="text-purple-600 w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800">Study Resources & Notes</h2>
+        {/* --- ATTENDANCE TABLE SECTION --- */}
+        <div className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+            <h3 className="text-xl font-bold flex items-center text-gray-700">
+              <HiOutlineCalendar className="mr-2 text-green-500" /> Attendance History
+            </h3>
+            <span className="text-sm font-bold text-gray-400 uppercase tracking-tighter">Daily Log</span>
           </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {notes.length > 0 ? (
-              notes.map((note) => (
-                <div key={note._id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="font-bold text-gray-800">{note.title}</p>
-                    <p className="text-xs text-gray-500">{note.description || "Shared by Faculty"}</p>
-                  </div>
-                  <a 
-                    href={note.file_url} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="text-blue-600 font-bold text-sm hover:underline"
-                  >
-                    View Resource
-                  </a>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic text-center py-4">No study resources found.</p>
-            )}
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Session Type</th>
+                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {data.attendanceRecords?.length > 0 ? data.attendanceRecords.map((record, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="p-5 text-gray-700 font-medium">
+                      {new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="p-5 text-gray-500 italic">{record.session_type || "Lecture"}</td>
+                    <td className="p-5">
+                      <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase ${
+                        record.status === "Present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
+                        {record.status}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="3" className="p-10 text-center text-gray-400 italic">No attendance records found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-
       </div>
     </div>
   );

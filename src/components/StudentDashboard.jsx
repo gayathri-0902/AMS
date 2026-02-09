@@ -9,7 +9,7 @@ import {
   HiOutlineArrowRight,
   HiOutlineLogout,
   HiOutlineUser,
-  HiOutlineSparkles // New icon for the AI feature
+  HiOutlineSparkles 
 } from "react-icons/hi";
 
 const StudentDashboard = () => {
@@ -19,18 +19,12 @@ const StudentDashboard = () => {
   const [studentInfo, setStudentInfo] = useState(null); 
   const [loading, setLoading] = useState(true);
 
-  // --- CORRECTED TIME FORMATTING LOGIC ---
   const formatTime = (timeString) => {
     if (!timeString) return "";
-    
     let [hours, minutes] = timeString.split(':');
     let h = parseInt(hours);
-    
-    const ampm = (h >= 12 || (h >= 1 && h <= 7)) ? 'PM' : 'AM';
-    
-    let displayHours = h % 12;
-    displayHours = displayHours ? displayHours : 12; 
-    
+    const ampm = (h >= 12) ? 'PM' : 'AM';
+    let displayHours = h % 12 || 12; 
     return `${displayHours}:${minutes} ${ampm}`;
   };
 
@@ -40,159 +34,135 @@ const StudentDashboard = () => {
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${auth.studentId}`
         );
-        
-        console.log("Dashboard Data:", response.data);
-
         setTimetable(response.data.timetableData || []);
-        const profile = response.data.studentDetails || response.data.student || null;
-        setStudentInfo(profile);
-        
+        setStudentInfo(response.data.studentDetails || response.data.student || null);
       } catch (error) {
-        console.error("Error fetching student dashboard data:", error);
+        console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    if (auth.studentId) {
-      fetchDashboardData();
-    }
-  }, [auth.studentId]);
+    if (auth?.studentId) fetchDashboardData();
+  }, [auth?.studentId]);
 
   const getAcademicYear = (rollNo) => {
     if (!rollNo || typeof rollNo !== 'string') return "";
+    
     const joinYear = parseInt(rollNo.substring(0, 2));
-    const currentYearShort = 26; 
-    const diff = currentYearShort - joinYear;
+    const now = new Date();
+    const currentYear = now.getFullYear(); // 2026
+    const currentMonth = now.getMonth();    // 0 = Jan, 1 = Feb... 5 = June
 
-    const labels = {
-      1: "1st year",
-      2: "2nd year",
-      3: "3rd year",
-      4: "4th year"
+    // Strict Graduation Logic:
+    // Graduation is May 2026. Only show Alumni if Year is > 2026 OR (Year is 2026 AND Month is >= June)
+    if (currentYear > 2026 || (currentYear === 2026 && currentMonth >= 5)) {
+      return "ALUMNI";
+    }
+
+    const yearDiff = 26 - joinYear; // Based on 2026 baseline
+    const labels = { 
+      0: "1ST YEAR", 
+      1: "2ND YEAR", 
+      2: "3RD YEAR", 
+      3: "4TH YEAR" 
     };
 
-    return labels[diff] || "";
+    return labels[yearDiff] || "ALUMNI";
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-lg font-bold text-blue-600 animate-pulse">Syncing Academic Profile...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-antiqua">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] p-4 md:p-8">
+    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- HEADER --- */}
-        <header className="flex justify-between items-center mb-10 py-2">
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md">
-              <HiOutlineUser className="w-7 h-7" />
+        {/* --- HEADER: Separated Individual Elements --- */}
+        <div className="flex justify-between items-start mb-10">
+          
+          {/* LEFT: Student Info (BAR REMOVED) */}
+          <div className="flex items-center space-x-4 p-2">
+            <div className="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg">
+              <HiOutlineUser className="w-8 h-8" />
             </div>
-            
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900 leading-none">
-                {studentInfo?.student_id_no || "Roll No Not Found"}
-              </span>
-              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide mt-1">
-                {studentInfo?.branch_name || "Branch"} • {getAcademicYear(studentInfo?.student_id_no)}
-              </span>
+            <div className="text-left">
+              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
+                {studentInfo?.student_id_no}
+              </h2>
+              <p className="text-sm font-bold text-blue-600 uppercase mt-1 tracking-widest">
+                {studentInfo?.branch_name} • {getAcademicYear(studentInfo?.student_id_no)}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {/* --- NEW ACADEMIC AI BUTTON --- */}
-            <button 
-              className="flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all border border-blue-100 uppercase"
-            >
-              <HiOutlineSparkles className="w-4 h-4" />
-              <span>Academic AI</span>
-            </button>
+          {/* RIGHT: Logout Button (Independent Block) */}
+          <button 
+            onClick={logout}
+            className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
+          >
+            <span>LOGOUT</span>
+            <HiOutlineLogout className="w-5 h-5" />
+          </button>
+        </div>
 
-            <button 
-              onClick={logout}
-              className="flex items-center space-x-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white transition-all border border-red-100 uppercase"
-            >
-              <span>LOGOUT</span>
-              <HiOutlineLogout className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* Welcome Section */}
-        <div className="mb-8 px-2">
-          <h1 className="text-2xl font-black text-gray-800">Student Dashboard</h1>
-          <p className="text-gray-500 font-medium">
-            Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name || "Student"}</span>
+        {/* Dashboard Title */}
+        <div className="mb-10 text-left px-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Student Dashboard</h1>
+          <p className="text-xl text-gray-500 mt-1">
+            Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name}</span>
           </p>
         </div>
 
-        {/* Timetable Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {timetable.length > 0 ? (
-            timetable.map((course, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="bg-blue-50 w-11 h-11 rounded-xl flex items-center justify-center text-blue-600">
-                    <HiOutlineBookOpen className="w-6 h-6" />
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    course.attendance_status === "Present" 
-                      ? "bg-green-100 text-green-700" 
-                      : course.attendance_status === "Absent" 
-                      ? "bg-red-100 text-red-700" 
-                      : "bg-gray-100 text-gray-400"
-                  }`}>
-                    {course.attendance_status || "Not Marked"}
-                  </span>
+        {/* Course Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
+          {timetable.map((course, index) => (
+            <div key={index} className="bg-white rounded-[40px] p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left border border-gray-100 group">
+              <div className="flex justify-between items-start mb-8">
+                <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <HiOutlineBookOpen className="w-8 h-8" />
                 </div>
-
-                <h3 className="text-lg font-bold text-gray-800 leading-tight">{course.class_name}</h3>
-                <span className="inline-block mt-1 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase">
-                  {course.class_code}
+                <span className="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                  Not Marked
                 </span>
+              </div>
 
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-gray-700 leading-none">{course.day}</span>
-                      <span className="text-[11px] text-gray-400 mt-1 font-semibold italic">
-                        {formatTime(course.start_time)} - {formatTime(course.end_time)}
-                      </span>
-                    </div>
-                  </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-1">{course.class_name}</h3>
+              <span className="bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
+                {course.class_code}
+              </span>
 
-                  <div className="flex items-center space-x-3">
-                    <HiOutlineClipboardCheck className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm font-bold text-gray-600 truncate">
-                      Faculty: {course.faculty_name}
-                    </span>
+              <div className="mt-8 space-y-4 text-gray-600">
+                <div className="flex items-center space-x-3">
+                  <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="font-bold text-gray-800">{course.day}</p>
+                    <p className="text-xs text-gray-400">{formatTime(course.start_time)} - {formatTime(course.end_time)}</p>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => navigate(`/student/subject-details/${course.subject_offering_id}`)}
-                  className="w-full mt-8 flex items-center justify-center bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-sm"
-                >
-                  VIEW DETAILS
-                  <HiOutlineArrowRight className="ml-2 w-4 h-4" />
-                </button>
+                <div className="flex items-center space-x-3">
+                  <HiOutlineClipboardCheck className="w-5 h-5 text-gray-400" />
+                  <p className="text-sm">Faculty: <span className="font-bold text-gray-800">{course.faculty_name}</span></p>
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full bg-white p-20 rounded-3xl text-center border-2 border-dashed border-gray-100">
-              <p className="text-gray-400 font-bold italic">No classes found for your profile today.</p>
+
+              <button 
+                onClick={() => navigate(`/student/subject-details/${course.subject_offering_id}`)}
+                className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg"
+              >
+                VIEW COURSE DETAILS <HiOutlineArrowRight className="ml-2 w-5 h-5" />
+              </button>
             </div>
-          )}
+          ))}
         </div>
+
+        {/* Floating Academic AI Button */}
+        <button 
+          onClick={() => alert("Academic AI is launching in June 2026!")}
+          className="fixed bottom-10 right-10 flex items-center space-x-3 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-blue-700 hover:-translate-y-2 transition-all z-[1000] border-4 border-white"
+        >
+          <HiOutlineSparkles className="w-6 h-6" />
+          <span className="text-lg">Academic AI</span>
+        </button>
+
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { HiOutlineLogout, HiOutlineUserCircle, HiOutlineChartBar, HiOutlineAcademicCap } from "react-icons/hi";
+import { MdOutlineFingerprint } from "react-icons/md";
 
 const ParentDashboard = () => {
   const { parentId } = useParams();
@@ -34,88 +36,123 @@ const ParentDashboard = () => {
     navigate("/login");
   };
 
-  if (loading) return <div className="flex justify-center items-center h-screen">Loading Dashboard...</div>;
+  if (loading) return (
+    <div className="flex flex-col justify-center items-center h-screen bg-[#f0f2f5] font-antiqua">
+       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+       <p className="text-xl text-gray-600">Loading Dashboard...</p>
+    </div>
+  );
   
   if (error) return (
-    <div className="flex flex-col justify-center items-center h-screen text-red-600">
-      <p className="text-xl font-bold">{error}</p>
-      <button onClick={handleLogout} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">Back to Login</button>
+    <div className="flex flex-col justify-center items-center h-screen bg-[#f0f2f5] font-antiqua p-6 text-center">
+      <div className="bg-white p-10 rounded-[32px] shadow-lg max-w-md">
+        <p className="text-xl font-bold text-red-600 mb-6">{error}</p>
+        <button 
+          onClick={handleLogout} 
+          className="w-full bg-[#3b82f6] text-white px-6 py-3 rounded-xl hover:bg-blue-600 transition shadow-md"
+        >
+          Back to Login
+        </button>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-[#f0f2f5] p-6 md:p-8 font-antiqua">
       <div className="max-w-6xl mx-auto">
+        
         {/* Header */}
-        <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-lg shadow-md">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Parent Dashboard</h1>
-            <p className="text-gray-600">Monitoring performance for: <strong>{data.studentDetails.student_name}</strong></p>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <div className="flex items-center gap-5 mb-4 md:mb-0">
+            <div className="bg-blue-50 p-4 rounded-2xl text-blue-600">
+              <HiOutlineUserCircle size={40} />
+            </div>
+            <div>
+              <h1 className="text-[32px] text-gray-800 leading-tight">Parent Dashboard</h1>
+              <p className="text-[#64748b] text-lg">
+                Child: <span className="text-[#3b82f6] font-bold">{data.studentDetails.student_name}</span>
+              </p>
+            </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition"
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
           >
-            Logout
+            <span className="text-lg">Logout</span>
+            <HiOutlineLogout size={22} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
-            <h3 className="text-gray-500 text-sm font-semibold uppercase">Roll Number</h3>
-            <p className="text-2xl font-bold">{data.studentDetails.student_id_no}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border-b-8 border-blue-500 flex flex-col items-center text-center">
+            <MdOutlineFingerprint size={32} className="text-blue-500 mb-3" />
+            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Roll Number</h3>
+            <p className="text-2xl text-gray-800">{data.studentDetails.student_id_no}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
-            <h3 className="text-gray-500 text-sm font-semibold uppercase">Branch / Stream</h3>
-            <p className="text-2xl font-bold">{data.studentDetails.branch_name}</p>
+          
+          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30_rgb(0,0,0,0.03)] border-b-8 border-green-500 flex flex-col items-center text-center">
+            <HiOutlineAcademicCap size={32} className="text-green-500 mb-3" />
+            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Branch / Stream</h3>
+            <p className="text-2xl text-gray-800">{data.studentDetails.branch_name}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500">
-            <h3 className="text-gray-500 text-sm font-semibold uppercase">Overall Attendance</h3>
-            <p className={`text-2xl font-bold ${data.attendanceStats.percentage < 75 ? 'text-red-500' : 'text-green-600'}`}>
+
+          <div className="bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border-b-8 border-purple-500 flex flex-col items-center text-center">
+            <HiOutlineChartBar size={32} className="text-purple-500 mb-3" />
+            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Overall Attendance</h3>
+            <p className={`text-3xl font-bold ${data.attendanceStats.percentage < 75 ? 'text-red-500' : 'text-green-600'}`}>
               {data.attendanceStats.percentage}%
             </p>
           </div>
         </div>
 
         {/* Recent Attendance Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-800">Recent Class Activity</h2>
+        <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-white">
+          <div className="p-8 border-b border-gray-50 bg-gray-50/50">
+            <h2 className="text-2xl text-gray-800">Recent Class Activity</h2>
+            <p className="text-sm text-gray-500 mt-1 uppercase tracking-wider">Latest updates from the classroom</p>
           </div>
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-gray-600 uppercase text-sm">
-                <th className="p-4 border-b">Subject</th>
-                <th className="p-4 border-b">Date</th>
-                <th className="p-4 border-b">Session</th>
-                <th className="p-4 border-b">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentAttendance.length > 0 ? (
-                data.recentAttendance.map((record, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="p-4 border-b font-medium">{record.class_name}</td>
-                    <td className="p-4 border-b text-gray-600">{record.date}</td>
-                    <td className="p-4 border-b text-gray-600">Session {record.session_no}</td>
-                    <td className="p-4 border-b">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        record.status === "Present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}>
-                        {record.status}
-                      </span>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white text-gray-400 uppercase text-xs font-bold tracking-widest">
+                  <th className="p-6 border-b">Subject</th>
+                  <th className="p-6 border-b">Date</th>
+                  <th className="p-6 border-b">Session</th>
+                  <th className="p-6 border-b text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {data.recentAttendance.length > 0 ? (
+                  data.recentAttendance.map((record, index) => (
+                    <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
+                      <td className="p-6 font-medium text-gray-700 text-lg">{record.class_name}</td>
+                      <td className="p-6 text-[#64748b]">{record.date}</td>
+                      <td className="p-6 text-[#64748b] font-bold">Session {record.session_no}</td>
+                      <td className="p-6 text-center">
+                        <span className={`px-4 py-2 rounded-xl text-sm font-bold inline-block min-w-[100px] shadow-sm ${
+                          record.status === "Present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}>
+                          {record.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="p-12 text-center text-gray-400 text-xl italic">
+                      No attendance records found yet.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="p-8 text-center text-gray-500">No attendance records found yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <footer className="mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
+          © 2026 Campus Management System
+        </footer>
       </div>
     </div>
   );
