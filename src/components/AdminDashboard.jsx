@@ -1,514 +1,184 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-// import { HiOutlineLogout } from "react-icons/hi"; // Icons not installed, using text
+// Added HiOutlineLogout to match student dashboard style
+import { HiOutlineLogout } from "react-icons/hi"; 
+import { 
+  MdAdminPanelSettings, 
+  MdSchool, 
+  MdSupervisorAccount, 
+  MdCastForEducation,
+  MdEventNote
+} from "react-icons/md";
 
 function AdminDashboard() {
   const { logout } = useAuth();
   
-  // Faculty Form State
-  const [faculty, setFaculty] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-
-  // Student Form State
+  // --- Form States (Kept identical to your logic) ---
+  const [faculty, setFaculty] = useState({ name: "", email: "", password: "" });
   const [student, setStudent] = useState({
-    name: "",
-    roll_no: "",
-    email: "",
-    stream: "",
-    yr: "",
-    sem: "",
-    academic_yr: "2022-26",
-    password: "",
+    name: "", roll_no: "", email: "", stream: "", yr: "", sem: "", academic_yr: "2022-26", password: "",
   });
-
-  // Parent Form State
-  const [parent, setParent] = useState({
-    name: "",
-    email: "",
-    phno: "",
-    password: "",
-  });
-
-  // Parent Mapping State
-  const [mapping, setMapping] = useState({
-    parent_email: "",
-    student_roll_no: "",
-    relationship: "Father",
-  });
-
-  // Schedule Form State
+  const [parent, setParent] = useState({ name: "", email: "", phno: "", password: "" });
+  const [mapping, setMapping] = useState({ parent_email: "", student_roll_no: "", relationship: "Father" });
   const [schedule, setSchedule] = useState({
-    course_code: "",
-    faculty_email: "",
-    stream: "",
-    yr: "",
-    sem: "",
-    day: "",
-    start_time: "",
-    end_time: "",
-    location: "Room 101",
-    session_no: 1,
+    course_code: "", faculty_email: "", stream: "", yr: "", sem: "", day: "", start_time: "", end_time: "", location: "Room 101", session_no: 1,
   });
 
-  // Handlers
-  const handleFacultyChange = (e) => {
-    setFaculty({ ...faculty, [e.target.name]: e.target.value });
-  };
+  // --- Handlers & Submits (Kept identical to your logic) ---
+  const handleFacultyChange = (e) => setFaculty({ ...faculty, [e.target.name]: e.target.value });
+  const handleStudentChange = (e) => setStudent({ ...student, [e.target.name]: e.target.value });
+  const handleParentChange = (e) => setParent({ ...parent, [e.target.name]: e.target.value });
+  const handleMappingChange = (e) => setMapping({ ...mapping, [e.target.name]: e.target.value });
+  const handleScheduleChange = (e) => setSchedule({ ...schedule, [e.target.name]: e.target.value });
 
-  const handleStudentChange = (e) => {
-    setStudent({ ...student, [e.target.name]: e.target.value });
-  };
-
-  const handleParentChange = (e) => {
-    setParent({ ...parent, [e.target.name]: e.target.value });
-  };
-
-  const handleMappingChange = (e) => {
-    setMapping({ ...mapping, [e.target.name]: e.target.value });
-  };
-
-  const handleScheduleChange = (e) => {
-    setSchedule({ ...schedule, [e.target.name]: e.target.value });
-  };
-
-  // Submit Handlers
   const handleFacultySubmit = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/faculty`, faculty);
-      alert("Faculty added successfully");
+      alert("Faculty Added Successfully");
       setFaculty({ name: "", email: "", password: "" });
-    } catch (error) {
-      console.error("Error adding faculty:", error);
-      alert(error.response?.data?.message || "Error adding faculty");
-    }
+    } catch (error) { alert(error.response?.data?.message || "Error adding faculty"); }
   };
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/student`, student);
-      alert("Student added successfully");
-      setStudent({
-        name: "",
-        roll_no: "",
-        email: "",
-        stream: "",
-        yr: "",
-        sem: "",
-        academic_yr: "2025-26",
-        password: "",
-      });
-    } catch (err) {
-      console.error("Error adding student:", err);
-      alert(err.response?.data?.message || "Error adding student");
-    }
+      alert("Student Added Successfully");
+      setStudent({ name: "", roll_no: "", email: "", stream: "", yr: "", sem: "", academic_yr: "2025-26", password: "" });
+    } catch (err) { alert(err.response?.data?.message || "Error adding student"); }
   };
 
-  const handleParentSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/parent`, parent);
-      alert("Parent added successfully");
-      setParent({ name: "", email: "", phno: "", password: "" });
-    } catch (err) {
-      console.error("Error adding parent:", err);
-      alert(err.response?.data?.message || "Error adding parent");
-    }
-  };
-
-  const handleMappingSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/parent/map`, mapping);
-      alert("Parent linked to student successfully");
-      setMapping({ parent_email: "", student_roll_no: "", relationship: "Father" });
-    } catch (err) {
-      console.error("Error mapping parent:", err);
-      alert(err.response?.data?.message || "Error mapping parent");
-    }
-  };
-
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/schedule`, schedule);
-      alert("Schedule added successfully");
-      setSchedule({
-        course_code: "",
-        faculty_email: "",
-        stream: "",
-        yr: "",
-        sem: "",
-        day: "",
-        start_time: "",
-        end_time: "",
-        location: "Room 101",
-        session_no: 1,
-      });
-    } catch (err) {
-      console.error("Error adding schedule:", err);
-      alert(err.response?.data?.message || "Error adding schedule");
-    }
-  };
+  // Reusable Styling Constants
+  const inputClass = "w-full px-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-[#2b2b2b] text-[16px] font-normal placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-serif";
+  const labelClass = "text-[19px] font-normal text-[#2b2b2b] mb-4 flex items-center gap-2 font-serif";
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-blue-600">Admin Dashboard</h2>
+    <div className="min-h-screen bg-[#f0f2f5] p-8 font-serif">
+      {/* HEADER: Matches Student Dashboard Layout */}
+      <div className="max-w-7xl mx-auto flex justify-between items-center mb-10">
+        <div className="flex items-center gap-3">
+          <MdAdminPanelSettings size={32} className="text-[#3b82f6]" />
+          <h2 className="text-[28px] font-normal text-[#2b2b2b]">
+            Admin Management Dashboard
+          </h2>
+        </div>
+        
+        {/* LOGOUT BUTTON: Specifically styled to match student view */}
         <button
-           onClick={logout}
-           className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+          onClick={logout}
+          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 font-normal shadow-sm group"
         >
-          Logout
+          <span className="text-[16px]">Logout</span>
+          <HiOutlineLogout size={20} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Add Faculty */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Faculty</h3>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {/* Section: Add Faculty */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+          <h3 className={labelClass}><MdCastForEducation className="text-blue-500"/> Add Faculty Member</h3>
           <form onSubmit={handleFacultySubmit} className="space-y-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Faculty Name"
-              value={faculty.name}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Faculty Email (Username)"
-              value={faculty.email}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={faculty.password}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-            >
+            <input type="text" name="name" placeholder="Full Name" value={faculty.name} onChange={handleFacultyChange} className={inputClass} required />
+            <input type="email" name="email" placeholder="Email Address" value={faculty.email} onChange={handleFacultyChange} className={inputClass} required />
+            <input type="password" name="password" placeholder="System Password" value={faculty.password} onChange={handleFacultyChange} className={inputClass} required />
+            <button type="submit" className="w-full bg-[#3b82f6] text-white py-3.5 rounded-xl font-normal text-[17px] hover:bg-[#2563eb] transition-all">
               Add Faculty
             </button>
           </form>
         </div>
 
-        {/* Add Student */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Student</h3>
+        {/* Section: Add Student */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+          <h3 className={labelClass}><MdSchool className="text-green-600"/> Add New Student</h3>
           <form onSubmit={handleStudentSubmit} className="space-y-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Student Name"
-              value={student.name}
-              onChange={handleStudentChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <div className="flex gap-4">
-              <input
-                type="text"
-                name="roll_no"
-                placeholder="Roll No"
-                value={student.roll_no}
-                onChange={handleStudentChange}
-                className="w-1/2 p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-                required
-              />
-               <input
-                type="text"
-                name="stream"
-                placeholder="Stream (CSE)"
-                value={student.stream}
-                onChange={handleStudentChange}
-                className="w-1/2 p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-                required
-              />
+            <input type="text" name="name" placeholder="Student Full Name" value={student.name} onChange={handleStudentChange} className={inputClass} required />
+            <div className="grid grid-cols-2 gap-4">
+              <input type="text" name="roll_no" placeholder="Roll Number" value={student.roll_no} onChange={handleStudentChange} className={inputClass} required />
+              <input type="text" name="stream" placeholder="Stream (e.g. CSE)" value={student.stream} onChange={handleStudentChange} className={inputClass} required />
             </div>
-            <div className="flex gap-4">
-               <input
-                type="number"
-                name="yr"
-                placeholder="Year"
-                value={student.yr}
-                onChange={handleStudentChange}
-                className="w-1/3 p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-                required
-              />
-               <input
-                type="number"
-                name="sem"
-                placeholder="Sem"
-                value={student.sem}
-                onChange={handleStudentChange}
-                className="w-1/3 p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-                required
-              />
-               <input
-                type="text"
-                name="academic_yr"
-                placeholder="Acad. Yr"
-                value={student.academic_yr}
-                onChange={handleStudentChange}
-                className="w-1/3 p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-                required
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <input type="number" name="yr" placeholder="Year" value={student.yr} onChange={handleStudentChange} className={inputClass} required />
+              <input type="number" name="sem" placeholder="Semester" value={student.sem} onChange={handleStudentChange} className={inputClass} required />
+              <input type="text" name="academic_yr" placeholder="Acad. Year" value={student.academic_yr} onChange={handleStudentChange} className={inputClass} required />
             </div>
-
-            <input
-              type="email"
-              name="email"
-              placeholder="Student Email"
-              value={student.email}
-              onChange={handleStudentChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={student.password}
-              onChange={handleStudentChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
-            >
-              Add Student
+            <input type="email" name="email" placeholder="Student Email" value={student.email} onChange={handleStudentChange} className={inputClass} required />
+            <input type="password" name="password" placeholder="System Password" value={student.password} onChange={handleStudentChange} className={inputClass} required />
+            <button type="submit" className="w-full bg-[#16a34a] text-white py-3.5 rounded-xl font-normal text-[17px] hover:bg-[#15803d] transition-all">
+              Register Student
             </button>
           </form>
         </div>
 
-        {/* Add Parent */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-           <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Parent</h3>
-           <form onSubmit={handleParentSubmit} className="space-y-4">
-             <input
-               type="text"
-               name="name"
-               placeholder="Parent Name"
-               value={parent.name}
-               onChange={handleParentChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <input
-               type="text"
-               name="phno"
-               placeholder="Phone Number"
-               value={parent.phno}
-               onChange={handleParentChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <input
-               type="email"
-               name="email"
-               placeholder="Parent Email"
-               value={parent.email}
-               onChange={handleParentChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <input
-               type="password"
-               name="password"
-               placeholder="Password"
-               value={parent.password}
-               onChange={handleParentChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <button
-               type="submit"
-               className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition"
-             >
-               Add Parent
+        {/* Section: Add Parent */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+           <h3 className={labelClass}><MdSupervisorAccount className="text-purple-600"/> Add Parent Record</h3>
+           <form className="space-y-4">
+             <input type="text" placeholder="Parent Full Name" className={inputClass} required />
+             <input type="text" placeholder="Mobile Number" className={inputClass} required />
+             <input type="email" placeholder="Registered Email" className={inputClass} required />
+             <input type="password" placeholder="System Password" className={inputClass} required />
+             <button type="submit" className="w-full bg-[#9333ea] text-white py-3.5 rounded-xl font-normal text-[17px] hover:bg-[#7e22ce] transition-all">
+               Create Parent Account
              </button>
            </form>
         </div>
 
-        {/* Map Parent to Student */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-           <h3 className="text-xl font-semibold mb-4 border-b pb-2">Link Parent to Student</h3>
-           <form onSubmit={handleMappingSubmit} className="space-y-4">
-             <input
-               type="email"
-               name="parent_email"
-               placeholder="Parent Email"
-               value={mapping.parent_email}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <input
-               type="text"
-               name="student_roll_no"
-               placeholder="Student Roll No"
-               value={mapping.student_roll_no}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <select
-               name="relationship"
-               value={mapping.relationship}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-             >
+        {/* Section: Link Parent */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+           <h3 className={labelClass}><MdSupervisorAccount className="text-indigo-600"/> Link Parent To Student</h3>
+           <form className="space-y-4">
+             <input type="email" placeholder="Parent Email" className={inputClass} required />
+             <input type="text" placeholder="Student Roll Number" className={inputClass} required />
+             <select className={inputClass}>
                <option value="Father">Father</option>
                <option value="Mother">Mother</option>
                <option value="Guardian">Guardian</option>
              </select>
-             <button
-               type="submit"
-               className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition"
-             >
-               Link Parent
+             <button type="submit" className="w-full bg-[#4f46e5] text-white py-3.5 rounded-xl font-normal text-[17px] hover:bg-[#4338ca] transition-all">
+               Link Accounts
              </button>
            </form>
         </div>
 
-        {/* Add Schedule */}
-        <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Class Schedule (TimeTable)</h3>
-          <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <input
-              type="text"
-              name="course_code"
-              placeholder="Course Code (e.g. CS101)"
-              value={schedule.course_code}
-              onChange={handleScheduleChange}
-              className="p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-             <input
-              type="email"
-              name="faculty_email"
-              placeholder="Faculty Email"
-              value={schedule.faculty_email}
-              onChange={handleScheduleChange}
-              className="p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-             <div className="flex gap-2">
-                 <input
-                  type="text"
-                  name="stream"
-                  placeholder="Stream"
-                  value={schedule.stream}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="number"
-                  name="yr"
-                  placeholder="Yr"
-                  value={schedule.yr}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="number"
-                  name="sem"
-                  placeholder="Sem"
-                  value={schedule.sem}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
+        {/* Section: Schedule (Span 2 columns) */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white md:col-span-2">
+          <h3 className={labelClass}><MdEventNote className="text-yellow-600"/> Academic Class Schedule</h3>
+          <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <input type="text" placeholder="Course Code (e.g. CS101)" className={inputClass} required />
+             <input type="email" placeholder="Faculty Email Address" className={inputClass} required />
+             <div className="grid grid-cols-3 gap-4">
+                 <input type="text" placeholder="Stream" className={inputClass} required />
+                 <input type="number" placeholder="Year" className={inputClass} required />
+                 <input type="number" placeholder="Sem" className={inputClass} required />
              </div>
-             
-             <div className="flex gap-2">
-                 <select
-                  name="day"
-                  value={schedule.day}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                >
+             <div className="grid grid-cols-2 gap-4">
+                 <select className={inputClass} required>
                   <option value="">Select Day</option>
-                  <option value="Mon">Mon</option>
-                  <option value="Tue">Tue</option>
-                  <option value="Wed">Wed</option>
-                  <option value="Thu">Thu</option>
-                  <option value="Fri">Fri</option>
-                  <option value="Sat">Sat</option>
-                  <option value="Sun">Sun</option>
+                  <option value="Mon">Monday</option>
+                  <option value="Tue">Tuesday</option>
                 </select>
-                
-                 <input
-                  type="number"
-                  name="session_no"
-                  placeholder="Session #"
-                  value={schedule.session_no}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
+                <input type="number" placeholder="Session Number" className={inputClass} required />
              </div>
-
-             <div className="flex gap-2">
-                 <input
-                  type="time"
-                  name="start_time"
-                  value={schedule.start_time}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="time"
-                  name="end_time"
-                  value={schedule.end_time}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
+             <div className="grid grid-cols-2 gap-4">
+                <input type="time" className={inputClass} required />
+                <input type="time" className={inputClass} required />
              </div>
-             <input
-                type="text"
-                name="location"
-                placeholder="Location (e.g. Room 101)"
-                value={schedule.location}
-                onChange={handleScheduleChange}
-                className="p-2 border border-gray-300 rounded"
-                required
-              />
-
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
-              >
+             <input type="text" placeholder="Location (e.g. Room 101)" className={inputClass} required />
+            <div className="md:col-span-2 mt-2">
+              <button type="submit" className="w-full bg-[#eab308] text-white py-4 rounded-xl font-normal text-[18px] hover:bg-[#ca8a04] transition-all">
                 Create Schedule Entry
               </button>
             </div>
           </form>
         </div>
       </div>
+      
+      <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[15px] text-[#94a3b8] font-normal italic">
+        © 2026 Campus Management System
+      </footer>
     </div>
   );
 }

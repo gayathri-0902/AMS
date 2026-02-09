@@ -8,7 +8,8 @@ import {
   HiOutlineBookOpen, 
   HiOutlineArrowRight,
   HiOutlineLogout,
-  HiOutlineUser
+  HiOutlineUser,
+  HiOutlineSparkles // New icon for the AI feature
 } from "react-icons/hi";
 
 const StudentDashboard = () => {
@@ -25,12 +26,8 @@ const StudentDashboard = () => {
     let [hours, minutes] = timeString.split(':');
     let h = parseInt(hours);
     
-    /** * FIX: If the hour is between 1 and 7, it's an afternoon class (PM).
-     * If it's 12 or higher (13, 14, etc.), it's also PM.
-     */
     const ampm = (h >= 12 || (h >= 1 && h <= 7)) ? 'PM' : 'AM';
     
-    // Convert to 12-hour display format
     let displayHours = h % 12;
     displayHours = displayHours ? displayHours : 12; 
     
@@ -90,7 +87,7 @@ const StudentDashboard = () => {
     <div className="min-h-screen bg-[#f8f9fa] p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- HEADER (CLEANED - NO TABLE GROUPING) --- */}
+        {/* --- HEADER --- */}
         <header className="flex justify-between items-center mb-10 py-2">
           <div className="flex items-center space-x-4">
             <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-md">
@@ -107,13 +104,23 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          <button 
-            onClick={logout}
-            className="flex items-center space-x-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white transition-all border border-red-100 uppercase"
-          >
-            <span>LOGOUT</span>
-            <HiOutlineLogout className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* --- NEW ACADEMIC AI BUTTON --- */}
+            <button 
+              className="flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all border border-blue-100 uppercase"
+            >
+              <HiOutlineSparkles className="w-4 h-4" />
+              <span>Academic AI</span>
+            </button>
+
+            <button 
+              onClick={logout}
+              className="flex items-center space-x-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white transition-all border border-red-100 uppercase"
+            >
+              <span>LOGOUT</span>
+              <HiOutlineLogout className="w-4 h-4" />
+            </button>
+          </div>
         </header>
 
         {/* Welcome Section */}

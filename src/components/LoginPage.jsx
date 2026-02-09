@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
+import { 
+  MdAdminPanelSettings, 
+  MdSchool, 
+  MdSupervisorAccount, 
+  MdCastForEducation,
+  MdPerson
+} from "react-icons/md";
 
 function LoginPage() {
   const [activeTab, setActiveTab] = useState("Faculty");
@@ -21,14 +28,8 @@ function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // Sends role (admin, faculty, student, or parent) to AuthContext
-      await login(
-        activeTab.toLowerCase(),
-        credentials.identifier,
-        credentials.password
-      );
+      await login(activeTab.toLowerCase(), credentials.identifier, credentials.password);
     } catch (error) {
       alert(error.message || "Invalid Credentials");
     } finally {
@@ -36,12 +37,31 @@ function LoginPage() {
     }
   };
 
+  const getRoleIcon = () => {
+    const iconStyle = { color: "#94a3b8" };
+    switch (activeTab) {
+      case "Admin": 
+        return <MdAdminPanelSettings size={26} style={iconStyle} />;
+      case "Faculty": 
+        return <MdCastForEducation size={26} style={iconStyle} />;
+      case "Student": 
+        return <MdSchool size={26} style={iconStyle} />;
+      case "Parent": 
+        return <MdSupervisorAccount size={26} style={iconStyle} />;
+      default: 
+        return <MdPerson size={26} style={iconStyle} />;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5] p-4 font-sans">
-      <div className="w-full max-w-[440px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[32px] p-10 flex flex-col items-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5] p-6 font-serif">
+      {/* BOX UPDATE: 
+          max-w-[520px] makes it wider for a horizontal desktop feel.
+          Removed min-height to prevent vertical stretching.
+      */}
+      <div className="w-full max-w-[520px] bg-white shadow-[0_10px_40px_rgba(0,0,0,0.06)] rounded-[32px] p-12 flex flex-col items-center">
         
-        {/* LOGO UPDATE: changed to logo.jpeg */}
-        <div className="mb-4">
+        <div className="mb-6">
           <img 
             src="/logo.jpeg" 
             alt="AIMSCS Logo" 
@@ -49,17 +69,16 @@ function LoginPage() {
           />
         </div>
 
-        <h1 className="text-[22px] font-bold text-[#1e293b] mb-8">
-          Attendance Hub
+        <h1 className="text-[30px] font-normal text-[#2b2b2b] mb-10 capitalize text-center leading-tight">
+          Attendance Management System
         </h1>
 
-        {/* Updated Tab Bar with Parent */}
-        <div className="w-full flex bg-[#e2e8f0] p-1.5 rounded-2xl mb-8">
+        <div className="w-full flex bg-[#e2e8f0] p-1.5 rounded-2xl mb-10">
           {["Admin", "Faculty", "Student", "Parent"].map((tab) => (
             <button
               key={tab}
               type="button"
-              className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 ${
+              className={`flex-1 py-3 text-base font-bold rounded-xl transition-all duration-200 ${
                 activeTab === tab
                   ? "bg-[#3b82f6] text-white shadow-md"
                   : "text-[#64748b] hover:text-[#1e293b]"
@@ -71,20 +90,25 @@ function LoginPage() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="w-full space-y-5">
-          <input
-            type="text"
-            name="identifier"
-            placeholder={
-              activeTab === "Student" ? "Roll Number" : 
-              activeTab === "Parent" ? "Registered Email" : 
-              `${activeTab} Username`
-            }
-            value={credentials.identifier}
-            onChange={handleInputChange}
-            className="w-full px-5 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-gray-700 placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-            required
-          />
+        <form onSubmit={handleSubmit} className="w-full space-y-6">
+          <div className="relative">
+            <input
+              type="text"
+              name="identifier"
+              placeholder={
+                activeTab === "Student" ? "Roll Number" : 
+                activeTab === "Parent" ? "Registered Email" : 
+                `${activeTab} Username`
+              }
+              value={credentials.identifier}
+              onChange={handleInputChange}
+              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] font-normal placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-serif"
+              required
+            />
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-80">
+              {getRoleIcon()}
+            </div>
+          </div>
 
           <div className="relative">
             <input
@@ -93,35 +117,34 @@ function LoginPage() {
               placeholder="Password"
               value={credentials.password}
               onChange={handleInputChange}
-              className="w-full px-5 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-gray-700 placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              className="w-full px-6 py-4 bg-white border border-[#e2e8f0] rounded-2xl text-[#2b2b2b] text-[18px] font-normal placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-serif"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
+              className="absolute right-6 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
             >
-              {showPassword ? <HiOutlineEyeOff size={22} /> : <HiOutlineEye size={22} />}
+              {showPassword ? <HiOutlineEyeOff size={24} /> : <HiOutlineEye size={24} />}
             </button>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-blue-100 hover:bg-[#2563eb] active:scale-[0.98] transition-all disabled:opacity-70"
+            className="w-full bg-[#3b82f6] text-white py-4 rounded-2xl font-normal text-[20px] shadow-lg shadow-blue-100 hover:bg-[#2563eb] active:scale-[0.98] transition-all disabled:opacity-70 font-serif mt-4"
             disabled={loading}
           >
             {loading ? "Verifying..." : "Login"}
           </button>
         </form>
 
-        <div className="mt-8 text-sm text-[#64748b]">
+        <div className="mt-10 text-base text-[#64748b]">
           Forgot <span className="text-[#3b82f6] font-bold cursor-pointer hover:underline">Password?</span>
         </div>
       </div>
 
-      {/* Corrected year to 2026 */}
-      <footer className="mt-8 text-sm text-[#94a3b8] font-medium">
-        © 2026 Attendance Hub
+      <footer className="mt-10 text-[15px] text-[#94a3b8] font-normal italic">
+        © 2026 Campus Management System
       </footer>
     </div>
   );

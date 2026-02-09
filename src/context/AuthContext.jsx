@@ -6,7 +6,9 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// --- REDIRECT LOGIC UPDATED FOR PARENT ---
+/**
+ * HELPER: Determines the redirect URL
+ */
 const redirectToDashboard = (role, id) => {
   switch (role) {
     case "faculty":
@@ -14,11 +16,11 @@ const redirectToDashboard = (role, id) => {
     case "student":
       return `/student-dashboard/${id}`;
     case "parent":
-      return `/parent-dashboard/${id}`; // Added Parent Route
+      return `/parent-dashboard/${id}`;
     case "admin":
       return "/admin-dashboard";
     default:
-      return "/";
+      return "/login";
   }
 };
 
@@ -26,129 +28,114 @@ export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({
     isAuthenticated: false,
     role: null,
+    userId: null,
     facultyId: null,
     studentId: null,
-    parentId: null, // Added Parent ID
+    parentId: null,
+    sectionId: null,
+    name: null,
   });
   const navigate = useNavigate();
 
+  // --- RESTORE SESSION ON REFRESH ---
   useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    const storedFacultyId = localStorage.getItem("facultyId");
-    const storedStudentId = localStorage.getItem("studentId");
-    const storedParentId = localStorage.getItem("parentId"); // Added Parent storage check
+    const storedAuth = {
+      role: localStorage.getItem("role"),
+      userId: localStorage.getItem("userId"),
+      facultyId: localStorage.getItem("facultyId"),
+      studentId: localStorage.getItem("studentId"),
+      parentId: localStorage.getItem("parentId"),
+      sectionId: localStorage.getItem("sectionId"),
+      name: localStorage.getItem("name"),
+    };
 
-    if (storedRole) {
+    if (storedAuth.role) {
       setAuth({
         isAuthenticated: true,
-        role: storedRole,
-        facultyId: storedFacultyId,
-        studentId: storedStudentId,
-        parentId: storedParentId,
+        role: storedAuth.role,
+        userId: storedAuth.userId,
+        facultyId: storedAuth.facultyId || null,
+        studentId: storedAuth.studentId || null,
+        parentId: storedAuth.parentId || null,
+        sectionId: storedAuth.sectionId || null,
+        name: storedAuth.name || null,
       });
 
-      // Redirect to appropriate dashboard if user is already logged in
-      if (window.location.pathname === "/login") {
-        navigate(
-          redirectToDashboard(storedRole, storedFacultyId || storedStudentId || storedParentId)
-        );
+      // If they are on the login page but have a session, push them to their dashboard
+      if (window.location.pathname === "/login" || window.location.pathname === "/") {
+        const id = storedAuth.facultyId || storedAuth.studentId || storedAuth.parentId || storedAuth.userId;
+        navigate(redirectToDashboard(storedAuth.role, id));
       }
     }
   }, [navigate]);
 
-  // --- LOGIN HANDLER UPDATED FOR NEW UI ROLES ---
+  // --- LOGIN HANDLER ---
   const login = async (role, identifier, password) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/login`,
-        {
-          role, // This will be 'admin', 'faculty', 'student', or 'parent' from the new UI
-          identifier,
-          password,
-        }
-      );
-
-      // Extracting IDs from backend response
-      const { facultyId, studentId, parentId, sectionId } = response.data;
-
-      setAuth({
-        isAuthenticated: true,
+      // Note: Use your environment variable or fallback to localhost
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+      
+      const response = await axios.post(`${baseUrl}/api/login`, {
         role,
+        identifier,
+        password,
+      });
+
+      const { userId, facultyId, studentId, parentId, sectionId, name, message } = response.data;
+
+      // 1. Prepare global state
+      const authState = {
+        isAuthenticated: true,
+        role: response.data.role, // Use role from server response for accuracy
+        userId: userId,
         facultyId: facultyId || null,
         studentId: studentId || null,
         parentId: parentId || null,
         sectionId: sectionId || null,
-      });
+        name: name || null,
+      };
 
-      // Save user data in local storage
-      localStorage.setItem("role", role);
+      setAuth(authState);
+
+      // 2. Persist to Local Storage
+      localStorage.setItem("role", authState.role);
+      localStorage.setItem("userId", userId || "");
       localStorage.setItem("facultyId", facultyId || "");
       localStorage.setItem("studentId", studentId || "");
       localStorage.setItem("parentId", parentId || "");
       localStorage.setItem("sectionId", sectionId || "");
+      localStorage.setItem("name", name || "");
 
-      // Use the helper to determine which ID to pass for redirection
-      const targetId = facultyId || studentId || parentId;
-
-      if (role === "admin") {
-        navigate(redirectToDashboard(role));
-      } else if (targetId) {
-        navigate(redirectToDashboard(role, targetId));
-      }
+      // 3. Navigate
+      const targetId = facultyId || studentId || parentId || userId;
+      navigate(redirectToDashboard(authState.role, targetId));
       
+      return response.data;
     } catch (error) {
-      console.error("Login error:", error.response?.data?.message || error);
+      console.error("Login error:", error.response?.data?.message || error.message);
       throw new Error(error.response?.data?.message || "Login failed");
     }
   };
 
-  // --- LOGOUT HANDLER (Cleaned up all IDs) ---
+  // --- LOGOUT HANDLER ---
   const logout = () => {
-    localStorage.removeItem("role");
-    localStorage.removeItem("facultyId");
-    localStorage.removeItem("studentId");
-    localStorage.removeItem("parentId");
-    localStorage.removeItem("sectionId");
-    
+    // Clear State
     setAuth({
       isAuthenticated: false,
       role: null,
+      userId: null,
       facultyId: null,
       studentId: null,
       parentId: null,
+      sectionId: null,
+      name: null,
     });
 
+    // Clear Storage
+    localStorage.clear();
+
+    // Send back to login
     navigate("/login");
-  };
-
-  const ProtectedRoute = ({ allowedRoles, children }) => {
-    if (!auth.isAuthenticated) {
-      return <Navigate to="/login" replace />;
-    }
-
-    if (allowedRoles && !allowedRoles.includes(auth.role)) {
-      return (
-        <Navigate
-          to={redirectToDashboard(auth.role, auth.facultyId || auth.studentId || auth.parentId)}
-          replace
-        />
-      );
-    }
-
-    return children;
-  };
-
-  const PublicRoute = ({ children }) => {
-    if (auth.isAuthenticated) {
-      return (
-        <Navigate 
-          to={redirectToDashboard(auth.role, auth.facultyId || auth.studentId || auth.parentId)} 
-          replace 
-        />
-      );
-    }
-
-    return children;
   };
 
   return (
@@ -157,8 +144,6 @@ export const AuthProvider = ({ children }) => {
         auth,
         login,
         logout,
-        ProtectedRoute,
-        PublicRoute,
       }}
     >
       {children}
