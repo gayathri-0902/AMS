@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -33,22 +33,15 @@ export const AuthProvider = ({ children }) => {
     const storedFacultyId = localStorage.getItem("facultyId");
     const storedStudentId = localStorage.getItem("studentId");
 
-    if (storedRole) {
+    if (storedRole && !auth.isAuthenticated) {
       setAuth({
         isAuthenticated: true,
         role: storedRole,
         facultyId: storedFacultyId,
         studentId: storedStudentId,
       });
-
-      // Redirect to appropriate dashboard if user is already logged in
-      if (window.location.pathname === "/login") {
-        navigate(
-          redirectToDashboard(storedRole, storedFacultyId || storedStudentId)
-        );
-      }
     }
-  }, [navigate]);
+  }, [auth.isAuthenticated]);
 
   // Login handler
   const login = async (role, identifier, password) => {
@@ -104,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       studentId: null,
     });
 
-    navigate("/login");
+    navigate("/");
   };
 
   // const ProtectedRoute = ({ allowedRoles, children }) => {
@@ -120,13 +113,19 @@ export const AuthProvider = ({ children }) => {
   // };
   const ProtectedRoute = ({ allowedRoles, children }) => {
     if (!auth.isAuthenticated) {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
     }
 
     if (allowedRoles && !allowedRoles.includes(auth.role)) {
+      const id =
+        auth.role === "faculty"
+          ? auth.facultyId
+          : auth.role === "student"
+          ? auth.studentId
+          : null;
       return (
         <Navigate
-          to={redirectToDashboard(auth.role, auth.facultyId || auth.studentId)}
+          to={redirectToDashboard(auth.role, id)}
           replace
         />
       );
@@ -136,10 +135,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const PublicRoute = ({ children }) => {
-    if (auth.isAuthenticated) {
-      return <Navigate to={redirectToDashboard(auth.role)} replace />;
-    }
+  const location = useLocation();
 
+  if (auth.isAuthenticated) {
+      const id =
+        auth.role === "faculty"
+          ? auth.facultyId
+          : auth.role === "student"
+          ? auth.studentId
+          : null;
+
+      const target = redirectToDashboard(auth.role, id);
+
+      if (location.pathname !== target) {
+        return <Navigate to={target} replace />;
+      }
+    }
     return children;
   };
 

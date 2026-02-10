@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import AdminDashboard from "./components/AdminDashboard";
+import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 import { useAuth } from "./context/AuthContext";
@@ -29,6 +30,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/timetable"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminTimetable />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/faculty-dashboard/:facultyId"
           element={
             <ProtectedRoute allowedRoles={["faculty"]}>
@@ -44,7 +53,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
         <Route
           path="/student/feedback/:subjectOfferingId"
           element={
@@ -53,6 +61,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

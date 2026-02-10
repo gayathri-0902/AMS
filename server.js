@@ -850,8 +850,14 @@ app.post("/api/admin/setup-faculty", async (req, res) => {
       }
     }
 
-    return res.status(201).json({
-      message: "Users and Faculty processed successfully",
+    const nothingCreated =
+      summary.users_created.length === 0 &&
+      summary.faculty_created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Users and faculty already exist. No operation performed."
+        : "Users and faculty processed successfully",
       summary
     });
 
@@ -898,13 +904,18 @@ app.post("/api/admin/ensure-course-masters", async (req, res) => {
       created.push(newCourse.course_code);
     }
 
-    return res.status(200).json({
-      message: "Course master check completed",
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "All course masters already exist. No operation performed."
+        : "Course masters processed successfully",
       created_count: created.length,
       skipped_count: skipped.length,
       created,
       skipped
     });
+
   } catch (error) {
     console.error("Error ensuring course masters:", error);
     return res.status(500).json({
@@ -980,8 +991,12 @@ app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
       created.push(course.course_code);
     }
 
-    return res.status(201).json({
-      message: "Subject offerings processed successfully",
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Subject offerings already exist. No operation performed."
+        : "Subject offerings processed successfully",
       yr_sem_id,
       created_count: created.length,
       skipped_count: skipped.length,
@@ -1085,8 +1100,12 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
       created.push(course_code);
     }
 
-    return res.status(201).json({
-      message: "Faculty assignments processed successfully",
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Faculty assignments already exist. No operation performed."
+        : "Faculty assignments processed successfully",
       created_count: created.length,
       skipped_count: skipped.length,
       missing_count: missing.length,
@@ -1094,6 +1113,7 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
       skipped,
       missing
     });
+
 
   } catch (error) {
     console.error("Error ensuring faculty assignments:", error);
@@ -1225,8 +1245,12 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
       });
     }
 
-    return res.status(201).json({
-      message: "Timetable processed successfully",
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Timetable already exists. No operation performed."
+        : "Timetable processed successfully",
       created_count: created.length,
       skipped_count: skipped.length,
       missing_count: missing.length,

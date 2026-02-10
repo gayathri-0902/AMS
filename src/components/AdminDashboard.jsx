@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate, Navigate } from "react-router-dom";
 // import { HiOutlineLogout } from "react-icons/hi"; // Icons not installed, using text
 
 function AdminDashboard() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   
   // Faculty Form State
   const [faculty, setFaculty] = useState({
@@ -160,6 +162,14 @@ function AdminDashboard() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold text-blue-600">Admin Dashboard</h2>
+
+        <button
+            onClick={() => navigate("/admin/timetable")}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+          >
+          Add Timetable
+          </button>
+        
         <button
            onClick={logout}
            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
