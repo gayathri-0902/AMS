@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 
 const AdminTimetable = () => {
   /* ================= BATCH INFO ================= */
@@ -69,17 +70,39 @@ const AdminTimetable = () => {
   });
 
 
-  const saveBatchInfo = () => {
+  const saveBatchInfo = async () => {
     const { yr, sem, stream, academic_yr } = batchInfo;
 
     if (!yr || !sem || !stream.trim() || !academic_yr.trim()) {
-      alert("Fill all batch info fields");
+      alert("Fill all batch fields");
       return;
     }
 
-    setBatchSaved(true);
-    setBatchLocked(true);
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-yrsem`,
+        buildBatchPayload()
+      );
+
+      // 200 → created
+      alert(res.data.message);
+
+      setBatchSaved(true);
+      setBatchLocked(true);
+
+    } catch (err) {
+      if (err.response?.status === 409) {
+        // already exists → still valid
+        alert(err.response.data.message);
+
+        setBatchSaved(true);
+        setBatchLocked(true);
+      } else {
+        alert("Batch setup failed");
+      }
+    }
   };
+
 
 
   /* ================= API CALL FUNCTIONS ====================*/
@@ -89,9 +112,9 @@ const AdminTimetable = () => {
 
   const setupFacultyAndMappings = async () => {
   try {
-    await axios.post("/api/admin/setup-faculty", buildFacultyPayload());
-    await axios.post("/api/admin/ensure-subject-offerings", buildSubjectOfferingPayload());
-    await axios.post("/api/admin/ensure-faculty-assignments", buildSubjectOfferingPayload());
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/setup-faculty`, buildFacultyPayload());
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-subject-offerings`, buildSubjectOfferingPayload());
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-faculty-assignments`, buildSubjectOfferingPayload());
 
     setFacultySetupDone(true);
     alert("Faculty & subject setup completed");
@@ -111,7 +134,7 @@ const AdminTimetable = () => {
 
     try {
       const res = await axios.post(
-        "/api/admin/ensure-course-masters",
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-course-masters`,
         payload
       );
       alert(res.data.message);
@@ -127,7 +150,7 @@ const AdminTimetable = () => {
     const saveSubjectOfferings = async () => {
     try {
       const res = await axios.post(
-        "/api/admin/ensure-subject-offerings",
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-subject-offerings`,
         buildSubjectOfferingPayload()
       );
       alert(res.data.message);
@@ -143,7 +166,7 @@ const AdminTimetable = () => {
   const saveTimetable = async () => {
     try {
       const res = await axios.post(
-        "/api/admin/ensure-timetable",
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/ensure-timetable`,
         buildTimetablePayload()
       );
       alert(res.data.message);

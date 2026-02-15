@@ -1268,6 +1268,61 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
 });
 
 
+app.post("/api/admin/ensure-yrsem", async (req, res) => {
+  try {
+    const { batch_info } = req.body;
+
+    if (!batch_info) {
+      return res.status(400).json({
+        message: "batch_info missing"
+      });
+    }
+
+    const { yr, sem, stream, academic_yr } = batch_info;
+
+    if (!yr || !sem || !stream || !academic_yr) {
+      return res.status(400).json({
+        message: "yr, sem, stream, academic_yr required"
+      });
+    }
+
+    // 🔎 Check existing
+    const existing = await YrSem.findOne({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        message: "Year-Sem already exists",
+        yr_sem_id: existing._id
+      });
+    }
+
+    // ➕ Create
+    const newYrSem = await YrSem.create({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    return res.status(200).json({
+      message: "Year-Sem created successfully",
+      yr_sem_id: newYrSem._id
+    });
+
+  } catch (error) {
+    console.error("ensure-yrsem error:", error);
+    res.status(500).json({
+      message: "Server error while ensuring yr_sem"
+    });
+  }
+});
+
+
 
 app.listen(3001, () => {
   console.log("Server is running on port 3001");
