@@ -37,43 +37,35 @@ export const AuthProvider = ({ children }) => {
   });
   const navigate = useNavigate();
 
-  // --- RESTORE SESSION ON REFRESH ---
+  // --- FORCE RESET ON STARTUP ---
+  // This ensures the app always starts at the Login page
   useEffect(() => {
-    const storedAuth = {
-      role: localStorage.getItem("role"),
-      userId: localStorage.getItem("userId"),
-      facultyId: localStorage.getItem("facultyId"),
-      studentId: localStorage.getItem("studentId"),
-      parentId: localStorage.getItem("parentId"),
-      sectionId: localStorage.getItem("sectionId"),
-      name: localStorage.getItem("name"),
-    };
+    // 1. Clear State
+    setAuth({
+      isAuthenticated: false,
+      role: null,
+      userId: null,
+      facultyId: null,
+      studentId: null,
+      parentId: null,
+      sectionId: null,
+      name: null,
+    });
 
-    if (storedAuth.role) {
-      setAuth({
-        isAuthenticated: true,
-        role: storedAuth.role,
-        userId: storedAuth.userId,
-        facultyId: storedAuth.facultyId || null,
-        studentId: storedAuth.studentId || null,
-        parentId: storedAuth.parentId || null,
-        sectionId: storedAuth.sectionId || null,
-        name: storedAuth.name || null,
-      });
+    // 2. Clear Storage so no old session remains
+    localStorage.clear();
 
-      // If they are on the login page but have a session, push them to their dashboard
-      if (window.location.pathname === "/login" || window.location.pathname === "/") {
-        const id = storedAuth.facultyId || storedAuth.studentId || storedAuth.parentId || storedAuth.userId;
-        navigate(redirectToDashboard(storedAuth.role, id));
-      }
+    // 3. Force navigation to login
+    if (window.location.pathname !== "/login") {
+      navigate("/login", { replace: true });
     }
-  }, [navigate]);
+  }, []); // Empty dependency array runs only once when app starts
 
   // --- LOGIN HANDLER ---
   const login = async (role, identifier, password) => {
     try {
-      // Note: Use your environment variable or fallback to localhost
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+      // Note: Using your environment variable VITE_API_BASE_URL (defaults to 3002 as per your .env)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
       
       const response = await axios.post(`${baseUrl}/api/login`, {
         role,
@@ -81,12 +73,12 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
-      const { userId, facultyId, studentId, parentId, sectionId, name, message } = response.data;
+      const { userId, facultyId, studentId, parentId, sectionId, name } = response.data;
 
       // 1. Prepare global state
       const authState = {
         isAuthenticated: true,
-        role: response.data.role, // Use role from server response for accuracy
+        role: response.data.role, 
         userId: userId,
         facultyId: facultyId || null,
         studentId: studentId || null,
@@ -97,7 +89,7 @@ export const AuthProvider = ({ children }) => {
 
       setAuth(authState);
 
-      // 2. Persist to Local Storage
+      // 2. Persist to Local Storage (Optional: only if you want session to survive minor refreshes AFTER login)
       localStorage.setItem("role", authState.role);
       localStorage.setItem("userId", userId || "");
       localStorage.setItem("facultyId", facultyId || "");

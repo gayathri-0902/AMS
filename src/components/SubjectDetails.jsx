@@ -5,129 +5,154 @@ import { useAuth } from "../context/AuthContext";
 import { 
   HiOutlineArrowLeft, 
   HiOutlineBookOpen, 
-  HiOutlineDocumentText, 
+  HiOutlineDocumentText,
   HiOutlineClipboardList,
   HiOutlineCalendar
 } from "react-icons/hi";
 
 const SubjectDetails = () => {
-  const { id } = useParams();
+  const { id: urlSubjectId } = useParams(); // ID from the URL
   const { auth } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      if (!auth?.studentId) return;
+    const fetchCourseDetails = async () => {
       try {
+        setLoading(true);
+        
+        // Logic: Parents and Students both use the 'id' from the URL to fetch subject info
+        // We also need the Student's ID. 
+        // If a student is logged in, we use auth.studentId.
+        // If a parent is logged in, we should ideally have the student's ID in the URL or state.
+        // For this route, we will assume the URL provides the Subject Offering ID.
+        
+        const targetStudentId = auth.studentId || auth.userId; // Fallback for testing
+
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/student/course-details/${auth.studentId}/${id}`
+          `${API_BASE}/api/student/course-details/${targetStudentId}/${urlSubjectId}`
         );
-        setData(response.data);
+        
+        setCourseData(response.data);
       } catch (err) {
         console.error("Error fetching course details:", err);
+        setError("Unable to load course materials.");
       } finally {
         setLoading(false);
       }
     };
-    fetchDetails();
-  }, [id, auth?.studentId]);
 
-  if (loading) return <div className="p-20 text-center text-blue-600 font-bold">Loading records...</div>;
-  if (!data) return <div className="p-20 text-center">Data not found.</div>;
+    if (urlSubjectId) fetchCourseDetails();
+  }, [urlSubjectId, auth.studentId, API_BASE]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-antiqua">Loading Course...</div>;
+
+  if (error) return (
+    <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 font-antiqua">
+      <div className="bg-white p-8 rounded-[40px] shadow-xl text-center">
+        <p className="text-red-500 font-bold mb-4">{error}</p>
+        <button onClick={() => navigate(-1)} className="text-blue-600 font-bold">Go Back</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua">
       <div className="max-w-6xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center text-blue-600 mb-8 font-bold hover:underline">
+        
+        {/* Navigation */}
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center text-gray-500 hover:text-blue-600 font-bold mb-8 transition-colors"
+        >
           <HiOutlineArrowLeft className="mr-2" /> BACK TO DASHBOARD
         </button>
 
         {/* Course Header */}
-        <div className="bg-white rounded-[32px] p-8 shadow-sm mb-10 border border-gray-100">
-          <h1 className="text-3xl font-bold text-gray-800">{data.course_name}</h1>
-          <p className="text-blue-600 font-bold mt-1 uppercase tracking-wider">{data.course_code}</p>
-          
-          <div className="mt-6 flex flex-wrap gap-4">
-            <div className="bg-blue-50 px-6 py-4 rounded-2xl border border-blue-100">
-              <p className="text-xs text-blue-600 font-bold uppercase">Overall Attendance</p>
-              <h2 className="text-2xl font-bold text-blue-800">{data.attendanceStats?.percentage}%</h2>
+        <div className="bg-white rounded-[40px] p-10 shadow-sm border border-gray-100 mb-8 text-left">
+          <div className="flex items-center space-x-6">
+            <div className="bg-blue-600 p-5 rounded-3xl text-white shadow-lg">
+              <HiOutlineBookOpen className="w-10 h-10" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-extrabold text-gray-900">{courseData?.course_name}</h1>
+              <p className="text-blue-600 font-bold tracking-widest uppercase">{courseData?.course_code}</p>
             </div>
           </div>
         </div>
 
-        {/* Resources Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold flex items-center text-gray-700">
-              <HiOutlineBookOpen className="mr-2 text-blue-500" /> Faculty Notes
-            </h3>
-            {data.notes?.length > 0 ? data.notes.map(note => (
-              <div key={note._id} className="bg-white p-5 rounded-2xl shadow-sm border border-transparent hover:border-blue-200 transition-all">
-                <h4 className="font-bold">{note.title}</h4>
-                <a href={note.file_url} target="_blank" className="text-blue-600 text-sm font-bold flex items-center mt-2">
-                  <HiOutlineDocumentText className="mr-1" /> DOWNLOAD
-                </a>
-              </div>
-            )) : <div className="bg-white/50 p-6 rounded-2xl border-2 border-dashed text-center text-gray-400 italic">No notes uploaded.</div>}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold flex items-center text-gray-700">
-              <HiOutlineClipboardList className="mr-2 text-orange-500" /> Assignments
-            </h3>
-            {data.assignments?.length > 0 ? data.assignments.map(asm => (
-              <div key={asm._id} className="bg-white p-5 rounded-2xl shadow-sm border border-transparent hover:border-orange-200 transition-all">
-                <h4 className="font-bold">{asm.title}</h4>
-                <p className="text-red-500 text-xs font-bold mt-1">Due: {new Date(asm.due_date).toLocaleDateString()}</p>
-              </div>
-            )) : <div className="bg-white/50 p-6 rounded-2xl border-2 border-dashed text-center text-gray-400 italic">No pending assignments.</div>}
-          </div>
-        </div>
-
-        {/* --- ATTENDANCE TABLE SECTION --- */}
-        <div className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
-            <h3 className="text-xl font-bold flex items-center text-gray-700">
-              <HiOutlineCalendar className="mr-2 text-green-500" /> Attendance History
-            </h3>
-            <span className="text-sm font-bold text-gray-400 uppercase tracking-tighter">Daily Log</span>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Session Type</th>
-                  <th className="p-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {data.attendanceRecords?.length > 0 ? data.attendanceRecords.map((record, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-5 text-gray-700 font-medium">
-                      {new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="p-5 text-gray-500 italic">{record.session_type || "Lecture"}</td>
-                    <td className="p-5">
-                      <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase ${
-                        record.status === "Present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}>
-                        {record.status}
-                      </span>
-                    </td>
-                  </tr>
+          {/* Left: Attendance Summary */}
+          <div className="lg:col-span-1 space-y-8">
+            <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 text-left">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <HiOutlineCalendar className="mr-2 text-blue-600" /> Attendance
+              </h3>
+              <div className="text-5xl font-black text-gray-900 mb-2">
+                {courseData?.attendanceStats?.percentage}%
+              </div>
+              <p className="text-gray-400 text-sm font-bold uppercase mb-6">Current Standing</p>
+              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-full" 
+                  style={{ width: `${courseData?.attendanceStats?.percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Notes and Assignments */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Notes Section */}
+            <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 text-left">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <HiOutlineDocumentText className="mr-2 text-blue-600" /> Class Notes
+              </h3>
+              <div className="space-y-4">
+                {courseData?.notes?.length > 0 ? courseData.notes.map((note, index) => (
+                  <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div>
+                      <p className="font-bold text-gray-800">{note.title}</p>
+                      <p className="text-xs text-gray-400">{new Date(note.upload_date).toLocaleDateString()}</p>
+                    </div>
+                    <a href={note.file_url} target="_blank" rel="noreferrer" className="text-blue-600 font-bold text-sm">VIEW</a>
+                  </div>
                 )) : (
-                  <tr>
-                    <td colSpan="3" className="p-10 text-center text-gray-400 italic">No attendance records found.</td>
-                  </tr>
+                  <p className="text-gray-400 italic">No notes uploaded yet.</p>
                 )}
-              </tbody>
-            </table>
+              </div>
+            </div>
+
+            {/* Assignments Section */}
+            <div className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 text-left">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <HiOutlineClipboardList className="mr-2 text-blue-600" /> Assignments
+              </h3>
+              <div className="space-y-4">
+                {courseData?.assignments?.length > 0 ? courseData.assignments.map((task, index) => (
+                  <div key={index} className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-gray-800">{task.title}</p>
+                      <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-bold">DUE: {new Date(task.due_date).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-3">{task.instructions}</p>
+                    {task.file_url && <a href={task.file_url} className="text-xs text-blue-600 font-bold underline">DOWNLOAD ATTACHMENT</a>}
+                  </div>
+                )) : (
+                  <p className="text-gray-400 italic">No pending assignments.</p>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

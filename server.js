@@ -30,7 +30,6 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3002;
 
 // --- Automated Port Management (Linux Fix) ---
-// This prevents the "Address already in use" crash you experienced
 if (process.env.NODE_ENV !== 'production') {
   exec(`fuser -k ${PORT}/tcp`, (err) => {
     if (!err) console.log(`Cleared stale processes on port ${PORT}`);
@@ -40,7 +39,7 @@ if (process.env.NODE_ENV !== 'production') {
 // --- Middleware ---
 app.use(
   cors({
-    origin: ["http://localhost:5173"], // Matches your Vite frontend port
+    origin: ["http://localhost:5173"], 
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -61,14 +60,12 @@ mongoose
 
 // --- ROUTES ---
 
-// 1. Login Endpoint
+// 1. Login Endpoint (MODIFIED: Ensures Parent Profile ID is used for mapping)
 app.post("/api/login", async (req, res) => {
   const { body } = req;
   try {
-    // Search by username primarily
     let user = await User.findOne({ user_name: body.identifier });
     
-    // Fallback for students using Roll Number
     if (!user && body.role === "student") {
       const student = await Student.findOne({ roll_no: body.identifier });
       if (student) {
@@ -95,7 +92,6 @@ app.post("/api/login", async (req, res) => {
       userId: user._id,
     };
 
-    // Role-specific data fetching
     if (user.role === "admin") {
       const admin = await Admin.findOne({ user_id: user._id });
       if (admin) responseData.adminId = admin._id;
@@ -121,6 +117,7 @@ app.post("/api/login", async (req, res) => {
     } else if (user.role === "parent") {
       const parent = await Parent.findOne({ user_id: user._id });
       if (parent) {
+        // Fix: Use the Parent Profile ID (...7e8), not the user_id (...7e4)
         responseData.parentId = parent._id;
         responseData.name = parent.name;
       }
@@ -284,55 +281,70 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
   }
 });
 
-// 5. Parent Dashboard Route
+
+// 5. Parent Dashboard Route (STABILIZED)
 app.get("/api/parent/dashboard/:parentId", async (req, res) => {
   try {
     const { parentId } = req.params;
-    const mapping = await ParentStudentMap.findOne({ parent_id: parentId }).populate("student_id");
-    if (!mapping || !mapping.student_id) {
-      return res.status(404).json({ message: "No linked student found" });
+    
+    // 1. Find the Parent Profile using either User ID or Profile ID
+    const parentProfile = await Parent.findOne({ 
+      $or: [{ _id: parentId }, { user_id: parentId }] 
+    });
+
+    if (!parentProfile) {
+      return res.status(404).json({ message: "Parent profile not found." });
     }
 
-    const student = mapping.student_id;
-    const enrollment = await StudentEnrollment.findOne({ 
-      student_id: student._id, 
-      status: "active" 
-    }).populate("yr_sem_id");
+    // 2. Find student mappings
+    const mappings = await ParentStudentMap.find({ parent_id: parentProfile._id }).populate("student_id");
+    
+    // If no mappings exist, send empty array instead of crashing
+    if (!mappings || mappings.length === 0) {
+      return res.json([]); 
+    }
 
-    const records = await Attendance.find({ student_id: student._id })
-      .populate({
-        path: "class_session_id",
-        populate: { path: "subject_offering_id", populate: { path: "course_master_id" } }
-      })
-      .sort({ createdAt: -1 })
-      .limit(5);
+    const childrenData = await Promise.all(mappings.map(async (mapping) => {
+      const student = mapping.student_id;
+      if (!student) return null; 
 
-    const allRecords = await Attendance.find({ student_id: student._id });
-    const presentCount = allRecords.filter(r => r.status === "Present").length;
-    const percentage = allRecords.length > 0 ? ((presentCount / allRecords.length) * 100).toFixed(1) : 0;
+      // 3. Safe Enrollment Check (Optional Chaining prevents 500 errors)
+      const enrollment = await StudentEnrollment.findOne({ 
+        student_id: student._id, 
+        status: "active" 
+      }).populate("yr_sem_id");
 
-    res.json({
-      studentDetails: {
-        student_name: student.name,
-        student_id_no: student.roll_no,
-        branch_name: enrollment?.yr_sem_id?.stream || "N/A",
-      },
-      attendanceStats: {
-        percentage: percentage,
-        subjectsWithLowAttendance: [] 
-      },
-      recentAttendance: records.map(r => ({
-        class_name: r.class_session_id.subject_offering_id.course_master_id.course_name,
-        date: new Date(r.class_session_id.date).toLocaleDateString(),
-        session_no: r.class_session_id.session_no,
-        status: r.status
-      }))
-    });
+      // 4. Safe Attendance Calculation
+      const allRecords = await Attendance.find({ student_id: student._id });
+      
+      let percentage = "0.0";
+      if (allRecords.length > 0) {
+        const presentCount = allRecords.filter(r => r.status === "Present").length;
+        percentage = ((presentCount / allRecords.length) * 100).toFixed(1);
+      }
+
+      return {
+        studentDetails: {
+          student_id: student._id,
+          student_name: student.name || "Unknown Student",
+          student_id_no: student.roll_no || "N/A",
+          branch_name: enrollment?.yr_sem_id?.stream || "General", 
+        },
+        attendanceStats: {
+          percentage: percentage
+        }
+      };
+    }));
+
+    // Remove any nulls and send to frontend
+    res.json(childrenData.filter(child => child !== null)); 
+
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Dashboard Logic Error:", error);
+    // Sending a JSON error prevents the frontend from hanging
+    res.status(500).json({ message: "Server encountered an error calculating student data." });
   }
 });
-
 // 6. Overall Attendance (Student Perspective)
 app.get("/api/attendance/:studentId", async (req, res) => {
   const { studentId } = req.params;
@@ -686,15 +698,13 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// --- NEW ROUTE: 16. Detailed Course View for Student ---
+// 16. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;
   try {
-    // 1. Get Subject Info
     const subject = await SubjectOffering.findById(subjectOfferingId).populate("course_master_id");
     if (!subject) return res.status(404).json({ message: "Subject not found" });
 
-    // 2. Calculate Attendance for this specific subject
     const sessions = await ClassSession.find({ subject_offering_id: subjectOfferingId });
     const records = await Attendance.find({
       student_id: studentId,
@@ -708,13 +718,11 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
       percentage: records.length > 0 ? ((present / records.length) * 100).toFixed(2) : "0.00"
     };
 
-    // 3. Get Notes
     const notes = await ClassNotes.find({ 
       subject_offering_id: subjectOfferingId, 
       is_visible: true 
     }).sort({ upload_date: -1 });
 
-    // 4. Get Assignments
     const assignments = await Assignment.find({ 
       subject_offering_id: subjectOfferingId, 
       is_active: true 
@@ -734,8 +742,7 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
 });
 
 // --- Server Startup ---
-// Do not use 'const' here because PORT was already declared at line 30
-server = app.listen(PORT, () => {
+let server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 

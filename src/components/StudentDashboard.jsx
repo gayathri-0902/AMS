@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { 
@@ -12,8 +12,10 @@ import {
   HiOutlineSparkles 
 } from "react-icons/hi";
 
-const StudentDashboard = () => {
+// The component now accepts 'overrideId' passed from App.jsx for Parent views
+const StudentDashboard = ({ overrideId }) => {
   const { auth, logout } = useAuth();
+  const { studentId: urlStudentId } = useParams(); // Get ID from URL if available
   const navigate = useNavigate();
   const [timetable, setTimetable] = useState([]);
   const [studentInfo, setStudentInfo] = useState(null); 
@@ -31,8 +33,17 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
+        // LOGIC: Use overrideId (prop), then urlStudentId (URL), then auth.studentId (Login)
+        const targetId = overrideId || urlStudentId || auth?.studentId;
+        
+        if (!targetId) {
+          console.error("No Student ID found");
+          setLoading(false);
+          return;
+        }
+
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${auth.studentId}`
+          `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${targetId}`
         );
         setTimetable(response.data.timetableData || []);
         setStudentInfo(response.data.studentDetails || response.data.student || null);
@@ -42,8 +53,9 @@ const StudentDashboard = () => {
         setLoading(false);
       }
     };
-    if (auth?.studentId) fetchDashboardData();
-  }, [auth?.studentId]);
+
+    fetchDashboardData();
+  }, [auth?.studentId, urlStudentId, overrideId]);
 
   const getAcademicYear = (rollNo) => {
     if (!rollNo || typeof rollNo !== 'string') return "";
@@ -54,7 +66,6 @@ const StudentDashboard = () => {
     const currentMonth = now.getMonth();    // 0 = Jan, 1 = Feb... 5 = June
 
     // Strict Graduation Logic:
-    // Graduation is May 2026. Only show Alumni if Year is > 2026 OR (Year is 2026 AND Month is >= June)
     if (currentYear > 2026 || (currentYear === 2026 && currentMonth >= 5)) {
       return "ALUMNI";
     }
@@ -76,10 +87,10 @@ const StudentDashboard = () => {
     <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- HEADER: Separated Individual Elements --- */}
+        {/* --- HEADER --- */}
         <div className="flex justify-between items-start mb-10">
           
-          {/* LEFT: Student Info (BAR REMOVED) */}
+          {/* LEFT: Student Info */}
           <div className="flex items-center space-x-4 p-2">
             <div className="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg">
               <HiOutlineUser className="w-8 h-8" />
@@ -94,7 +105,7 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT: Logout Button (Independent Block) */}
+          {/* RIGHT: Logout Button */}
           <button 
             onClick={logout}
             className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
