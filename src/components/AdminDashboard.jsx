@@ -7,7 +7,8 @@ import {
   MdSchool, 
   MdSupervisorAccount, 
   MdCastForEducation,
-  MdEventNote
+  MdEventNote,
+  MdArrowForward
 } from "react-icons/md";
 
 function AdminDashboard() {
@@ -20,16 +21,12 @@ function AdminDashboard() {
   });
   const [parent, setParent] = useState({ name: "", email: "", phno: "", password: "" });
   const [mapping, setMapping] = useState({ parent_email: "", student_roll_no: "", relationship: "Father" });
-  const [schedule, setSchedule] = useState({
-    course_code: "", faculty_email: "", stream: "", yr: "", sem: "", day: "", start_time: "", end_time: "", location: "Room 101", session_no: 1,
-  });
 
   // --- Handlers ---
   const handleFacultyChange = (e) => setFaculty({ ...faculty, [e.target.name]: e.target.value });
   const handleStudentChange = (e) => setStudent({ ...student, [e.target.name]: e.target.value });
   const handleParentChange = (e) => setParent({ ...parent, [e.target.name]: e.target.value });
   const handleMappingChange = (e) => setMapping({ ...mapping, [e.target.name]: e.target.value });
-  const handleScheduleChange = (e) => setSchedule({ ...schedule, [e.target.name]: e.target.value });
 
   // --- Submit Logic ---
   const handleFacultySubmit = async (e) => {
@@ -66,15 +63,6 @@ function AdminDashboard() {
       alert("Parent-Student Link Established");
       setMapping({ parent_email: "", student_roll_no: "", relationship: "Father" });
     } catch (err) { alert(err.response?.data?.message || "Error mapping accounts"); }
-  };
-
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/schedule`, schedule);
-      alert("Schedule Entry Created");
-      setSchedule({ course_code: "", faculty_email: "", stream: "", yr: "", sem: "", day: "", start_time: "", end_time: "", location: "Room 101", session_no: 1 });
-    } catch (err) { alert(err.response?.data?.message || "Error creating schedule"); }
   };
 
   // Reusable Styling Constants
@@ -169,41 +157,24 @@ function AdminDashboard() {
            </form>
         </div>
 
-        {/* Section: Schedule */}
-        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white md:col-span-2">
-          <h3 className={labelClass}><MdEventNote size={24} className="text-yellow-600"/> Academic Class Schedule</h3>
-          <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <input type="text" name="course_code" placeholder="Course Code (e.g. CS101)" value={schedule.course_code} onChange={handleScheduleChange} className={inputClass} required />
-             <input type="email" name="faculty_email" placeholder="Faculty Email Address" value={schedule.faculty_email} onChange={handleScheduleChange} className={inputClass} required />
-             <div className="grid grid-cols-3 gap-4">
-                 <input type="text" name="stream" placeholder="Stream" value={schedule.stream} onChange={handleScheduleChange} className={inputClass} required />
-                 <input type="number" name="yr" placeholder="Year" value={schedule.yr} onChange={handleScheduleChange} className={inputClass} required />
-                 <input type="number" name="sem" placeholder="Sem" value={schedule.sem} onChange={handleScheduleChange} className={inputClass} required />
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                 <select name="day" value={schedule.day} onChange={handleScheduleChange} className={inputClass} required>
-                  <option value="">Select Day</option>
-                  <option value="Mon">Monday</option>
-                  <option value="Tue">Tuesday</option>
-                  <option value="Wed">Wednesday</option>
-                  <option value="Thu">Thursday</option>
-                  <option value="Fri">Friday</option>
-                  <option value="Sat">Saturday</option>
-                </select>
-                <input type="number" name="session_no" placeholder="Session No." value={schedule.session_no} onChange={handleScheduleChange} className={inputClass} required />
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <input type="time" name="start_time" value={schedule.start_time} onChange={handleScheduleChange} className={inputClass} required />
-                <input type="time" name="end_time" value={schedule.end_time} onChange={handleScheduleChange} className={inputClass} required />
-             </div>
-             <input type="text" name="location" placeholder="Location (e.g. Room 101)" value={schedule.location} onChange={handleScheduleChange} className={inputClass} required />
-            <div className="md:col-span-2 mt-2">
-              <button type="submit" className="w-full bg-[#eab308] text-white py-4 rounded-xl text-[19px] hover:bg-[#ca8a04] transition-all shadow-md">
-                Create Schedule Entry
-              </button>
-            </div>
-          </form>
+        {/* Section: Manage Schedules Button */}
+        <div className="bg-white p-10 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white md:col-span-2 flex flex-col items-center justify-center space-y-6">
+          <div className="bg-blue-50 p-4 rounded-full">
+            <MdEventNote size={48} className="text-blue-600"/>
+          </div>
+          <div className="text-center">
+            <h3 className="text-[24px] font-bold text-[#2b2b2b]">Academic Timetables</h3>
+            <p className="text-[#94a3b8] mt-2 max-w-md">Configure class timings, assign faculty to rooms, and manage the university's weekly schedule.</p>
+          </div>
+          <button 
+            onClick={() => alert("Redirecting to Schedule Management...")}
+            className="group flex items-center gap-3 bg-[#3b82f6] text-white px-10 py-4 rounded-2xl text-[20px] font-semibold hover:bg-[#2563eb] transition-all shadow-lg hover:shadow-blue-200"
+          >
+            Manage Schedules
+            <MdArrowForward size={24} className="group-hover:translate-x-2 transition-transform" />
+          </button>
         </div>
+
       </div>
       
       <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
