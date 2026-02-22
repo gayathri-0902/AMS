@@ -107,9 +107,6 @@ const AdminTimetable = () => {
 
   /* ================= API CALL FUNCTIONS ====================*/
 
-
-
-
   const setupFacultyAndMappings = async () => {
   try {
     await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/setup-faculty`, buildFacultyPayload());
@@ -120,6 +117,12 @@ const AdminTimetable = () => {
     alert("Faculty & subject setup completed");
 
   } catch (err) {
+    if (err.response?.status === 409) {
+      setFacultySetupDone(true);
+      alert(err.response.data.message);
+      return;
+    }
+
     alert(err.response?.data?.message || "Faculty setup failed");
   }
 };
@@ -223,11 +226,19 @@ const AdminTimetable = () => {
       <section className="bg-white p-4 rounded shadow">
         <h2 className="font-semibold mb-2">Batch Information</h2>
 
+        {/* Column Labels */}
+        <div className="flex flex-wrap gap-2 mb-1 font-semibold text-sm">
+          <div className="w-40">Year</div>
+          <div className="w-40">Semester</div>
+          <div className="w-48">Stream</div>
+          <div className="w-56">Academic Year</div>
+        </div>
+
         <div className="flex flex-wrap gap-2 mb-4">
           <input
             type="number"
-            placeholder="Year (e.g. 3)"
-            className="border p-2"
+            placeholder="e.g. 3"
+            className="border p-2 w-40"
             value={batchInfo.yr}
             disabled={Boolean(batchLocked)}
             onChange={e =>
@@ -237,8 +248,8 @@ const AdminTimetable = () => {
 
           <input
             type="number"
-            placeholder="Semester"
-            className="border p-2"
+            placeholder="e.g. 1"
+            className="border p-2 w-40"
             value={batchInfo.sem}
             disabled={Boolean(batchLocked)}
             onChange={e =>
@@ -248,8 +259,8 @@ const AdminTimetable = () => {
 
           <input
             type="text"
-            placeholder="Stream (CSDS)"
-            className="border p-2"
+            placeholder="e.g. CSDS"
+            className="border p-2 w-48"
             value={batchInfo.stream}
             disabled={Boolean(batchLocked)}
             onChange={e =>
@@ -259,8 +270,8 @@ const AdminTimetable = () => {
 
           <input
             type="text"
-            placeholder="Academic Year (2023-2027)"
-            className="border p-2"
+            placeholder=" e.g. 2023-2027"
+            className="border p-2 w-56"
             value={batchInfo.academic_yr}
             disabled={Boolean(batchLocked)}
             onChange={e =>
@@ -289,11 +300,22 @@ const AdminTimetable = () => {
           </p>
         )}
 
+        {/* Column Labels */}
+        {courses.length > 0 && (
+          <div className="flex gap-2 mb-1 font-semibold text-sm">
+            <div className="w-40">Course Code</div>
+            <div className="w-64">Course Name</div>
+            <div className="w-48">Faculty Name</div>
+            <div className="w-24">Credits</div>
+          </div>
+        )}
+
+        {/* Rows */}
         {courses.map((c, idx) => (
           <div key={idx} className="flex gap-2 mb-2">
             <input
               placeholder="Course Code"
-              className="border p-2"
+              className="border p-2 w-40"
               value={c.course_code}
               disabled={Boolean(!batchSaved || coursesSaved)}
               onChange={e => {
@@ -305,7 +327,7 @@ const AdminTimetable = () => {
 
             <input
               placeholder="Course Name"
-              className="border p-2"
+              className="border p-2 w-64"
               value={c.course_name}
               disabled={Boolean(!batchSaved || coursesSaved)}
               onChange={e => {
@@ -317,7 +339,7 @@ const AdminTimetable = () => {
 
             <input
               placeholder="Faculty Name"
-              className="border p-2"
+              className="border p-2 w-48"
               value={c.faculty_name}
               disabled={Boolean(!batchSaved || coursesSaved)}
               onChange={e => {
@@ -375,6 +397,16 @@ const AdminTimetable = () => {
           </p>
         )}
 
+        {/* Column Labels */}
+        {users.length > 0 && (
+          <div className="flex gap-2 mb-1 font-semibold text-sm">
+            <div className="w-64">Email</div>
+            <div className="w-48">Password</div>
+            <div className="w-32">Role</div>
+          </div>
+        )}
+
+        {/* Rows */}
         {users.map((u, idx) => (
           <div key={idx} className="flex gap-2 mb-2">
             <input
@@ -447,6 +479,16 @@ const AdminTimetable = () => {
           </p>
         )}
 
+        {/* Column Labels */}
+        {faculties.length > 0 && (
+          <div className="flex gap-2 mb-1 font-semibold text-sm">
+            <div className="w-56">Faculty Name</div>
+            <div className="w-72">Faculty Email</div>
+          </div>
+        )}
+
+        {/* Rows */}
+
         {faculties.map((f, idx) => (
           <div key={idx} className="flex gap-2 mb-2">
             <input
@@ -507,10 +549,24 @@ const AdminTimetable = () => {
           </p>
         )}
 
+        {/* Column Labels */}
+        {timetable.length > 0 && (
+          <div className="flex gap-2 mb-1 font-semibold text-sm">
+            <div className="w-40">Day</div>
+            <div className="w-24">Session</div>
+            <div className="w-32">Start Time</div>
+            <div className="w-32">End Time</div>
+            <div className="w-40">Course Code</div>
+            <div className="w-40">Location</div>
+          </div>
+        )}
+
+        {/* Rows */}
+
         {timetable.map((t, idx) => (
           <div key={idx} className="flex gap-2 mb-2">
             <select
-              className="border p-2"
+              className="border p-2 w-40"
               value={t.day_of_week}
               disabled={Boolean(!facultySetupDone)}
               onChange={e => {
@@ -539,7 +595,7 @@ const AdminTimetable = () => {
 
             <input
               type="time"
-              className="border p-2"
+              className="border p-2 w-32"
               value={t.start_time}
               disabled={Boolean(!facultySetupDone)}
               onChange={e => {
@@ -551,7 +607,7 @@ const AdminTimetable = () => {
 
             <input
               type="time"
-              className="border p-2"
+              className="border p-2 w-32"
               value={t.end_time}
               disabled={Boolean(!facultySetupDone)}
               onChange={e => {
@@ -563,7 +619,7 @@ const AdminTimetable = () => {
 
             <input
               placeholder="Course Code"
-              className="border p-2"
+              className="border p-2 w-40"
               value={t.course_code}
               disabled={Boolean(!facultySetupDone)}
               onChange={e => {
@@ -575,7 +631,7 @@ const AdminTimetable = () => {
 
             <input
               placeholder="Location"
-              className="border p-2"
+              className="border p-2 w-40"
               value={t.location}
               disabled={Boolean(!facultySetupDone)}
               onChange={e => {
@@ -611,120 +667,3 @@ const AdminTimetable = () => {
 };
 
 export default AdminTimetable;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState } from "react";
-// import axios from "axios";
-
-// function AdminTimetable() {
-//   const [timetable, setTimetable] = useState({
-//     course_code: "",
-//     faculty_email: "",
-//     stream: "",
-//     yr: "",
-//     sem: "",
-//     day_of_week: "",
-//     session_number: 1,
-//     start_time: "",
-//     end_time: "",
-//     location: "",
-//   });
-
-//   const handleChange = (e) => {
-//     setTimetable({ ...timetable, [e.target.name]: e.target.value });
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       await axios.post(
-//         `${import.meta.env.VITE_API_BASE_URL}/api/admin/schedule`,
-//         timetable
-//       );
-//       alert("Timetable entry created successfully");
-//     } catch (err) {
-//       alert(err.response?.data?.message || "Error creating timetable");
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gray-100 p-8">
-//       <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-//         <h2 className="text-2xl font-bold mb-6 text-center">
-//           Add Timetable Entry
-//         </h2>
-
-//         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
-//           <input name="course_code" placeholder="Course Code" onChange={handleChange} className="input" required />
-//           <input name="faculty_email" placeholder="Faculty Email" onChange={handleChange} className="input" required />
-//           <input name="stream" placeholder="Stream" onChange={handleChange} className="input" required />
-
-//           <div className="flex gap-2">
-//             <input name="yr" type="number" placeholder="Year" onChange={handleChange} className="w-1/2 input" required />
-//             <input name="sem" type="number" placeholder="Sem" onChange={handleChange} className="w-1/2 input" required />
-//           </div>
-
-//           <select name="day_of_week" onChange={handleChange} className="input" required>
-//             <option value="">Select Day</option>
-//             <option>Monday</option>
-//             <option>Tuesday</option>
-//             <option>Wednesday</option>
-//             <option>Thursday</option>
-//             <option>Friday</option>
-//           </select>
-
-//           <input name="session_number" type="number" placeholder="Session Number" onChange={handleChange} className="input" required />
-
-//           <div className="flex gap-2">
-//             <input name="start_time" type="time" onChange={handleChange} className="w-1/2 input" required />
-//             <input name="end_time" type="time" onChange={handleChange} className="w-1/2 input" required />
-//           </div>
-
-//           <input name="location" placeholder="Location" onChange={handleChange} className="input" required />
-
-//           <button className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-//             Create Timetable
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default AdminTimetable;
-
-// function AdminTimetable() {
-//   return <h1>Admin Timetable Page</h1>;
-// }
-// export default AdminTimetable;
