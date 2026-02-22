@@ -4,6 +4,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
+import SubjectDetails from "./components/SubjectDetails"; 
 import { useAuth } from "./context/AuthContext";
 import FeedbackPage from "./components/FeedbackPage";
 
@@ -50,6 +51,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Added the route below */}
+        <Route
+          path="/student/subject-details/:id"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <SubjectDetails />
             </ProtectedRoute>
           }
         />
