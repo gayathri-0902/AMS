@@ -313,20 +313,6 @@ app.post("/api/attendance", async (req, res) => {
   }
 });
 
-// 7. Admin: Create Faculty
-app.post("/api/admin/faculty", async (req, res) => {
-  const { name, email, password } = req.body;
-  try {
-    let user = await User.findOne({ user_name: email });
-    if (user) return res.status(400).json({ message: "User already exists" });
-    user = new User({ user_name: email, password, role: "faculty" });
-    await user.save();
-    const faculty = new Faculty({ user_id: user._id, name, email });
-    await faculty.save();
-    res.status(201).json({ message: "Faculty created successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
-
 // 8. Admin: Create Student
 app.post("/api/admin/student", async (req, res) => {
   const { name, roll_no, email, stream, yr, sem, academic_yr, password } = req.body;
@@ -345,29 +331,6 @@ app.post("/api/admin/student", async (req, res) => {
     const enrollment = new StudentEnrollment({ student_id: student._id, yr_sem_id: yrSem._id, academic_yr, status: "active", start_date: new Date() });
     await enrollment.save();
     res.status(201).json({ message: "Student created successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
-
-// 9. Admin: Create Schedule
-app.post("/api/admin/schedule", async (req, res) => {
-  const { course_code, faculty_email, stream, yr, sem, academic_yr, day, start_time, end_time, location, session_no } = req.body;
-  try {
-    const faculty = await Faculty.findOne({ email: faculty_email });
-    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream });
-    if (!faculty || !yrSem) return res.status(404).json({ message: "Faculty or Section not found" });
-
-    let course = await CourseMaster.findOne({ course_code });
-    if (!course) { course = new CourseMaster({ course_code, course_name: course_code, credits: 3 }); await course.save(); }
-
-    let subjectOffering = await SubjectOffering.findOne({ course_master_id: course._id, yr_sem_id: yrSem._id });
-    if (!subjectOffering) { subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true }); await subjectOffering.save(); }
-
-    const assignment = await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id });
-    if (!assignment) { await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save(); }
-
-    const timetable = new TimeTable({ yr_sem_id: yrSem._id, day_of_week: day, session_no: Number(session_no), start_time, end_time, subject_offering_id: subjectOffering._id, faculty_id: faculty._id, location });
-    await timetable.save();
-    res.status(201).json({ message: "Schedule created successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
@@ -673,7 +636,7 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
       });
     }
 
-    // 🔎 Check existing
+    // Check existing
     const existing = await YrSem.findOne({
       yr,
       sem,
@@ -688,7 +651,7 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
       });
     }
 
-    // ➕ Create
+    // Create
     const newYrSem = await YrSem.create({
       yr,
       sem,

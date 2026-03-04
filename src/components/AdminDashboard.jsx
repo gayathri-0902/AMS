@@ -8,12 +8,6 @@ function AdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   
-  // Faculty Form State
-  const [faculty, setFaculty] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
 
   // Student Form State
   const [student, setStudent] = useState({
@@ -42,24 +36,9 @@ function AdminDashboard() {
     relationship: "Father",
   });
 
-  // Schedule Form State
-  const [schedule, setSchedule] = useState({
-    course_code: "",
-    faculty_email: "",
-    stream: "",
-    yr: "",
-    sem: "",
-    day: "",
-    start_time: "",
-    end_time: "",
-    location: "Room 101",
-    session_no: 1,
-  });
+  
 
   // Handlers
-  const handleFacultyChange = (e) => {
-    setFaculty({ ...faculty, [e.target.name]: e.target.value });
-  };
 
   const handleStudentChange = (e) => {
     setStudent({ ...student, [e.target.name]: e.target.value });
@@ -73,22 +52,9 @@ function AdminDashboard() {
     setMapping({ ...mapping, [e.target.name]: e.target.value });
   };
 
-  const handleScheduleChange = (e) => {
-    setSchedule({ ...schedule, [e.target.name]: e.target.value });
-  };
+  
 
   // Submit Handlers
-  const handleFacultySubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/faculty`, faculty);
-      alert("Faculty added successfully");
-      setFaculty({ name: "", email: "", password: "" });
-    } catch (error) {
-      console.error("Error adding faculty:", error);
-      alert(error.response?.data?.message || "Error adding faculty");
-    }
-  };
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
@@ -135,28 +101,6 @@ function AdminDashboard() {
     }
   };
 
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/schedule`, schedule);
-      alert("Schedule added successfully");
-      setSchedule({
-        course_code: "",
-        faculty_email: "",
-        stream: "",
-        yr: "",
-        sem: "",
-        day: "",
-        start_time: "",
-        end_time: "",
-        location: "Room 101",
-        session_no: 1,
-      });
-    } catch (err) {
-      console.error("Error adding schedule:", err);
-      alert(err.response?.data?.message || "Error adding schedule");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -179,45 +123,6 @@ function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Add Faculty */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Faculty</h3>
-          <form onSubmit={handleFacultySubmit} className="space-y-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Faculty Name"
-              value={faculty.name}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Faculty Email (Username)"
-              value={faculty.email}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={faculty.password}
-              onChange={handleFacultyChange}
-              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-            >
-              Add Faculty
-            </button>
-          </form>
-        </div>
 
         {/* Add Student */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -397,126 +302,6 @@ function AdminDashboard() {
                Link Parent
              </button>
            </form>
-        </div>
-
-        {/* Add Schedule */}
-        <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-          <h3 className="text-xl font-semibold mb-4 border-b pb-2">Add Class Schedule (TimeTable)</h3>
-          <form onSubmit={handleScheduleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <input
-              type="text"
-              name="course_code"
-              placeholder="Course Code (e.g. CS101)"
-              value={schedule.course_code}
-              onChange={handleScheduleChange}
-              className="p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-             <input
-              type="email"
-              name="faculty_email"
-              placeholder="Faculty Email"
-              value={schedule.faculty_email}
-              onChange={handleScheduleChange}
-              className="p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-              required
-            />
-             <div className="flex gap-2">
-                 <input
-                  type="text"
-                  name="stream"
-                  placeholder="Stream"
-                  value={schedule.stream}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="number"
-                  name="yr"
-                  placeholder="Yr"
-                  value={schedule.yr}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="number"
-                  name="sem"
-                  placeholder="Sem"
-                  value={schedule.sem}
-                  onChange={handleScheduleChange}
-                  className="w-1/3 p-2 border border-gray-300 rounded"
-                  required
-                />
-             </div>
-             
-             <div className="flex gap-2">
-                 <select
-                  name="day"
-                  value={schedule.day}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                >
-                  <option value="">Select Day</option>
-                  <option value="Mon">Mon</option>
-                  <option value="Tue">Tue</option>
-                  <option value="Wed">Wed</option>
-                  <option value="Thu">Thu</option>
-                  <option value="Fri">Fri</option>
-                  <option value="Sat">Sat</option>
-                  <option value="Sun">Sun</option>
-                </select>
-                
-                 <input
-                  type="number"
-                  name="session_no"
-                  placeholder="Session #"
-                  value={schedule.session_no}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
-             </div>
-
-             <div className="flex gap-2">
-                 <input
-                  type="time"
-                  name="start_time"
-                  value={schedule.start_time}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
-                 <input
-                  type="time"
-                  name="end_time"
-                  value={schedule.end_time}
-                  onChange={handleScheduleChange}
-                  className="w-1/2 p-2 border border-gray-300 rounded"
-                  required
-                />
-             </div>
-             <input
-                type="text"
-                name="location"
-                placeholder="Location (e.g. Room 101)"
-                value={schedule.location}
-                onChange={handleScheduleChange}
-                className="p-2 border border-gray-300 rounded"
-                required
-              />
-
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition"
-              >
-                Create Schedule Entry
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </div>
