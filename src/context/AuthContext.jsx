@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -40,6 +40,30 @@ export const AuthProvider = ({ children }) => {
   // --- FORCE RESET ON STARTUP ---
   // This ensures the app always starts at the Login page
   useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    const storedFacultyId = localStorage.getItem("facultyId");
+    const storedStudentId = localStorage.getItem("studentId");
+    const storedParentId = localStorage.getItem("parentId"); // Added Parent storage check
+
+    if (storedRole && !auth.isAuthenticated) {
+      setAuth({
+        isAuthenticated: true,
+        role: storedRole,
+        facultyId: storedFacultyId,
+        studentId: storedStudentId,
+        parentId: storedParentId,
+      });
+
+      // Redirect to appropriate dashboard if user is already logged in
+      if (window.location.pathname === "/login") {
+        navigate(
+          redirectToDashboard(storedRole, storedFacultyId || storedStudentId)
+        );
+      }
+    }
+  }, [auth.isAuthenticated]);
+
+  // --- LOGIN HANDLER UPDATED FOR NEW UI ROLES ---
     // 1. Clear State
     setAuth({
       isAuthenticated: false,
@@ -127,7 +151,50 @@ export const AuthProvider = ({ children }) => {
     localStorage.clear();
 
     // Send back to login
-    navigate("/login");
+    navigate("/");
+  };
+
+  const ProtectedRoute = ({ allowedRoles, children }) => {
+    if (!auth.isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(auth.role)) {
+      const id =
+        auth.role === "faculty"
+          ? auth.facultyId
+          : auth.role === "student"
+          ? auth.studentId
+          : null;
+      return (
+        <Navigate
+          to={redirectToDashboard(auth.role, id)}
+          replace
+        />
+      );
+    }
+
+    return children;
+  };
+
+  const PublicRoute = ({ children }) => {
+  const location = useLocation();
+
+  if (auth.isAuthenticated) {
+      const id =
+        auth.role === "faculty"
+          ? auth.facultyId
+          : auth.role === "student"
+          ? auth.studentId
+          : null;
+
+      const target = redirectToDashboard(auth.role, id);
+
+      if (location.pathname !== target) {
+        return <Navigate to={target} replace />;
+      }
+    }
+    return children;
   };
 
   return (

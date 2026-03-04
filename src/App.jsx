@@ -4,6 +4,8 @@ import { useAuth } from "./context/AuthContext";
 
 // Components 
 import LoginPage from "./components/LoginPage";
+import AdminDashboard from "./components/AdminDashboard";
+import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 import AdminDashboard from "./components/AdminDashboard";
@@ -106,10 +108,24 @@ function App() {
             </PublicRoute>
           } 
         />
-
-        {/* Faculty Access */}
-        <Route 
-          path="/faculty-dashboard/:facultyId" 
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/timetable"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminTimetable />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faculty-dashboard/:facultyId"
           element={
             <ProtectedRoute allowedRoles={["faculty"]}>
               <FacultyDashboard />

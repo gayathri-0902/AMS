@@ -619,12 +619,43 @@ app.post("/api/admin/setup-faculty", async (req, res) => {
     }
     for (const facultyData of faculties_entries) {
       const user = userMap[facultyData.email];
-      if (user && !(await Faculty.findOne({ user_id: user._id }))) {
-        await new Faculty({ user_id: user._id, name: facultyData.name, email: facultyData.email }).save();
+
+      if (!user) {
+        console.warn(`User not found for faculty email: ${facultyData.email}`);
+        continue;
+      }
+
+      let faculty = await Faculty.findOne({ user_id: user._id });
+
+      if (!faculty) {
+        faculty = new Faculty({
+          user_id: user._id,
+          name: facultyData.name,
+          email: facultyData.email
+        });
+
+        await faculty.save();
+        summary.faculty_created.push(facultyData.email);
+      } else {
+        summary.faculty_existing.push(facultyData.email);
       }
     }
-    res.status(201).json({ message: "Processed successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    const nothingCreated =
+      summary.users_created.length === 0 &&
+      summary.faculty_created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Users and faculty already exist. No operation performed."
+        : "Users and faculty processed successfully",
+      summary
+    });
+
+  } catch (error) {
+    console.error("Faculty setup error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.post("/api/admin/ensure-course-masters", async (req, res) => {
@@ -635,8 +666,25 @@ app.post("/api/admin/ensure-course-masters", async (req, res) => {
       const existing = await CourseMaster.findOne({ course_code: course.course_code });
       if (!existing) await CourseMaster.create({ course_code: course.course_code, course_name: course.course_name, credits: course.credits ?? 0 });
     }
-    res.status(200).json({ message: "Check completed" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "All course masters already exist. No operation performed."
+        : "Course masters processed successfully",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      created,
+      skipped
+    });
+
+  } catch (error) {
+    console.error("Error ensuring course masters:", error);
+    return res.status(500).json({
+      message: "Server error while ensuring course masters"
+    });
+  }
 });
 
 app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
@@ -651,8 +699,28 @@ app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
         await SubjectOffering.create({ course_master_id: cm._id, yr_sem_id: yrSem._id, is_active: true });
       }
     }
-    res.status(201).json({ message: "Processed successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Subject offerings already exist. No operation performed."
+        : "Subject offerings processed successfully",
+      yr_sem_id,
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_courses_count: missing_courses.length,
+      created,
+      skipped,
+      missing_courses
+    });
+
+  } catch (error) {
+    console.error("Error ensuring subject offerings:", error);
+    res.status(500).json({
+      message: "Server error while ensuring subject offerings"
+    });
+  }
 });
 
 app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
@@ -671,8 +739,28 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
         }
       }
     }
-    res.status(201).json({ message: "Processed successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Faculty assignments already exist. No operation performed."
+        : "Faculty assignments processed successfully",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_count: missing.length,
+      created,
+      skipped,
+      missing
+    });
+
+
+  } catch (error) {
+    console.error("Error ensuring faculty assignments:", error);
+    res.status(500).json({
+      message: "Server error while ensuring faculty assignments"
+    });
+  }
 });
 
 app.post("/api/admin/ensure-timetable", async (req, res) => {
@@ -694,9 +782,142 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
         }
       }
     }
-    res.status(201).json({ message: "Timetable processed successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    const nothingCreated = created.length === 0;
+
+    return res.status(nothingCreated ? 409 : 201).json({
+      message: nothingCreated
+        ? "Timetable already exists. No operation performed."
+        : "Timetable processed successfully",
+      created_count: created.length,
+      skipped_count: skipped.length,
+      missing_count: missing.length,
+      created,
+      skipped,
+      missing
+    });
+
+  } catch (error) {
+    console.error("Error ensuring timetable:", error);
+    res.status(500).json({
+      message: "Server error while ensuring timetable"
+    });
+  }
 });
+
+
+app.post("/api/admin/ensure-yrsem", async (req, res) => {
+  try {
+    const { batch_info } = req.body;
+
+    if (!batch_info) {
+      return res.status(400).json({
+        message: "batch_info missing"
+      });
+    }
+
+    const { yr, sem, stream, academic_yr } = batch_info;
+
+    if (!yr || !sem || !stream || !academic_yr) {
+      return res.status(400).json({
+        message: "yr, sem, stream, academic_yr required"
+      });
+    }
+
+    // 🔎 Check existing
+    const existing = await YrSem.findOne({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        message: "Year-Sem already exists",
+        yr_sem_id: existing._id
+      });
+    }
+
+    // ➕ Create
+    const newYrSem = await YrSem.create({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    return res.status(200).json({
+      message: "Year-Sem created successfully",
+      yr_sem_id: newYrSem._id
+    });
+
+  } catch (error) {
+    console.error("ensure-yrsem error:", error);
+    res.status(500).json({
+      message: "Server error while ensuring yr_sem"
+    });
+  }
+});
+
+
+
+
+app.post("/api/admin/ensure-yrsem", async (req, res) => {
+  try {
+    const { batch_info } = req.body;
+
+    if (!batch_info) {
+      return res.status(400).json({
+        message: "batch_info missing"
+      });
+    }
+
+    const { yr, sem, stream, academic_yr } = batch_info;
+
+    if (!yr || !sem || !stream || !academic_yr) {
+      return res.status(400).json({
+        message: "yr, sem, stream, academic_yr required"
+      });
+    }
+
+    // 🔎 Check existing
+    const existing = await YrSem.findOne({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        message: "Year-Sem already exists",
+        yr_sem_id: existing._id
+      });
+    }
+
+    // ➕ Create
+    const newYrSem = await YrSem.create({
+      yr,
+      sem,
+      stream,
+      academic_yr
+    });
+
+    return res.status(200).json({
+      message: "Year-Sem created successfully",
+      yr_sem_id: newYrSem._id
+    });
+
+  } catch (error) {
+    console.error("ensure-yrsem error:", error);
+    res.status(500).json({
+      message: "Server error while ensuring yr_sem"
+    });
+  }
+});
+
+
 
 // 16. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {

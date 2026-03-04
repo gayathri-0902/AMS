@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate, Navigate } from "react-router-dom";
+// import { HiOutlineLogout } from "react-icons/hi"; // Icons not installed, using text
 import { HiOutlineLogout } from "react-icons/hi"; 
 import { 
   MdAdminPanelSettings, 
@@ -13,6 +15,7 @@ import {
 
 function AdminDashboard() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   
   // --- Form States ---
   const [faculty, setFaculty] = useState({ name: "", email: "", password: "" });
@@ -70,6 +73,17 @@ function AdminDashboard() {
   const labelClass = "text-[20px] text-[#2b2b2b] mb-4 flex items-center gap-2";
 
   return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-blue-600">Admin Dashboard</h2>
+
+        <button
+            onClick={() => navigate("/admin/timetable")}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+          >
+          Add Timetable
+          </button>
+        
     <div className="min-h-screen bg-[#f0f2f5] p-8 font-antiqua">
       {/* HEADER */}
       <div className="max-w-7xl mx-auto flex justify-between items-center mb-10">
