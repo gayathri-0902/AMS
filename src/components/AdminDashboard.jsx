@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate, Navigate } from "react-router-dom";
-// import { HiOutlineLogout } from "react-icons/hi"; // Icons not installed, using text
-import { HiOutlineLogout } from "react-icons/hi"; 
-import { 
-  MdAdminPanelSettings, 
-  MdSchool, 
-  MdSupervisorAccount, 
+import { useNavigate } from "react-router-dom";
+import { HiOutlineLogout } from "react-icons/hi";
+import {
+  MdAdminPanelSettings,
+  MdSchool,
+  MdSupervisorAccount,
   MdCastForEducation,
   MdEventNote,
   MdArrowForward
@@ -16,7 +15,7 @@ import {
 function AdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // --- Form States ---
   const [faculty, setFaculty] = useState({ name: "", email: "", password: "" });
   const [student, setStudent] = useState({
@@ -68,23 +67,13 @@ function AdminDashboard() {
     } catch (err) { alert(err.response?.data?.message || "Error mapping accounts"); }
   };
 
-  // Reusable Styling Constants
+  // --- Reusable Styling Constants ---
   const inputClass = "w-full px-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-[#2b2b2b] text-[16px] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all";
   const labelClass = "text-[20px] text-[#2b2b2b] mb-4 flex items-center gap-2";
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-blue-600">Admin Dashboard</h2>
-
-        <button
-            onClick={() => navigate("/admin/timetable")}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-          >
-          Add Timetable
-          </button>
-        
     <div className="min-h-screen bg-[#f0f2f5] p-8 font-antiqua">
+
       {/* HEADER */}
       <div className="max-w-7xl mx-auto flex justify-between items-center mb-10">
         <div className="flex items-center gap-3">
@@ -93,21 +82,30 @@ function AdminDashboard() {
             Admin Management Dashboard
           </h2>
         </div>
-        
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
-        >
-          <span className="text-[18px]">Logout</span>
-          <HiOutlineLogout size={22} className="group-hover:translate-x-1 transition-transform" />
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/admin/timetable")}
+            className="px-5 py-2.5 bg-blue-500 text-white text-[16px] rounded-xl hover:bg-blue-600 transition-all shadow-sm"
+          >
+            Add Timetable
+          </button>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
+          >
+            <span className="text-[18px]">Logout</span>
+            <HiOutlineLogout size={22} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Section: Add Faculty */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-          <h3 className={labelClass}><MdCastForEducation size={24} className="text-blue-500"/> Add Faculty Member</h3>
+          <h3 className={labelClass}>
+            <MdCastForEducation size={24} className="text-blue-500" /> Add Faculty Member
+          </h3>
           <form onSubmit={handleFacultySubmit} className="space-y-4">
             <input type="text" name="name" placeholder="Full Name" value={faculty.name} onChange={handleFacultyChange} className={inputClass} required />
             <input type="email" name="email" placeholder="Email Address" value={faculty.email} onChange={handleFacultyChange} className={inputClass} required />
@@ -120,7 +118,9 @@ function AdminDashboard() {
 
         {/* Section: Add Student */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-          <h3 className={labelClass}><MdSchool size={24} className="text-green-600"/> Add New Student</h3>
+          <h3 className={labelClass}>
+            <MdSchool size={24} className="text-green-600" /> Add New Student
+          </h3>
           <form onSubmit={handleStudentSubmit} className="space-y-4">
             <input type="text" name="name" placeholder="Student Full Name" value={student.name} onChange={handleStudentChange} className={inputClass} required />
             <div className="grid grid-cols-2 gap-4">
@@ -142,46 +142,52 @@ function AdminDashboard() {
 
         {/* Section: Add Parent */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-           <h3 className={labelClass}><MdSupervisorAccount size={24} className="text-purple-600"/> Add Parent Record</h3>
-           <form onSubmit={handleParentSubmit} className="space-y-4">
-             <input type="text" name="name" placeholder="Parent Full Name" value={parent.name} onChange={handleParentChange} className={inputClass} required />
-             <input type="text" name="phno" placeholder="Mobile Number" value={parent.phno} onChange={handleParentChange} className={inputClass} required />
-             <input type="email" name="email" placeholder="Registered Email" value={parent.email} onChange={handleParentChange} className={inputClass} required />
-             <input type="password" name="password" placeholder="System Password" value={parent.password} onChange={handleParentChange} className={inputClass} required />
-             <button type="submit" className="w-full bg-[#9333ea] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#7e22ce] transition-all">
-               Create Parent Account
-             </button>
-           </form>
+          <h3 className={labelClass}>
+            <MdSupervisorAccount size={24} className="text-purple-600" /> Add Parent Record
+          </h3>
+          <form onSubmit={handleParentSubmit} className="space-y-4">
+            <input type="text" name="name" placeholder="Parent Full Name" value={parent.name} onChange={handleParentChange} className={inputClass} required />
+            <input type="text" name="phno" placeholder="Mobile Number" value={parent.phno} onChange={handleParentChange} className={inputClass} required />
+            <input type="email" name="email" placeholder="Registered Email" value={parent.email} onChange={handleParentChange} className={inputClass} required />
+            <input type="password" name="password" placeholder="System Password" value={parent.password} onChange={handleParentChange} className={inputClass} required />
+            <button type="submit" className="w-full bg-[#9333ea] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#7e22ce] transition-all">
+              Create Parent Account
+            </button>
+          </form>
         </div>
 
-        {/* Section: Link Parent */}
+        {/* Section: Link Parent To Student */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-           <h3 className={labelClass}><MdSupervisorAccount size={24} className="text-indigo-600"/> Link Parent To Student</h3>
-           <form onSubmit={handleMappingSubmit} className="space-y-4">
-             <input type="email" name="parent_email" placeholder="Parent Email" value={mapping.parent_email} onChange={handleMappingChange} className={inputClass} required />
-             <input type="text" name="student_roll_no" placeholder="Student Roll Number" value={mapping.student_roll_no} onChange={handleMappingChange} className={inputClass} required />
-             <select name="relationship" value={mapping.relationship} onChange={handleMappingChange} className={inputClass}>
-               <option value="Father">Father</option>
-               <option value="Mother">Mother</option>
-               <option value="Guardian">Guardian</option>
-             </select>
-             <button type="submit" className="w-full bg-[#4f46e5] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#4338ca] transition-all">
-               Link Accounts
-             </button>
-           </form>
+          <h3 className={labelClass}>
+            <MdSupervisorAccount size={24} className="text-indigo-600" /> Link Parent To Student
+          </h3>
+          <form onSubmit={handleMappingSubmit} className="space-y-4">
+            <input type="email" name="parent_email" placeholder="Parent Email" value={mapping.parent_email} onChange={handleMappingChange} className={inputClass} required />
+            <input type="text" name="student_roll_no" placeholder="Student Roll Number" value={mapping.student_roll_no} onChange={handleMappingChange} className={inputClass} required />
+            <select name="relationship" value={mapping.relationship} onChange={handleMappingChange} className={inputClass}>
+              <option value="Father">Father</option>
+              <option value="Mother">Mother</option>
+              <option value="Guardian">Guardian</option>
+            </select>
+            <button type="submit" className="w-full bg-[#4f46e5] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#4338ca] transition-all">
+              Link Accounts
+            </button>
+          </form>
         </div>
 
-        {/* Section: Manage Schedules Button */}
+        {/* Section: Manage Schedules */}
         <div className="bg-white p-10 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white md:col-span-2 flex flex-col items-center justify-center space-y-6">
           <div className="bg-blue-50 p-4 rounded-full">
-            <MdEventNote size={48} className="text-blue-600"/>
+            <MdEventNote size={48} className="text-blue-600" />
           </div>
           <div className="text-center">
             <h3 className="text-[24px] font-bold text-[#2b2b2b]">Academic Timetables</h3>
-            <p className="text-[#94a3b8] mt-2 max-w-md">Configure class timings, assign faculty to rooms, and manage the university's weekly schedule.</p>
+            <p className="text-[#94a3b8] mt-2 max-w-md">
+              Configure class timings, assign faculty to rooms, and manage the university's weekly schedule.
+            </p>
           </div>
-          <button 
-            onClick={() => alert("Redirecting to Schedule Management...")}
+          <button
+            onClick={() => navigate("/admin/timetable")}
             className="group flex items-center gap-3 bg-[#3b82f6] text-white px-10 py-4 rounded-2xl text-[20px] font-semibold hover:bg-[#2563eb] transition-all shadow-lg hover:shadow-blue-200"
           >
             Manage Schedules
@@ -190,10 +196,11 @@ function AdminDashboard() {
         </div>
 
       </div>
-      
+
       <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
         © 2026 Campus Management System
       </footer>
+
     </div>
   );
 }

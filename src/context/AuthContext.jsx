@@ -63,7 +63,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, [auth.isAuthenticated]);
 
-  // --- LOGIN HANDLER UPDATED FOR NEW UI ROLES ---
+  // --- FORCE CLEAR SESSION ON STARTUP ---
+  // This clears any stale session so the app always starts fresh
+  useEffect(() => {
     // 1. Clear State
     setAuth({
       isAuthenticated: false,
@@ -90,7 +92,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // Note: Using your environment variable VITE_API_BASE_URL (defaults to 3002 as per your .env)
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
-      
+
       const response = await axios.post(`${baseUrl}/api/login`, {
         role,
         identifier,
@@ -102,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Prepare global state
       const authState = {
         isAuthenticated: true,
-        role: response.data.role, 
+        role: response.data.role,
         userId: userId,
         facultyId: facultyId || null,
         studentId: studentId || null,
@@ -125,7 +127,7 @@ export const AuthProvider = ({ children }) => {
       // 3. Navigate
       const targetId = facultyId || studentId || parentId || userId;
       navigate(redirectToDashboard(authState.role, targetId));
-      
+
       return response.data;
     } catch (error) {
       console.error("Login error:", error.response?.data?.message || error.message);
@@ -178,9 +180,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const PublicRoute = ({ children }) => {
-  const location = useLocation();
+    const location = useLocation();
 
-  if (auth.isAuthenticated) {
+    if (auth.isAuthenticated) {
       const id =
         auth.role === "faculty"
           ? auth.facultyId
@@ -203,6 +205,8 @@ export const AuthProvider = ({ children }) => {
         auth,
         login,
         logout,
+        ProtectedRoute,
+        PublicRoute,
       }}
     >
       {children}

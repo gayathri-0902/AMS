@@ -4,7 +4,6 @@ import { useAuth } from "./context/AuthContext";
 
 // Components 
 import LoginPage from "./components/LoginPage";
-import AdminDashboard from "./components/AdminDashboard";
 import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
@@ -100,6 +99,7 @@ function App() {
           element={<Navigate to={getDashboardPath(auth)} replace />} 
         />
 
+        {/* Public Route */}
         <Route 
           path="/login" 
           element={
@@ -108,6 +108,8 @@ function App() {
             </PublicRoute>
           } 
         />
+
+        {/* Admin Access */}
         <Route
           path="/admin-dashboard"
           element={
@@ -116,6 +118,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin Timetable */}
         <Route
           path="/admin/timetable"
           element={
@@ -124,6 +128,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Faculty Access */}
         <Route
           path="/faculty-dashboard/:facultyId"
           element={
@@ -152,16 +158,6 @@ function App() {
           } 
         />
 
-        {/* Admin Access */}
-        <Route 
-          path="/admin-dashboard" 
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } 
-        />
-
         {/* Parent Access */}
         <Route 
           path="/parent-dashboard/:parentId" 
@@ -172,6 +168,7 @@ function App() {
           } 
         />
 
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to={getDashboardPath(auth)} replace />} />
       </Routes>
     </div>
