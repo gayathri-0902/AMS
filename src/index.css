@@ -1,19 +1,26 @@
-/* 1. Import the font */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,200..800&display=swap');
+/* index.css */
 
-/* 2. Tailwind Directives (The lines causing the warning) */
+/* 1. Import Schibsted Grotesk from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap');
+
+/* 2. Tailwind Directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 3. Global Styles */
+/* 3. Global Base Styles */
 @layer base {
-  html {
-    font-family: 'Newsreader', serif;
+  html, body {
+    /* Standard stack for Schibsted Grotesk */
+    font-family: 'Schibsted Grotesk', sans-serif !important;
+    background-color: #f8fafc;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-sha-smoothing: grayscale;
   }
-}
 
-body {
-  @apply bg-[#f8fafc]; /* This uses the light gray background from your design */
-  font-family: 'Newsreader', serif;
+  /* Apply to all text elements to override any remaining serif defaults */
+  h1, h2, h3, h4, h5, h6, button, input, select, textarea, span, p, div {
+    font-family: 'Schibsted Grotesk', sans-serif !important;
+  }
 }
