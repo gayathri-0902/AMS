@@ -15,30 +15,34 @@ import {
 function AdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  
 
-  // --- Form States ---
-  const [faculty, setFaculty] = useState({ name: "", email: "", password: "" });
+  // Student Form State
   const [student, setStudent] = useState({
     name: "", roll_no: "", email: "", stream: "", yr: "", sem: "", academic_yr: "2022-26", password: "",
   });
   const [parent, setParent] = useState({ name: "", email: "", phno: "", password: "" });
   const [mapping, setMapping] = useState({ parent_email: "", student_roll_no: "", relationship: "Father" });
 
-  // --- Handlers ---
-  const handleFacultyChange = (e) => setFaculty({ ...faculty, [e.target.name]: e.target.value });
-  const handleStudentChange = (e) => setStudent({ ...student, [e.target.name]: e.target.value });
-  const handleParentChange = (e) => setParent({ ...parent, [e.target.name]: e.target.value });
-  const handleMappingChange = (e) => setMapping({ ...mapping, [e.target.name]: e.target.value });
+  
 
-  // --- Submit Logic ---
-  const handleFacultySubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/admin/faculty`, faculty);
-      alert("Faculty Added Successfully");
-      setFaculty({ name: "", email: "", password: "" });
-    } catch (error) { alert(error.response?.data?.message || "Error adding faculty"); }
+  // Handlers
+
+  const handleStudentChange = (e) => {
+    setStudent({ ...student, [e.target.name]: e.target.value });
   };
+
+  const handleParentChange = (e) => {
+    setParent({ ...parent, [e.target.name]: e.target.value });
+  };
+
+  const handleMappingChange = (e) => {
+    setMapping({ ...mapping, [e.target.name]: e.target.value });
+  };
+
+  
+
+  // Submit Handlers
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
@@ -99,22 +103,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-
-        {/* Section: Add Faculty */}
-        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-          <h3 className={labelClass}>
-            <MdCastForEducation size={24} className="text-blue-500" /> Add Faculty Member
-          </h3>
-          <form onSubmit={handleFacultySubmit} className="space-y-4">
-            <input type="text" name="name" placeholder="Full Name" value={faculty.name} onChange={handleFacultyChange} className={inputClass} required />
-            <input type="email" name="email" placeholder="Email Address" value={faculty.email} onChange={handleFacultyChange} className={inputClass} required />
-            <input type="password" name="password" placeholder="System Password" value={faculty.password} onChange={handleFacultyChange} className={inputClass} required />
-            <button type="submit" className="w-full bg-[#3b82f6] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#2563eb] transition-all">
-              Add Faculty
-            </button>
-          </form>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         {/* Section: Add Student */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
@@ -156,6 +145,45 @@ function AdminDashboard() {
           </form>
         </div>
 
+        {/* Map Parent to Student */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+           <h3 className="text-xl font-semibold mb-4 border-b pb-2">Link Parent to Student</h3>
+           <form onSubmit={handleMappingSubmit} className="space-y-4">
+             <input
+               type="email"
+               name="parent_email"
+               placeholder="Parent Email"
+               value={mapping.parent_email}
+               onChange={handleMappingChange}
+               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
+               required
+             />
+             <input
+               type="text"
+               name="student_roll_no"
+               placeholder="Student Roll No"
+               value={mapping.student_roll_no}
+               onChange={handleMappingChange}
+               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
+               required
+             />
+             <select
+               name="relationship"
+               value={mapping.relationship}
+               onChange={handleMappingChange}
+               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
+             >
+               <option value="Father">Father</option>
+               <option value="Mother">Mother</option>
+               <option value="Guardian">Guardian</option>
+             </select>
+             <button
+               type="submit"
+               className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition"
+             >
+               Link Parent
+             </button>
+           </form>
         {/* Section: Link Parent To Student */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
           <h3 className={labelClass}>

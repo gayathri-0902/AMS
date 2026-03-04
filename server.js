@@ -409,22 +409,6 @@ app.post("/api/attendance", async (req, res) => {
   }
 });
 
-// 8. Admin: Create Faculty
-app.post("/api/admin/faculty", async (req, res) => {
-  const { name, email, password } = req.body;
-  try {
-    let user = await User.findOne({ user_name: email });
-    if (user) return res.status(400).json({ message: "User already exists" });
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    user = new User({ user_name: email, password: hashedPassword, role: "faculty" });
-    await user.save();
-    const faculty = new Faculty({ user_id: user._id, name, email });
-    await faculty.save();
-    res.status(201).json({ message: "Faculty created successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
-
 // 9. Admin: Create Student
 app.post("/api/admin/student", async (req, res) => {
   const { name, roll_no, email, stream, yr, sem, academic_yr, password } = req.body;
@@ -824,7 +808,7 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
       });
     }
 
-    // 🔎 Check existing
+    // Check existing
     const existing = await YrSem.findOne({
       yr,
       sem,
@@ -839,7 +823,7 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
       });
     }
 
-    // ➕ Create
+    // Create
     const newYrSem = await YrSem.create({
       yr,
       sem,
@@ -859,65 +843,6 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
     });
   }
 });
-
-
-
-
-app.post("/api/admin/ensure-yrsem", async (req, res) => {
-  try {
-    const { batch_info } = req.body;
-
-    if (!batch_info) {
-      return res.status(400).json({
-        message: "batch_info missing"
-      });
-    }
-
-    const { yr, sem, stream, academic_yr } = batch_info;
-
-    if (!yr || !sem || !stream || !academic_yr) {
-      return res.status(400).json({
-        message: "yr, sem, stream, academic_yr required"
-      });
-    }
-
-    // 🔎 Check existing
-    const existing = await YrSem.findOne({
-      yr,
-      sem,
-      stream,
-      academic_yr
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        message: "Year-Sem already exists",
-        yr_sem_id: existing._id
-      });
-    }
-
-    // ➕ Create
-    const newYrSem = await YrSem.create({
-      yr,
-      sem,
-      stream,
-      academic_yr
-    });
-
-    return res.status(200).json({
-      message: "Year-Sem created successfully",
-      yr_sem_id: newYrSem._id
-    });
-
-  } catch (error) {
-    console.error("ensure-yrsem error:", error);
-    res.status(500).json({
-      message: "Server error while ensuring yr_sem"
-    });
-  }
-});
-
-
 
 // 16. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
