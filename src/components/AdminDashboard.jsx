@@ -88,12 +88,6 @@ function AdminDashboard() {
         </div>
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/admin/timetable")}
-            className="px-5 py-2.5 bg-blue-500 text-white text-[16px] rounded-xl hover:bg-blue-600 transition-all shadow-sm"
-          >
-            Add Timetable
-          </button>
-          <button
             onClick={logout}
             className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm group"
           >
@@ -145,45 +139,6 @@ function AdminDashboard() {
           </form>
         </div>
 
-        {/* Map Parent to Student */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-           <h3 className="text-xl font-semibold mb-4 border-b pb-2">Link Parent to Student</h3>
-           <form onSubmit={handleMappingSubmit} className="space-y-4">
-             <input
-               type="email"
-               name="parent_email"
-               placeholder="Parent Email"
-               value={mapping.parent_email}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <input
-               type="text"
-               name="student_roll_no"
-               placeholder="Student Roll No"
-               value={mapping.student_roll_no}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-               required
-             />
-             <select
-               name="relationship"
-               value={mapping.relationship}
-               onChange={handleMappingChange}
-               className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 outline-none"
-             >
-               <option value="Father">Father</option>
-               <option value="Mother">Mother</option>
-               <option value="Guardian">Guardian</option>
-             </select>
-             <button
-               type="submit"
-               className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition"
-             >
-               Link Parent
-             </button>
-           </form>
         {/* Section: Link Parent To Student */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
           <h3 className={labelClass}>
@@ -218,12 +173,11 @@ function AdminDashboard() {
             onClick={() => navigate("/admin/timetable")}
             className="group flex items-center gap-3 bg-[#3b82f6] text-white px-10 py-4 rounded-2xl text-[20px] font-semibold hover:bg-[#2563eb] transition-all shadow-lg hover:shadow-blue-200"
           >
-            Manage Schedules
+            Add Schedules
             <MdArrowForward size={24} className="group-hover:translate-x-2 transition-transform" />
           </button>
         </div>
 
-      </div>
 
       <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
         © 2026 Campus Management System

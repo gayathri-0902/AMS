@@ -6,9 +6,7 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-/**
- * HELPER: Determines the redirect URL
- */
+// --- REDIRECT LOGIC UPDATED FOR PARENT ---
 const redirectToDashboard = (role, id) => {
   switch (role) {
     case "faculty":
@@ -16,11 +14,11 @@ const redirectToDashboard = (role, id) => {
     case "student":
       return `/student-dashboard/${id}`;
     case "parent":
-      return `/parent-dashboard/${id}`;
+      return `/parent-dashboard/${id}`; // Added Parent Route
     case "admin":
       return "/admin-dashboard";
     default:
-      return "/login";
+      return "/";
   }
 };
 
@@ -28,17 +26,12 @@ export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({
     isAuthenticated: false,
     role: null,
-    userId: null,
     facultyId: null,
     studentId: null,
-    parentId: null,
-    sectionId: null,
-    name: null,
+    parentId: null, // Added Parent ID
   });
   const navigate = useNavigate();
 
-  // --- FORCE RESET ON STARTUP ---
-  // This ensures the app always starts at the Login page
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
     const storedFacultyId = localStorage.getItem("facultyId");
@@ -63,96 +56,68 @@ export const AuthProvider = ({ children }) => {
     }
   }, [auth.isAuthenticated]);
 
-  // --- FORCE CLEAR SESSION ON STARTUP ---
-  // This clears any stale session so the app always starts fresh
-  useEffect(() => {
-    // 1. Clear State
-    setAuth({
-      isAuthenticated: false,
-      role: null,
-      userId: null,
-      facultyId: null,
-      studentId: null,
-      parentId: null,
-      sectionId: null,
-      name: null,
-    });
-
-    // 2. Clear Storage so no old session remains
-    localStorage.clear();
-
-    // 3. Force navigation to login
-    if (window.location.pathname !== "/login") {
-      navigate("/login", { replace: true });
-    }
-  }, []); // Empty dependency array runs only once when app starts
-
-  // --- LOGIN HANDLER ---
+  // --- LOGIN HANDLER UPDATED FOR NEW UI ROLES ---
   const login = async (role, identifier, password) => {
     try {
-      // Note: Using your environment variable VITE_API_BASE_URL (defaults to 3002 as per your .env)
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/login`,
+        {
+          role, // This will be 'admin', 'faculty', 'student', or 'parent' from the new UI
+          identifier,
+          password,
+        }
+      );
 
-      const response = await axios.post(`${baseUrl}/api/login`, {
-        role,
-        identifier,
-        password,
-      });
+      // Extracting IDs from backend response
+      const { facultyId, studentId, parentId, sectionId } = response.data;
 
-      const { userId, facultyId, studentId, parentId, sectionId, name } = response.data;
-
-      // 1. Prepare global state
-      const authState = {
+      setAuth({
         isAuthenticated: true,
-        role: response.data.role,
-        userId: userId,
+        role,
         facultyId: facultyId || null,
         studentId: studentId || null,
         parentId: parentId || null,
         sectionId: sectionId || null,
-        name: name || null,
-      };
+      });
 
-      setAuth(authState);
-
-      // 2. Persist to Local Storage (Optional: only if you want session to survive minor refreshes AFTER login)
-      localStorage.setItem("role", authState.role);
-      localStorage.setItem("userId", userId || "");
+      // Save user data in local storage
+      localStorage.setItem("role", role);
       localStorage.setItem("facultyId", facultyId || "");
       localStorage.setItem("studentId", studentId || "");
       localStorage.setItem("parentId", parentId || "");
       localStorage.setItem("sectionId", sectionId || "");
-      localStorage.setItem("name", name || "");
 
-      // 3. Navigate
-      const targetId = facultyId || studentId || parentId || userId;
-      navigate(redirectToDashboard(authState.role, targetId));
+      // Use the helper to determine which ID to pass for redirection
+      const targetId = facultyId || studentId || parentId;
 
-      return response.data;
+      if (role === "admin") {
+        navigate(redirectToDashboard(role));
+      } else if (targetId) {
+        navigate(redirectToDashboard(role, targetId));
+      }
+      
     } catch (error) {
-      console.error("Login error:", error.response?.data?.message || error.message);
+      console.error("Login error:", error.response?.data?.message || error);
       throw new Error(error.response?.data?.message || "Login failed");
     }
   };
 
-  // --- LOGOUT HANDLER ---
+  // --- LOGOUT HANDLER (Cleaned up all IDs) ---
   const logout = () => {
-    // Clear State
+    localStorage.removeItem("role");
+    localStorage.removeItem("facultyId");
+    localStorage.removeItem("studentId");
+    localStorage.removeItem("parentId");
+    localStorage.removeItem("sectionId");
+    
     setAuth({
       isAuthenticated: false,
       role: null,
-      userId: null,
       facultyId: null,
       studentId: null,
       parentId: null,
-      sectionId: null,
-      name: null,
     });
 
-    // Clear Storage
-    localStorage.clear();
-
-    // Send back to login
     navigate("/");
   };
 
@@ -180,9 +145,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const PublicRoute = ({ children }) => {
-    const location = useLocation();
+  const location = useLocation();
 
-    if (auth.isAuthenticated) {
+  if (auth.isAuthenticated) {
       const id =
         auth.role === "faculty"
           ? auth.facultyId
