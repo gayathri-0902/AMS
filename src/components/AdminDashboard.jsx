@@ -230,6 +230,7 @@ function AdminDashboard() {
       </footer>
 
     </div>
+   </div> 
   );
 }
 
