@@ -72,10 +72,10 @@ const StudentDashboard = ({ overrideId }) => {
 
     const yearDiff = 26 - joinYear; // Based on 2026 baseline
     const labels = { 
-      0: "1ST YEAR", 
-      1: "2ND YEAR", 
-      2: "3RD YEAR", 
-      3: "4TH YEAR" 
+      1: "1ST YEAR", 
+      2: "2ND YEAR", 
+      3: "3RD YEAR", 
+      4: "4TH YEAR" 
     };
 
     return labels[yearDiff] || "ALUMNI";
