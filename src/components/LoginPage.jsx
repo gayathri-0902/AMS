@@ -79,7 +79,10 @@ function LoginPage() {
                   ? "bg-[#3b82f6] text-white shadow-md"
                   : "text-[#64748b] hover:text-[#1e293b]"
               }`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                setCredentials({ identifier: "", password: "" });
+              }}
             >
               {tab}
             </button>
