@@ -12,13 +12,14 @@ import {
   HiOutlineSparkles 
 } from "react-icons/hi";
 
-// The component now accepts 'overrideId' passed from App.jsx for Parent views
 const StudentDashboard = ({ overrideId }) => {
   const { auth, logout } = useAuth();
-  const { studentId: urlStudentId } = useParams(); // Get ID from URL if available
+  const { studentId: urlStudentId } = useParams();
   const navigate = useNavigate();
   const [timetable, setTimetable] = useState([]);
   const [studentInfo, setStudentInfo] = useState(null); 
+  const [currentYear, setCurrentYear] = useState("");
+  const [currentSem, setCurrentSem] = useState("");
   const [loading, setLoading] = useState(true);
 
   const formatTime = (timeString) => {
@@ -30,10 +31,46 @@ const StudentDashboard = ({ overrideId }) => {
     return `${displayHours}:${minutes} ${ampm}`;
   };
 
+  // FIX 3: yearDiff now maps correctly to year labels
+  const getAcademicYear = (rollNo) => {
+    if (!rollNo || typeof rollNo !== 'string') return "";
+    const joinYear = parseInt(rollNo.substring(0, 2));
+    const now = new Date();
+    const currentCalYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    if (currentCalYear > 2026 || (currentCalYear === 2026 && currentMonth >= 5)) {
+      return "ALUMNI";
+    }
+
+    // FIX: yearDiff 0 means joined this year = 1st year, not 4th
+    const yearDiff = 26 - joinYear;
+    const labels = { 
+      1: "1ST YEAR", 
+      2: "2ND YEAR", 
+      3: "3RD YEAR", 
+      4: "4TH YEAR" 
+    };
+
+    return labels[yearDiff] || "ALUMNI";
+  };
+
+  // FIX 2: Helper to get status badge styles
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "Present":
+        return "bg-green-100 text-green-600";
+      case "Absent":
+        return "bg-red-100 text-red-500";
+      case "Not Marked":
+      default:
+        return "bg-gray-100 text-gray-400";
+    }
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // LOGIC: Use overrideId (prop), then urlStudentId (URL), then auth.studentId (Login)
         const targetId = overrideId || urlStudentId || auth?.studentId;
         
         if (!targetId) {
@@ -45,8 +82,14 @@ const StudentDashboard = ({ overrideId }) => {
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL}/api/student-dashboard/${targetId}`
         );
+
         setTimetable(response.data.timetableData || []);
         setStudentInfo(response.data.studentDetails || response.data.student || null);
+
+        // FIX 2: Use current_year and current_sem from API (YrSem) instead of calculating locally
+        setCurrentYear(response.data.current_year || "");
+        setCurrentSem(response.data.current_sem || "");
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -56,30 +99,6 @@ const StudentDashboard = ({ overrideId }) => {
 
     fetchDashboardData();
   }, [auth?.studentId, urlStudentId, overrideId]);
-
-  const getAcademicYear = (rollNo) => {
-    if (!rollNo || typeof rollNo !== 'string') return "";
-    
-    const joinYear = parseInt(rollNo.substring(0, 2));
-    const now = new Date();
-    const currentYear = now.getFullYear(); // 2026
-    const currentMonth = now.getMonth();    // 0 = Jan, 1 = Feb... 5 = June
-
-    // Strict Graduation Logic:
-    if (currentYear > 2026 || (currentYear === 2026 && currentMonth >= 5)) {
-      return "ALUMNI";
-    }
-
-    const yearDiff = 26 - joinYear; // Based on 2026 baseline
-    const labels = { 
-      1: "1ST YEAR", 
-      2: "2ND YEAR", 
-      3: "3RD YEAR", 
-      4: "4TH YEAR" 
-    };
-
-    return labels[yearDiff] || "ALUMNI";
-  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-antiqua">Loading...</div>;
 
@@ -131,8 +150,9 @@ const StudentDashboard = ({ overrideId }) => {
                 <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <HiOutlineBookOpen className="w-8 h-8" />
                 </div>
-                <span className="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-                  Not Marked
+                {/* FIX 1: Use attendance_status from API instead of hardcoded "Not Marked" */}
+                <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${getStatusStyle(course.attendance_status)}`}>
+                  {course.attendance_status || "Not Marked"}
                 </span>
               </div>
 
