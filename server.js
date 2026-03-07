@@ -39,7 +39,7 @@ if (process.env.NODE_ENV !== 'production') {
 // --- Middleware ---
 app.use(
   cors({
-    origin: ["http://localhost:5173"], 
+    origin: ["http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -65,27 +65,27 @@ app.post("/api/login", async (req, res) => {
   const { body } = req;
   try {
     let user = await User.findOne({ user_name: body.identifier });
-    
+
     if (!user && body.role === "student") {
       const student = await Student.findOne({ roll_no: body.identifier });
       if (student) {
         user = await User.findById(student.user_id);
       }
     }
-    
+
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-    
+
     const isMatch = await bcrypt.compare(body.password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-    
+
     if (body.role && user.role !== body.role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
-    
+
     const responseData = {
       message: `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} login successful`,
       role: user.role,
@@ -158,7 +158,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
         section_name: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "Unknown Batch",
         section_id: yrSem ? yrSem._id : null,
         class_id: subject ? subject._id : null,
-        session_no : entry.session_no,
+        session_no: entry.session_no,
         start_time: entry.start_time,
         end_time: entry.end_time
       };
@@ -177,11 +177,11 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
       yr_sem_id: sectionId,
       status: "active",
     }).populate("student_id").sort({ "student_id.roll_no": 1 });
-    
+
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ message: "No students found in this section." });
     }
-    
+
     const students = enrollments.map((enrollment) => {
       const student = enrollment.student_id;
       if (!student) return null;
@@ -191,7 +191,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
         student_id_no: student.roll_no || "N/A",
       };
     }).filter((s) => s !== null);
-    
+
     students.sort((a, b) => a.student_id_no.localeCompare(b.student_id_no));
     res.json(students);
   } catch (error) {
@@ -247,7 +247,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       const key = `${record.class_session_id.subject_offering_id}_${record.class_session_id.session_no}`;
       attendanceMap[key] = record.status;
     });
-    
+
     const timetableData = timetableEntries.map((entry) => {
       const subject = entry.subject_offering_id || {};
       const course = subject.course_master_id || {};
@@ -266,15 +266,15 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       };
     });
 
-    res.json({ 
+    res.json({
       studentDetails: {
         student_id_no: student.roll_no,
-        branch_name: yrSem.stream, 
+        branch_name: yrSem.stream,
         student_name: student.name,
         current_year: yrSem.yr,
         current_sem: yrSem.sem
       },
-      timetableData 
+      timetableData
     });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -286,10 +286,10 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
 app.get("/api/parent/dashboard/:parentId", async (req, res) => {
   try {
     const { parentId } = req.params;
-    
+
     // 1. Find the Parent Profile using either User ID or Profile ID
-    const parentProfile = await Parent.findOne({ 
-      $or: [{ _id: parentId }, { user_id: parentId }] 
+    const parentProfile = await Parent.findOne({
+      $or: [{ _id: parentId }, { user_id: parentId }]
     });
 
     if (!parentProfile) {
@@ -298,25 +298,25 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
 
     // 2. Find student mappings
     const mappings = await ParentStudentMap.find({ parent_id: parentProfile._id }).populate("student_id");
-    
+
     // If no mappings exist, send empty array instead of crashing
     if (!mappings || mappings.length === 0) {
-      return res.json([]); 
+      return res.json([]);
     }
 
     const childrenData = await Promise.all(mappings.map(async (mapping) => {
       const student = mapping.student_id;
-      if (!student) return null; 
+      if (!student) return null;
 
       // 3. Safe Enrollment Check (Optional Chaining prevents 500 errors)
-      const enrollment = await StudentEnrollment.findOne({ 
-        student_id: student._id, 
-        status: "active" 
+      const enrollment = await StudentEnrollment.findOne({
+        student_id: student._id,
+        status: "active"
       }).populate("yr_sem_id");
 
       // 4. Safe Attendance Calculation
       const allRecords = await Attendance.find({ student_id: student._id });
-      
+
       let percentage = "0.0";
       if (allRecords.length > 0) {
         const presentCount = allRecords.filter(r => r.status === "Present").length;
@@ -328,7 +328,7 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
           student_id: student._id,
           student_name: student.name || "Unknown Student",
           student_id_no: student.roll_no || "N/A",
-          branch_name: enrollment?.yr_sem_id?.stream || "General", 
+          branch_name: enrollment?.yr_sem_id?.stream || "General",
         },
         attendanceStats: {
           percentage: percentage
@@ -337,7 +337,7 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
     }));
 
     // Remove any nulls and send to frontend
-    res.json(childrenData.filter(child => child !== null)); 
+    res.json(childrenData.filter(child => child !== null));
 
   } catch (error) {
     console.error("Dashboard Logic Error:", error);
@@ -385,23 +385,23 @@ app.post("/api/attendance", async (req, res) => {
   try {
     const assignment = await FacultyAssignment.findOne({ subject_offering_id: classId });
     const facultyId = assignment ? assignment.faculty_id : null;
-    
+
     const session = new ClassSession({
       subject_offering_id: classId,
       faculty_id: facultyId,
       date: new Date(),
       is_conducted: true,
-      session_no : sessionNo
+      session_no: sessionNo
     });
-    
+
     await session.save();
-    
+
     const attendanceRecords = Object.keys(attendanceData).map((studentId) => ({
       class_session_id: session._id,
       student_id: studentId,
       status: attendanceData[studentId],
     }));
-    
+
     await Attendance.insertMany(attendanceRecords);
     res.status(200).json({ message: "Attendance marked successfully" });
   } catch (error) {
@@ -415,30 +415,30 @@ app.post("/api/admin/student", async (req, res) => {
   try {
     let user = await User.findOne({ user_name: email });
     if (user) return res.status(400).json({ message: "User already exists" });
-    
+
     let yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
     if (!yrSem) {
       yrSem = new YrSem({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
       await yrSem.save();
     }
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     user = new User({ user_name: email, password: hashedPassword, role: "student" });
     await user.save();
-    
+
     const student = new Student({ user_id: user._id, name, yr_sem_id: yrSem._id, roll_no, email });
     await student.save();
-    
-    const enrollment = new StudentEnrollment({ 
-      student_id: student._id, 
-      yr_sem_id: yrSem._id, 
-      academic_yr, 
-      status: "active", 
-      start_date: new Date() 
+
+    const enrollment = new StudentEnrollment({
+      student_id: student._id,
+      yr_sem_id: yrSem._id,
+      academic_yr,
+      status: "active",
+      start_date: new Date()
     });
     await enrollment.save();
-    
+
     res.status(201).json({ message: "Student created successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
@@ -452,31 +452,31 @@ app.post("/api/admin/schedule", async (req, res) => {
     if (!faculty || !yrSem) return res.status(404).json({ message: "Faculty or Section not found" });
 
     let course = await CourseMaster.findOne({ course_code });
-    if (!course) { 
-      course = new CourseMaster({ course_code, course_name: course_code, credits: 3 }); 
-      await course.save(); 
+    if (!course) {
+      course = new CourseMaster({ course_code, course_name: course_code, credits: 3 });
+      await course.save();
     }
 
     let subjectOffering = await SubjectOffering.findOne({ course_master_id: course._id, yr_sem_id: yrSem._id });
-    if (!subjectOffering) { 
-      subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true }); 
-      await subjectOffering.save(); 
+    if (!subjectOffering) {
+      subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true });
+      await subjectOffering.save();
     }
 
     const assignment = await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id });
-    if (!assignment) { 
-      await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save(); 
+    if (!assignment) {
+      await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save();
     }
 
-    const timetable = new TimeTable({ 
-      yr_sem_id: yrSem._id, 
-      day_of_week: day, 
-      session_no: Number(session_no), 
-      start_time, 
-      end_time, 
-      subject_offering_id: subjectOffering._id, 
-      faculty_id: faculty._id, 
-      location 
+    const timetable = new TimeTable({
+      yr_sem_id: yrSem._id,
+      day_of_week: day,
+      session_no: Number(session_no),
+      start_time,
+      end_time,
+      subject_offering_id: subjectOffering._id,
+      faculty_id: faculty._id,
+      location
     });
     await timetable.save();
     res.status(201).json({ message: "Schedule created successfully" });
@@ -516,14 +516,14 @@ app.post("/api/admin/parent/map", async (req, res) => {
 app.post("/api/notes", async (req, res) => {
   const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
   try {
-    const note = new ClassNotes({ 
-      subject_offering_id, 
-      faculty_id, 
-      title, 
-      description, 
-      file_url, 
-      upload_date: new Date(), 
-      is_visible: true 
+    const note = new ClassNotes({
+      subject_offering_id,
+      faculty_id,
+      title,
+      description,
+      file_url,
+      upload_date: new Date(),
+      is_visible: true
     });
     await note.save();
     res.status(201).json({ message: "Note added successfully" });
@@ -532,9 +532,9 @@ app.post("/api/notes", async (req, res) => {
 
 app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   try {
-    const notes = await ClassNotes.find({ 
-      subject_offering_id: req.params.subjectOfferingId, 
-      is_visible: true 
+    const notes = await ClassNotes.find({
+      subject_offering_id: req.params.subjectOfferingId,
+      is_visible: true
     }).populate("faculty_id", "name").sort({ upload_date: -1 });
     res.json(notes);
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -544,13 +544,13 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
 app.post("/api/faculty/assignments", async (req, res) => {
   const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
   try {
-    const assignment = new Assignment({ 
-      subject_offering_id, 
-      title, 
-      instructions, 
-      file_url, 
-      due_date: new Date(due_date), 
-      is_active: true 
+    const assignment = new Assignment({
+      subject_offering_id,
+      title,
+      instructions,
+      file_url,
+      due_date: new Date(due_date),
+      is_active: true
     });
     await assignment.save();
     res.status(201).json({ message: "Assignment posted successfully" });
@@ -559,9 +559,9 @@ app.post("/api/faculty/assignments", async (req, res) => {
 
 app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
   try {
-    const assignments = await Assignment.find({ 
-      subject_offering_id: req.params.subjectOfferingId, 
-      is_active: true 
+    const assignments = await Assignment.find({
+      subject_offering_id: req.params.subjectOfferingId,
+      is_active: true
     }).sort({ due_date: 1 });
     res.json(assignments);
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -856,7 +856,7 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
       student_id: studentId,
       class_session_id: { $in: sessions.map(s => s._id) },
     });
-    
+
     const present = records.filter(r => r.status === "Present").length;
     const attendanceStats = {
       present_count: present,
@@ -864,14 +864,14 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
       percentage: records.length > 0 ? ((present / records.length) * 100).toFixed(2) : "0.00"
     };
 
-    const notes = await ClassNotes.find({ 
-      subject_offering_id: subjectOfferingId, 
-      is_visible: true 
+    const notes = await ClassNotes.find({
+      subject_offering_id: subjectOfferingId,
+      is_visible: true
     }).sort({ upload_date: -1 });
 
-    const assignments = await Assignment.find({ 
-      subject_offering_id: subjectOfferingId, 
-      is_active: true 
+    const assignments = await Assignment.find({
+      subject_offering_id: subjectOfferingId,
+      is_active: true
     }).sort({ due_date: 1 });
 
     res.json({
@@ -884,6 +884,32 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
   } catch (error) {
     console.error("Error in course-details route:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 17. Academic AI — Proxy to Python Flask backend
+const FLASK_URL = process.env.FLASK_URL || "http://localhost:5001";
+
+app.post("/api/academic-ai/query", async (req, res) => {
+  try {
+    const response = await fetch(`${FLASK_URL}/api/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("Academic AI proxy error:", error.message);
+    res.status(502).json({
+      message: "Academic AI service is unavailable. Make sure the Flask server is running.",
+    });
   }
 });
 
