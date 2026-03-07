@@ -24,4 +24,7 @@ dist-ssr
 *.sw?
 .venv
 .env
-py_backend
+py_backend/models
+py_backend/chromadb
+
+__pycache__
