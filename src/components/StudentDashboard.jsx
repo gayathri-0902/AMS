@@ -2,57 +2,40 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { 
-  HiOutlineCalendar, 
-  HiOutlineClipboardCheck, 
-  HiOutlineBookOpen, 
+import {
+  HiOutlineCalendar,
+  HiOutlineClipboardCheck,
+  HiOutlineBookOpen,
   HiOutlineArrowRight,
   HiOutlineLogout,
   HiOutlineUser,
-  HiOutlineSparkles 
+  HiOutlineSparkles
 } from "react-icons/hi";
+import AcademicAI from "./AcademicAI";
 
 const StudentDashboard = ({ overrideId }) => {
   const { auth, logout } = useAuth();
   const { studentId: urlStudentId } = useParams();
   const navigate = useNavigate();
   const [timetable, setTimetable] = useState([]);
-  const [studentInfo, setStudentInfo] = useState(null); 
+  const [studentInfo, setStudentInfo] = useState(null);
   const [currentYear, setCurrentYear] = useState("");
   const [currentSem, setCurrentSem] = useState("");
   const [loading, setLoading] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const formatTime = (timeString) => {
     if (!timeString) return "";
     let [hours, minutes] = timeString.split(':');
     let h = parseInt(hours);
     const ampm = (h >= 12) ? 'PM' : 'AM';
-    let displayHours = h % 12 || 12; 
+    let displayHours = h % 12 || 12;
     return `${displayHours}:${minutes} ${ampm}`;
   };
 
-  // FIX 3: yearDiff now maps correctly to year labels
-  const getAcademicYear = (rollNo) => {
-    if (!rollNo || typeof rollNo !== 'string') return "";
-    const joinYear = parseInt(rollNo.substring(0, 2));
-    const now = new Date();
-    const currentCalYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-
-    if (currentCalYear > 2026 || (currentCalYear === 2026 && currentMonth >= 5)) {
-      return "ALUMNI";
-    }
-
-    // FIX: yearDiff 0 means joined this year = 1st year, not 4th
-    const yearDiff = 26 - joinYear;
-    const labels = { 
-      1: "1ST YEAR", 
-      2: "2ND YEAR", 
-      3: "3RD YEAR", 
-      4: "4TH YEAR" 
-    };
-
-    return labels[yearDiff] || "ALUMNI";
+  const getYearLabel = (yr) => {
+    const labels = { 1: "1ST YEAR", 2: "2ND YEAR", 3: "3RD YEAR", 4: "4TH YEAR" };
+    return labels[yr] || `YEAR ${yr}`;
   };
 
   // FIX 2: Helper to get status badge styles
@@ -72,7 +55,7 @@ const StudentDashboard = ({ overrideId }) => {
     const fetchDashboardData = async () => {
       try {
         const targetId = overrideId || urlStudentId || auth?.studentId;
-        
+
         if (!targetId) {
           console.error("No Student ID found");
           setLoading(false);
@@ -86,9 +69,10 @@ const StudentDashboard = ({ overrideId }) => {
         setTimetable(response.data.timetableData || []);
         setStudentInfo(response.data.studentDetails || response.data.student || null);
 
-        // FIX 2: Use current_year and current_sem from API (YrSem) instead of calculating locally
-        setCurrentYear(response.data.current_year || "");
-        setCurrentSem(response.data.current_sem || "");
+        // Use current_year and current_sem from the YrSem table (via studentDetails)
+        const details = response.data.studentDetails || response.data.student || {};
+        setCurrentYear(details.current_year || "");
+        setCurrentSem(details.current_sem || "");
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -105,10 +89,10 @@ const StudentDashboard = ({ overrideId }) => {
   return (
     <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* --- HEADER --- */}
         <div className="flex justify-between items-start mb-10">
-          
+
           {/* LEFT: Student Info */}
           <div className="flex items-center space-x-4 p-2">
             <div className="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg">
@@ -119,13 +103,13 @@ const StudentDashboard = ({ overrideId }) => {
                 {studentInfo?.student_id_no}
               </h2>
               <p className="text-sm font-bold text-blue-600 uppercase mt-1 tracking-widest">
-                {studentInfo?.branch_name} • {getAcademicYear(studentInfo?.student_id_no)}
+                {studentInfo?.branch_name} • {getYearLabel(studentInfo?.current_year)} • SEM {studentInfo?.current_sem}
               </p>
             </div>
           </div>
 
           {/* RIGHT: Logout Button */}
-          <button 
+          <button
             onClick={logout}
             className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
           >
@@ -175,7 +159,7 @@ const StudentDashboard = ({ overrideId }) => {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => navigate(`/student/subject-details/${course.subject_offering_id}`)}
                 className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg"
               >
@@ -186,13 +170,22 @@ const StudentDashboard = ({ overrideId }) => {
         </div>
 
         {/* Floating Academic AI Button */}
-        <button 
-          onClick={() => alert("Academic AI is launching in June 2026!")}
+        <button
+          onClick={() => setChatOpen(true)}
           className="fixed bottom-10 right-10 flex items-center space-x-3 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-blue-700 hover:-translate-y-2 transition-all z-[1000] border-4 border-white"
         >
           <HiOutlineSparkles className="w-6 h-6" />
           <span className="text-lg">Academic AI</span>
         </button>
+
+        {/* Academic AI Chat Modal */}
+        <AcademicAI
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          studentName={studentInfo?.student_name}
+          year={studentInfo?.current_year}
+          branch={studentInfo?.branch_name}
+        />
 
       </div>
     </div>
