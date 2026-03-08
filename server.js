@@ -898,13 +898,24 @@ app.post("/api/academic-ai/query", async (req, res) => {
       body: JSON.stringify(req.body),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      return res.status(response.status).json(data);
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
     }
 
-    res.json(data);
+    // Set headers for Server-Sent Events (SSE)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    // Stream the incoming chunks from Flask directly to the client
+    if (response.body) {
+      for await (const chunk of response.body) {
+        res.write(chunk);
+      }
+    }
+    res.end();
+
   } catch (error) {
     console.error("Academic AI proxy error:", error.message);
     res.status(502).json({

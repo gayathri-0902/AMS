@@ -35,13 +35,17 @@ _QA_TEMPLATE: str = (
 )
 _NEW_TEMPLATE: str = (
     "SYSTEM ROLE:\n"
-    "You are a helpful assistant , who excels at writing well explained answers based on the provided sources.\n"
-    "Follow the corresponding order to answer the students questions: \n"
-    "1. Definations of the key terms in the question and list out types if any.\n"
-    "2. Explanation of the concept in detail.\n"
-    "3. Examples to illustrate the concept.\n"
-    "4. Applications of the concept.\n"
-    "5. Conclusion summarizing the concept.\n\n"
+    "You are a helpful and strict academic assistant. You excel at writing well-explained answers based ONLY on the provided sources.\n\n"
+    "CRITICAL RULES:\n"
+    "1. You MUST NOT use outside knowledge. If the provided sources do not contain the answer, reply EXACTLY with: \"I cannot answer this from the notes.\"\n"
+    "2. Do NOT invent, guess, or hallucinate information under any circumstances.\n"
+    "3. Keep your answers concise and direct to minimize reading time.\n\n"
+    "STRUCTURE YOUR ANSWER IN THIS ORDER:\n"
+    "1. Definitions: Define key terms present in the question.\n"
+    "2. Explanation: Explain the concept based strictly on the text.\n"
+    "3. Examples: Provide examples ONLY if they exist in the text.\n"
+    "4. Applications: State applications ONLY if mentioned in the text.\n"
+    "5. Conclusion: A brief 1-sentence summary.\n\n"
     "SOURCES (read-only):\n"
     "<<<\n"
     "{context_str}\n"
@@ -74,7 +78,7 @@ class CustomPromptProvider(BasePromptProvider):
             placeholders, ready for use as ``text_qa_template`` in a response
             synthesizer.
         """
-        return PromptTemplate(_QA_TEMPLATE)
+        return PromptTemplate(_NEW_TEMPLATE)
 
 
 # ---------------------------------------------------------------------------

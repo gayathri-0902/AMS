@@ -49,7 +49,8 @@ def _get_engine(year: int, branch: str):
         return _cached_engine
 
     print(f"[app] Building query engine for year={year}, branch={branch} ...")
-    _cached_engine = setup_query_engine(year=year, branch=branch)
+    # Enable streaming for the engine
+    _cached_engine = setup_query_engine(year=year, branch=branch, streaming=True)
     _cached_key = key
     print("[app] Query engine ready.")
     return _cached_engine
@@ -96,22 +97,35 @@ def handle_query():
         engine = _get_engine(year, branch)
         response = engine.query(query)
 
-        # Collect source citations
-        sources = []
-        for node in response.source_nodes:
-            sources.append({
-                "document": os.path.basename(
-                    node.metadata.get("file_path", "Unknown")
-                ),
-                "page": node.metadata.get("page_label", "?"),
-                "score": round(node.score, 4) if node.score else None,
-            })
+        def generate():
+            # 1) Stream the text token by token
+            for token in response.response_gen:
+                # We yield each token as an SSE event containing a JSON blob
+                import json
+                chunk_data = json.dumps({"token": token})
+                yield f"data: {chunk_data}\n\n"
 
-        return jsonify({
-            "answer": str(response),
-            "sources": sources,
-            "student_name": student_name,
-        })
+            # 2) Collect and yield the source citations as the final event
+            sources = []
+            for node in response.source_nodes:
+                sources.append({
+                    "document": os.path.basename(
+                        node.metadata.get("file_path", "Unknown")
+                    ),
+                    "page": node.metadata.get("page_label", "?"),
+                    "score": round(node.score, 4) if node.score else None,
+                })
+            
+            final_data = json.dumps({
+                "sources": sources,
+                "student_name": student_name,
+                "done": True
+            })
+            yield f"data: {final_data}\n\n"
+
+        # Return it as an Event-Stream
+        from flask import Response
+        return Response(generate(), mimetype="text/event-stream")
 
     except Exception as e:
         print(f"[app] Query error: {e}")
