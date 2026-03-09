@@ -15,16 +15,16 @@ import {
 function AdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  
+
 
   // Student Form State
   const [student, setStudent] = useState({
-    name: "", roll_no: "", email: "", stream: "", yr: "", sem: "", academic_yr: "2022-26", password: "",
+    name: "", roll_no: "", email: "", stream: "", yr: "", sem: "", academic_yr: "", password: "",
   });
   const [parent, setParent] = useState({ name: "", email: "", phno: "", password: "" });
   const [mapping, setMapping] = useState({ parent_email: "", student_roll_no: "", relationship: "Father" });
 
-  
+
 
   // Handlers
 
@@ -40,7 +40,7 @@ function AdminDashboard() {
     setMapping({ ...mapping, [e.target.name]: e.target.value });
   };
 
-  
+
 
   // Submit Handlers
 
@@ -179,12 +179,12 @@ function AdminDashboard() {
         </div>
 
 
-      <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
-        © 2026 Campus Management System
-      </footer>
+        <footer className="max-w-7xl mx-auto mt-12 mb-8 text-center text-[16px] text-[#94a3b8] italic">
+          © 2026 Campus Management System
+        </footer>
 
+      </div>
     </div>
-   </div> 
   );
 }
 
