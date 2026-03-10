@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    const storedFacultyId = localStorage.getItem("facultyId");
-    const storedStudentId = localStorage.getItem("studentId");
-    const storedParentId = localStorage.getItem("parentId"); // Added Parent storage check
+    const storedRole = sessionStorage.getItem("role");
+    const storedFacultyId = sessionStorage.getItem("facultyId");
+    const storedStudentId = sessionStorage.getItem("studentId");
+    const storedParentId = sessionStorage.getItem("parentId"); // Added Parent storage check
 
     if (storedRole && !auth.isAuthenticated) {
       setAuth({
@@ -81,11 +81,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       // Save user data in local storage
-      localStorage.setItem("role", role);
-      localStorage.setItem("facultyId", facultyId || "");
-      localStorage.setItem("studentId", studentId || "");
-      localStorage.setItem("parentId", parentId || "");
-      localStorage.setItem("sectionId", sectionId || "");
+      sessionStorage.setItem("role", role);
+      sessionStorage.setItem("facultyId", facultyId || "");
+      sessionStorage.setItem("studentId", studentId || "");
+      sessionStorage.setItem("parentId", parentId || "");
+      sessionStorage.setItem("sectionId", sectionId || "");
 
       // Use the helper to determine which ID to pass for redirection
       const targetId = facultyId || studentId || parentId;
@@ -104,11 +104,11 @@ export const AuthProvider = ({ children }) => {
 
   // --- LOGOUT HANDLER (Cleaned up all IDs) ---
   const logout = () => {
-    localStorage.removeItem("role");
-    localStorage.removeItem("facultyId");
-    localStorage.removeItem("studentId");
-    localStorage.removeItem("parentId");
-    localStorage.removeItem("sectionId");
+    sessionStorage.removeItem("role");
+    sessionStorage.removeItem("facultyId");
+    sessionStorage.removeItem("studentId");
+    sessionStorage.removeItem("parentId");
+    sessionStorage.removeItem("sectionId");
     
     setAuth({
       isAuthenticated: false,
