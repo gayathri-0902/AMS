@@ -9,7 +9,8 @@ import {
   MdSupervisorAccount,
   MdCastForEducation,
   MdEventNote,
-  MdArrowForward
+  MdArrowForward,
+  MdEdit
 } from "react-icons/md";
 
 function AdminDashboard() {
@@ -196,142 +197,6 @@ function AdminDashboard() {
             </button>
           </form>
         </div>
-
-        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
-          <h3 className={labelClass}>
-            <MdEdit size={24} className="text-blue-600" /> Edit Student Details
-          </h3>
-
-          {/* Search Student */}
-          <div className="flex gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Enter Roll Number"
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-              className={inputClass}
-            />
-
-            <button
-              onClick={handleStudentSearch}
-              className="bg-[#2563eb] text-white px-6 rounded-xl hover:bg-[#1d4ed8]"
-            >
-              Search
-            </button>
-            {studentLoaded && (
-              <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4">
-                Student found. You can now edit details.
-              </div>
-            )}
-          </div>
-
-          {/* Student Form */}
-          {studentLoaded && (
-            <form className="space-y-4">
-
-              <input
-                type="text"
-                name="name"
-                placeholder="Student Full Name"
-                value={form.name}
-                onChange={handleFormChange}
-                className={inputClass}
-                disabled={!isEditing}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="roll_no"
-                  placeholder="Roll Number"
-                  value={form.roll_no}
-                  onChange={handleFormChange}
-                  className={inputClass}
-                  disabled={!isEditing}
-                />
-
-                <input
-                  type="text"
-                  name="stream"
-                  placeholder="Stream"
-                  value={form.stream}
-                  onChange={handleFormChange}
-                  className={inputClass}
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <input
-                  type="number"
-                  name="yr"
-                  placeholder="Year"
-                  value={form.yr}
-                  onChange={handleFormChange}
-                  className={inputClass}
-                  disabled={!isEditing}
-                />
-
-                <input
-                  type="number"
-                  name="sem"
-                  placeholder="Semester"
-                  value={form.sem}
-                  onChange={handleFormChange}
-                  className={inputClass}
-                  disabled={!isEditing}
-                />
-
-                <input
-                  type="text"
-                  name="academic_yr"
-                  placeholder="Academic Year"
-                  value={form.academic_yr}
-                  onChange={handleFormChange}
-                  className={inputClass}
-                  disabled={!isEditing}
-                />
-              </div>
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Student Email"
-                value={form.email}
-                onChange={handleFormChange}
-                className={inputClass}
-                disabled={!isEditing}
-              />
-
-              {/* Buttons */}
-              <div className="flex gap-4">
-
-                {!isEditing && studentId && (
-                  <button
-                    type="button"
-                    onClick={handleEditClick}
-                    className="w-full bg-[#2563eb] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#1d4ed8] transition-all"
-                  >
-                    Edit
-                  </button>
-                )}
-
-                {isEditing && (
-                  <button
-                    type="button"
-                    onClick={handleUpdate}
-                    className="w-full bg-[#16a34a] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#15803d] transition-all"
-                  >
-                    Update Student
-                  </button>
-                )}
-              </div>
-
-            </form>
-          )}
-        </div>
-
-
 
         {/* Section: Add Parent */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
