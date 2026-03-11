@@ -24,6 +24,18 @@ function AdminDashboard() {
   const [parent, setParent] = useState({ name: "", email: "", phno: "", password: "" });
   const [mapping, setMapping] = useState({ parent_email: "", student_roll_no: "", relationship: "Father" });
 
+  // Edit Faculty Assignment State
+  const [assignment, setAssignment] = useState({
+    yr: "",
+    sem: "",
+    stream: "",
+    academic_yr: "",
+    yr_sem_id: "",
+    course_code: "",
+    faculty_email: ""
+  });
+  const [availableCourses, setAvailableCourses] = useState([]);
+
 
 
   // Handlers
@@ -32,12 +44,18 @@ function AdminDashboard() {
     setStudent({ ...student, [e.target.name]: e.target.value });
   };
 
+
+
   const handleParentChange = (e) => {
     setParent({ ...parent, [e.target.name]: e.target.value });
   };
 
   const handleMappingChange = (e) => {
     setMapping({ ...mapping, [e.target.name]: e.target.value });
+  };
+
+  const handleAssignmentChange = (e) => {
+    setAssignment({ ...assignment, [e.target.name]: e.target.value });
   };
 
 
@@ -69,6 +87,62 @@ function AdminDashboard() {
       alert("Parent-Student Link Established");
       setMapping({ parent_email: "", student_roll_no: "", relationship: "Father" });
     } catch (err) { alert(err.response?.data?.message || "Error mapping accounts"); }
+  };
+
+
+
+  const fetchCoursesForBatch = async () => {
+    const { yr, sem, stream, academic_yr } = assignment;
+    if (!yr || !sem || !stream || !academic_yr) {
+      alert("Please fill yr, sem, stream, and academic year to fetch courses.");
+      return;
+    }
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/courses-by-batch`, {
+        params: { yr, sem, stream, academic_yr }
+      });
+
+      console.log("API response:", res.data);
+      const { yr_sem_id, courses } = res.data;
+      setAvailableCourses(courses);
+
+      console.log("STATE UPDATE:", courses);
+
+      // Store the returned yr_sem_id into state so we skip YrSem lookups on submit
+      setAssignment(prev => ({
+        ...prev,
+        yr_sem_id: yr_sem_id
+      }));
+
+      if (courses.length === 0) {
+        alert("No courses found for this batch");
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Error fetching courses");
+    }
+  };
+
+  const handleAssignmentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (!assignment.yr_sem_id) {
+        alert("Please click 'Fetch Courses' first to validate the batch.");
+        return;
+      }
+
+      const payload = {
+        course_code: assignment.course_code,
+        yr_sem_id: assignment.yr_sem_id,
+        faculty_email: assignment.faculty_email
+      };
+
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/admin/change-faculty`, payload);
+      alert("Faculty Assignment Updated Successfully");
+      setAssignment({ yr: "", sem: "", stream: "", academic_yr: "", yr_sem_id: "", course_code: "", faculty_email: "" });
+      setAvailableCourses([]);
+    } catch (err) {
+      alert(err.response?.data?.message || "Error updating faculty assignment");
+    }
   };
 
   // --- Reusable Styling Constants ---
@@ -123,6 +197,142 @@ function AdminDashboard() {
           </form>
         </div>
 
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+          <h3 className={labelClass}>
+            <MdEdit size={24} className="text-blue-600" /> Edit Student Details
+          </h3>
+
+          {/* Search Student */}
+          <div className="flex gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Enter Roll Number"
+              value={roll}
+              onChange={(e) => setRoll(e.target.value)}
+              className={inputClass}
+            />
+
+            <button
+              onClick={handleStudentSearch}
+              className="bg-[#2563eb] text-white px-6 rounded-xl hover:bg-[#1d4ed8]"
+            >
+              Search
+            </button>
+            {studentLoaded && (
+              <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4">
+                Student found. You can now edit details.
+              </div>
+            )}
+          </div>
+
+          {/* Student Form */}
+          {studentLoaded && (
+            <form className="space-y-4">
+
+              <input
+                type="text"
+                name="name"
+                placeholder="Student Full Name"
+                value={form.name}
+                onChange={handleFormChange}
+                className={inputClass}
+                disabled={!isEditing}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="roll_no"
+                  placeholder="Roll Number"
+                  value={form.roll_no}
+                  onChange={handleFormChange}
+                  className={inputClass}
+                  disabled={!isEditing}
+                />
+
+                <input
+                  type="text"
+                  name="stream"
+                  placeholder="Stream"
+                  value={form.stream}
+                  onChange={handleFormChange}
+                  className={inputClass}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <input
+                  type="number"
+                  name="yr"
+                  placeholder="Year"
+                  value={form.yr}
+                  onChange={handleFormChange}
+                  className={inputClass}
+                  disabled={!isEditing}
+                />
+
+                <input
+                  type="number"
+                  name="sem"
+                  placeholder="Semester"
+                  value={form.sem}
+                  onChange={handleFormChange}
+                  className={inputClass}
+                  disabled={!isEditing}
+                />
+
+                <input
+                  type="text"
+                  name="academic_yr"
+                  placeholder="Academic Year"
+                  value={form.academic_yr}
+                  onChange={handleFormChange}
+                  className={inputClass}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <input
+                type="email"
+                name="email"
+                placeholder="Student Email"
+                value={form.email}
+                onChange={handleFormChange}
+                className={inputClass}
+                disabled={!isEditing}
+              />
+
+              {/* Buttons */}
+              <div className="flex gap-4">
+
+                {!isEditing && studentId && (
+                  <button
+                    type="button"
+                    onClick={handleEditClick}
+                    className="w-full bg-[#2563eb] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#1d4ed8] transition-all"
+                  >
+                    Edit
+                  </button>
+                )}
+
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleUpdate}
+                    className="w-full bg-[#16a34a] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#15803d] transition-all"
+                  >
+                    Update Student
+                  </button>
+                )}
+              </div>
+
+            </form>
+          )}
+        </div>
+
+
+
         {/* Section: Add Parent */}
         <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
           <h3 className={labelClass}>
@@ -154,6 +364,40 @@ function AdminDashboard() {
             </select>
             <button type="submit" className="w-full bg-[#4f46e5] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#4338ca] transition-all">
               Link Accounts
+            </button>
+          </form>
+        </div>
+
+        {/* Section: Edit Faculty Assignment */}
+        <div className="bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-white">
+          <h3 className={labelClass}>
+            <MdCastForEducation size={24} className="text-orange-600" /> Edit Faculty Assignment
+          </h3>
+          <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <input type="number" name="yr" placeholder="Year" value={assignment.yr} onChange={handleAssignmentChange} className={inputClass} required />
+              <input type="number" name="sem" placeholder="Sem" value={assignment.sem} onChange={handleAssignmentChange} className={inputClass} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input type="text" name="stream" placeholder="Stream (e.g. CSE)" value={assignment.stream} onChange={handleAssignmentChange} className={inputClass} required />
+              <input type="text" name="academic_yr" placeholder="Acad. Year" value={assignment.academic_yr} onChange={handleAssignmentChange} className={inputClass} required />
+            </div>
+
+            <button type="button" onClick={fetchCoursesForBatch} className="w-full bg-[#f97316] text-white py-2 rounded-xl text-[16px] hover:bg-[#ea580c] transition-all">
+              Fetch Courses
+            </button>
+
+            <select name="course_code" value={assignment.course_code} onChange={handleAssignmentChange} className={inputClass} required>
+              <option value="">Select Course</option>
+              {availableCourses?.map((c, i) => (
+                <option key={i} value={c.course_code}>{c.course_name} ({c.course_code})</option>
+              ))}
+            </select>
+
+            <input type="email" name="faculty_email" placeholder="New Faculty Email" value={assignment.faculty_email} onChange={handleAssignmentChange} className={inputClass} required />
+
+            <button type="submit" className="w-full bg-[#ea580c] text-white py-3.5 rounded-xl text-[18px] hover:bg-[#c2410c] transition-all">
+              Update Assignment
             </button>
           </form>
         </div>

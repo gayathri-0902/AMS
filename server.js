@@ -844,6 +844,90 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
   }
 });
 
+
+// manage faculty assignment (fetches courses then updates faculties)
+app.get("/api/admin/courses-by-batch", async (req, res) => {
+  try {
+    const { yr, sem, stream, academic_yr } = req.query;
+
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
+    if (!yrSem) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    const offerings = await SubjectOffering.find({ yr_sem_id: yrSem._id })
+      .populate("course_master_id");
+
+    const courses = offerings.map(offering => ({
+      course_code: offering.course_master_id.course_code,
+      course_name: offering.course_master_id.course_name
+    }));
+
+    res.json({ yr_sem_id: yrSem._id, courses });
+    console.log(res)
+  } catch (error) {
+    console.error("Fetch courses error:", error);
+    res.status(500).json({ message: "Server error while fetching courses" });
+  }
+});
+
+app.put("/api/admin/change-faculty", async (req, res) => {
+  const { course_code, yr_sem_id, faculty_email } = req.body;
+
+  const session = await mongoose.startSession();
+
+  try {
+
+    session.startTransaction();
+
+    const course = await CourseMaster.findOne({ course_code }).session(session);
+    if (!course) throw new Error("Course not found");
+
+    const subjectOffering = await SubjectOffering.findOne({
+      course_master_id: course._id,
+      yr_sem_id: yr_sem_id
+    }).session(session);
+
+    if (!subjectOffering) throw new Error("Subject offering not found for this batch");
+
+    const faculty = await Faculty.findOne({ email: faculty_email }).session(session);
+    if (!faculty) throw new Error("Faculty not found with this email");
+
+    await FacultyAssignment.updateOne(
+      { subject_offering_id: subjectOffering._id },
+      { faculty_id: faculty._id },
+      { session }
+    );
+
+    await TimeTable.updateMany(
+      { subject_offering_id: subjectOffering._id },
+      { faculty_id: faculty._id },
+      { session }
+    );
+
+    await session.commitTransaction();
+
+    res.json({
+      message: "Faculty assignment updated successfully"
+    });
+
+  } catch (error) {
+
+    await session.abortTransaction();
+
+    console.error(error);
+
+    res.status(500).json({
+      message: error.message
+    });
+
+  } finally {
+
+    session.endSession();
+
+  }
+});
+
 // 16. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;
