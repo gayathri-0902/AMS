@@ -512,6 +512,45 @@ app.post("/api/admin/parent/map", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
+// 11.5. Faculty: Get All Assigned Subjects (for notes/assignments on any day)
+app.get("/api/faculty/subjects/:facultyId", async (req, res) => {
+  try {
+    const { facultyId } = req.params;
+
+    const assignments = await FacultyAssignment.find({ faculty_id: facultyId })
+      .populate({
+        path: "subject_offering_id",
+        populate: [
+          { path: "course_master_id" },
+          { path: "yr_sem_id" }
+        ]
+      });
+
+    const subjects = assignments
+      .filter(a => a.subject_offering_id && a.subject_offering_id.course_master_id)
+      .map(a => {
+        const so = a.subject_offering_id;
+        const course = so.course_master_id;
+        const yrSem = so.yr_sem_id;
+        return {
+          subject_offering_id: so._id,
+          course_name: course.course_name,
+          course_code: course.course_code,
+          credits: course.credits,
+          stream: yrSem?.stream || "N/A",
+          yr: yrSem?.yr || "",
+          sem: yrSem?.sem || "",
+          section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A"
+        };
+      });
+
+    res.json(subjects);
+  } catch (error) {
+    console.error("Error fetching faculty subjects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // 12. Notes Routes
 app.post("/api/notes", async (req, res) => {
   const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
