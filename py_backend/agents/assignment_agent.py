@@ -1,21 +1,93 @@
+import json
 from typing import TypedDict, Dict, Any, List
+from langgraph.graph import StateGraph, END
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
+from enum import auto, StrEnum
+from pydantic import BaseModel
+from prompts.assignment_prompts import (
+    MCQ_DRAFT_PROMPT, WRITTEN_DRAFT_PROMPT,
+    REVISE_MCQ_PROMPT, REVISE_WRITTEN_PROMPT,
+    CRITIC_PROMPT
+)
+
+class AssignType(StrEnum):
+    MCQ = auto()
+    WRITTEN = auto()
+    CODING = auto()
+
+class MCQQuestion(BaseModel):
+    """
+    Represents a single Multiple Choice Question.
+    """
+    question_text : str
+    options : List[str]
+    correct_answer : str
+    explanation : str
+
+class WrittenQuestion(BaseModel):
+    """
+    Represents a single Written Question.
+    """
+    question_text : str
+    model_answer : str
+    explanation  : str
+
+class CodingQuestion(BaseModel):
+    """
+    Represents a single coding question
+    """
+    question_text : str
+    model_code : str
+    algorithm : str
+    explanation : str
+
+class MCQAssignment(BaseModel):
+    """
+    Represents a collection of MCQ Questions.
+    """
+    topic : str
+    questions : List[MCQQuestion]
+
+class WrittenAssignment(BaseModel):
+    """
+    Represents a collection of Written Questions.
+    """
+    topic : str
+    questions : List[WrittenQuestion]
+
+class CodingAssignment(BaseModel):
+    """
+    Represents a collection of coding questions.
+    """
+    topic : str
+    questions : List[CodingQuestion]
 
 class AssignState(TypedDict):
     """
     The state dictionary that LangGraph passes between every Node.
     """
-    # 1. Inputs
-    faculty_instructions: str   # E.g., "Create 5 MCQ questions about Memory Management"
-    retrieved_context: str      # The raw text fetched from ChromaDB
+    faculty_instructions: str   
+    retrieved_context: str
+    assignment_type : AssignType  
+    current_draft: Dict[str, Any]
+    critique_notes: str            
+    final: str
+    revision_count: int
 
-    # 2. Working Memory
-    current_draft: Dict[str, Any]  # The JSON structure of the assignment
-    critique_notes: str            # Feedback from the Critic Node
-    
-    # 3. Control Mechanisms
-    revision_count: int            # Prevents infinite loops
+class QuestionFeedback(BaseModel):
+    question_index: int
+    passed: bool
+    issue: str
+
+class CriticFeedback(BaseModel):
+    """
+    Represents the feedback from the critic.
+    """
+    overall_pass: bool
+    question_feedback: List[QuestionFeedback]
+    summary: str
+
 
 llm = ChatOllama(
     model = "qwen3:8b",
@@ -30,8 +102,95 @@ def draft_assignment(state: AssignState) -> AssignState:
     """
     context = state["retrieved_context"]
     instructions = state["faculty_instructions"]
-    prompt  = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant that drafts assignments based on faculty instructions and retrieved context."),
-        ("user", "Context: {context}\nInstructions: {instructions}"),
-    ])
-    
+    if state["assignment_type"] == AssignType.MCQ:
+        schema = MCQAssignment
+        # Define prompt without .invoke yet, so we can pipe it into the chain
+        prompt = MCQ_DRAFT_PROMPT
+    else:
+        # Fallback for Written assignments
+        schema = WrittenAssignment
+        prompt = WRITTEN_DRAFT_PROMPT
+
+    # 1. Bind Pydantic schema to force structured JSON output
+    structured_llm = llm.with_structured_output(schema)
+
+    # 2. Chain prompt and LLM together
+    chain = prompt | structured_llm
+
+    # 3. Invoke the chain
+    # The dictionary passed here fills in {context} and {instructions} in the prompt
+    result = chain.invoke({"context": context, "instructions": instructions})
+
+    # 4. Update the state with the generated Pydantic model (convert to dict)
+    return {
+        "current_draft": result.model_dump(),
+        "revision_count": state.get("revision_count", 0) + 1
+    }
+
+def critic_node(state: AssignState) -> AssignState:
+    draft = state["current_draft"]
+    instructions = state["faculty_instructions"]
+    context = state["retrieved_context"]
+
+    structured_critic = llm.with_structured_output(CriticFeedback)
+    chain = CRITIC_PROMPT | structured_critic
+
+    feedback = chain.invoke({
+        "draft": json.dumps(draft,indent=2),
+        "instructions": instructions,
+        "context": context
+    })
+
+    return {
+        "critique_notes": feedback.model_dump_json()
+    }
+
+def revise_node(state: AssignState)-> AssignState:
+    draft = state["current_draft"]
+    critic_notes = state["critique_notes"]
+    context = state["retrieved_context"]
+    instructions = state["faculty_instructions"]
+    if state["assignment_type"] == AssignType.MCQ:
+        schema = MCQAssignment
+        prompt = REVISE_MCQ_PROMPT
+    else:
+        schema = WrittenAssignment
+        prompt = REVISE_WRITTEN_PROMPT
+
+    structured_llm = llm.with_structured_output(schema)
+    chain = prompt | structured_llm
+
+    result = chain.invoke({
+        "draft": json.dumps(draft,indent=2),
+        "critic_notes": critic_notes,
+        "context": context,
+        "instructions": instructions
+    })
+    return {
+        "current_draft":result.model_dump(),
+        "revision_count":state.get("revision_count",0)+1
+    }
+
+def should_continue(state: AssignState) -> str:
+    import json
+    feedback = json.loads(state["critique_notes"])
+    if feedback["overall_pass"] or state["revision_count"] >= 3:
+        return "end"
+    return "revise"
+
+graph = StateGraph(AssignState)
+graph.add_node("draft",draft_assignment)
+graph.add_node("critic",critic_node)
+graph.add_node("revise",revise_node)
+graph.add_edge("draft","critic")
+graph.add_edge("revise","critic")
+graph.add_conditional_edges(
+    "critic",
+    should_continue,
+    {
+        "revise":"revise",
+        "end": END
+    }
+)
+graph.set_entry_point("draft")
+assignment_agent = graph.compile()
