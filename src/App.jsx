@@ -8,8 +8,12 @@ import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 import AdminDashboard from "./components/AdminDashboard";
-import ParentDashboard from "./components/ParentDashboard"; 
+import AdminDash from "./components/AdminDash";
+import AdminDash2 from "./components/AdminDash2";
+import ParentDashboard from "./components/ParentDashboard";
 import SubjectDetails from "./components/SubjectDetails";
+import AddData from "./components/AddData";
+import EditData from "./components/EditData";
 
 /**
  * HELPER: Determines the correct URL for a user based on their role and stored IDs.
@@ -94,19 +98,19 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 font-antiqua">
       <Routes>
-        <Route 
-          path="/" 
-          element={<Navigate to={getDashboardPath(auth)} replace />} 
+        <Route
+          path="/"
+          element={<Navigate to={getDashboardPath(auth)} replace />}
         />
 
         {/* Public Route */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <LoginPage />
             </PublicRoute>
-          } 
+          }
         />
 
         {/* Admin Access */}
@@ -114,7 +118,7 @@ function App() {
           path="/admin-dashboard"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
+              <AdminDash2 />
             </ProtectedRoute>
           }
         />
@@ -136,36 +140,36 @@ function App() {
             <ProtectedRoute allowedRoles={["faculty"]}>
               <FacultyDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Student & Parent Access: Shared view for student details */}
-        <Route 
-          path="/student-dashboard/:studentId" 
+        <Route
+          path="/student-dashboard/:studentId"
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <StudentViewWrapper />
             </ProtectedRoute>
-          } 
+          }
         />
 
-        <Route 
-          path="/student/subject-details/:id" 
+        <Route
+          path="/student/subject-details/:id"
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <SubjectDetails />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Parent Access */}
-        <Route 
-          path="/parent-dashboard/:parentId" 
+        <Route
+          path="/parent-dashboard/:parentId"
           element={
             <ProtectedRoute allowedRoles={["parent"]}>
               <ParentDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Catch-all */}

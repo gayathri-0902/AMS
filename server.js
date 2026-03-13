@@ -871,6 +871,69 @@ app.get("/api/admin/courses-by-batch", async (req, res) => {
   }
 });
 
+app.get("/api/admin/batch-data", async (req, res) => {
+  try {
+    const { yr, sem, stream, academic_yr } = req.query;
+
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
+    if (!yrSem) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    // 1. Fetch Students
+    const enrollments = await StudentEnrollment.find({ yr_sem_id: yrSem._id })
+      .populate("student_id");
+    const students = enrollments
+      .filter(e => e.student_id)
+      .map(e => ({
+        _id: e.student_id._id,
+        name: e.student_id.name,
+        roll_no: e.student_id.roll_no,
+        email: e.student_id.email,
+        status: e.status
+      }));
+
+    // 2. Fetch Courses & Assigned Faculties
+    const offerings = await SubjectOffering.find({ yr_sem_id: yrSem._id })
+      .populate("course_master_id");
+      
+    const coursesData = [];
+    const faculties = new Map();
+
+    for (const offering of offerings) {
+      const assignment = await FacultyAssignment.findOne({ subject_offering_id: offering._id })
+        .populate("faculty_id");
+        
+      coursesData.push({
+        subject_offering_id: offering._id,
+        course_code: offering.course_master_id?.course_code,
+        course_name: offering.course_master_id?.course_name,
+        assigned_faculty: assignment?.faculty_id?.name || "Not Assigned",
+        assigned_faculty_email: assignment?.faculty_id?.email || ""
+      });
+
+      if (assignment?.faculty_id) {
+        faculties.set(assignment.faculty_id._id.toString(), {
+          _id: assignment.faculty_id._id,
+          name: assignment.faculty_id.name,
+          email: assignment.faculty_id.email
+        });
+      }
+    }
+
+    res.json({
+      yr_sem_id: yrSem._id,
+      students,
+      courses: coursesData,
+      faculties: Array.from(faculties.values())
+    });
+
+  } catch (error) {
+    console.error("Fetch batch data error:", error);
+    res.status(500).json({ message: "Server error while fetching batch data" });
+  }
+});
+
 app.put("/api/admin/change-faculty", async (req, res) => {
   const { course_code, yr_sem_id, faculty_email } = req.body;
 
@@ -928,7 +991,139 @@ app.put("/api/admin/change-faculty", async (req, res) => {
   }
 });
 
-// 16. Detailed Course View for Student
+// 15. Add New Student
+app.post("/api/admin/add-student", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { name, roll_no, email, password, status, yr_sem_id, academic_yr } = req.body;
+
+    if (!name || !roll_no || !email || !password || !yr_sem_id || !academic_yr) {
+      throw new Error("Missing required fields");
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ user_name: roll_no }).session(session);
+    if (existingUser) {
+      throw new Error("User with this roll number already exists");
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create User
+    const [newUser] = await User.create([{
+      user_name: roll_no,
+      password: hashedPassword,
+      role: "student"
+    }], { session });
+
+    // Create Student
+    const [newStudent] = await Student.create([{
+      user_id: newUser._id,
+      name,
+      yr_sem_id,
+      roll_no,
+      email
+    }], { session });
+
+    // Create Student Enrollment
+    await StudentEnrollment.create([{
+      student_id: newStudent._id,
+      yr_sem_id,
+      academic_yr,
+      status: status || "active",
+      start_date: new Date()
+    }], { session });
+
+    await session.commitTransaction();
+
+    res.status(201).json({ message: "Student added successfully", student: newStudent });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Add student error:", error);
+    // Return appropriate error if duplicate email vs roll_no
+    const isDuplicate = error.code === 11000;
+    const errorMsg = isDuplicate ? "Student with this roll number or email already exists." : error.message;
+    res.status(400).json({ message: errorMsg || "Server error while adding student" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 16. Edit Student
+app.put("/api/admin/edit-student/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { name, roll_no, email, password, status } = req.body;
+
+    if (!name || !roll_no || !email || !status) {
+      throw new Error("Missing required fields");
+    }
+
+    // Find the student
+    const student = await Student.findById(studentId).session(session);
+    if (!student) {
+      throw new Error("Student not found");
+    }
+
+    // Check if new roll_no conflicts with another user
+    if (student.roll_no !== roll_no) {
+      const existingUser = await User.findOne({ user_name: roll_no }).session(session);
+      if (existingUser) {
+        throw new Error("User with this roll number already exists");
+      }
+    }
+
+    // Check if new email conflicts with another student
+    if (student.email !== email) {
+      const existingStudent = await Student.findOne({ email: email }).session(session);
+      if (existingStudent && existingStudent._id.toString() !== studentId) {
+        throw new Error("Student with this email already exists");
+      }
+    }
+
+    // Update User
+    const userUpdate = { user_name: roll_no };
+    if (password) {
+      userUpdate.password = await bcrypt.hash(password, 10);
+    }
+    await User.findByIdAndUpdate(student.user_id, userUpdate, { session, runValidators: true });
+
+    // Update Student
+    await Student.findByIdAndUpdate(studentId, {
+      name,
+      roll_no,
+      email
+    }, { session, runValidators: true });
+
+    // Update Enrollment Status (Assuming we want to update the current enrollment associated with this student_id and yr_sem_id)
+    // We update the active or most recent one for the student in this batch context
+    await StudentEnrollment.findOneAndUpdate(
+      { student_id: studentId, yr_sem_id: student.yr_sem_id },
+      { status },
+      { session, runValidators: true, sort: { createdAt: -1 } }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({ message: "Student updated successfully" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Edit student error:", error);
+    const isDuplicate = error.code === 11000;
+    const errorMsg = isDuplicate ? "Student with this roll number or email already exists." : error.message;
+    res.status(400).json({ message: errorMsg || "Server error while editing student" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 17. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;
   try {
