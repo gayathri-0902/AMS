@@ -7,13 +7,11 @@ import LoginPage from "./components/LoginPage";
 import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
-import AdminDashboard from "./components/AdminDashboard";
-import AdminDash from "./components/AdminDash";
+//import AdminDashboard from "./components/AdminDashboard";
 import AdminDash2 from "./components/AdminDash2";
 import ParentDashboard from "./components/ParentDashboard";
 import SubjectDetails from "./components/SubjectDetails";
-import AddData from "./components/AddData";
-import EditData from "./components/EditData";
+
 
 /**
  * HELPER: Determines the correct URL for a user based on their role and stored IDs.
