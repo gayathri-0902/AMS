@@ -1,10 +1,10 @@
 import json
-from typing import TypedDict, Dict, Any, List
+from typing import TypedDict, Dict, Any, List, Optional
 from langgraph.graph import StateGraph, END
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from enum import auto, StrEnum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from prompts.assignment_prompts import (
     MCQ_DRAFT_PROMPT, WRITTEN_DRAFT_PROMPT,
     REVISE_MCQ_PROMPT, REVISE_WRITTEN_PROMPT,
@@ -95,6 +95,35 @@ llm = ChatOllama(
     format="json",
     keep_alive=-1,
 )
+
+# ---------------------------------------------------------------------------
+# Faculty Request Parser
+# ---------------------------------------------------------------------------
+class AssignmentRequest(BaseModel):
+    """Structured representation of a faculty's free-form assignment request."""
+    topic: str = Field(description="The core subject matter, e.g., 'Data Analytics'")
+    assignment_type: str = Field(description="The format: 'mcq', 'written', or 'coding'")
+    quantity: Optional[int] = Field(default=5, description="Number of questions requested")
+    additional_instructions: Optional[str] = Field(default=None, description="Any extra constraints or style guides")
+
+_request_parser = llm.with_structured_output(AssignmentRequest)
+
+def parse_faculty_request(free_text: str) -> AssignmentRequest:
+    """
+    Parses a free-form faculty instruction string into a structured
+    AssignmentRequest using the LLM.
+
+    Example:
+        parse_faculty_request("Give me 5 MCQs on Neural Networks, medium difficulty")
+        → AssignmentRequest(topic='Neural Networks', assignment_type='mcq',
+                            quantity=5, additional_instructions='medium difficulty')
+    """
+    system_msg = (
+        "You are a parser. Extract the assignment details from the faculty's request. "
+        "assignment_type must be one of: 'mcq', 'written', 'coding'. "
+        "Return a valid JSON object only."
+    )
+    return _request_parser.invoke(f"{system_msg}\n\nFaculty Request: {free_text}")
 
 def draft_assignment(state: AssignState) -> AssignState:
     """
