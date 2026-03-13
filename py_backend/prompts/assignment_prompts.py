@@ -17,7 +17,7 @@ EXAMPLE OUTPUT:
         "A secondary storage location for swap files"
       ],
       "correct_answer": "A technique that allows execution of processes not completely in memory",
-      "explanation": "Based on [Source], virtual memory extends the apparent size of RAM by using disk storage..."
+      "explanation": "Based on [Source 1: chapter4_os.pdf], virtual memory extends the apparent size of RAM by using disk storage..."
     }}
   ]
 }}
@@ -33,8 +33,8 @@ EXAMPLE OUTPUT:
   "questions": [
     {{
       "question_text": "Explain the concept of database normalization and its importance.",
-      "model_answer": "Database normalization is the process of organizing a relational database to reduce redundancy and improve data integrity. It involves decomposing tables into smaller, well-structured relations. The main normal forms (1NF, 2NF, 3NF) progressively eliminate different types of data anomalies, ensuring that each piece of data is stored only once. [Source]",
-      "explanation": "This question tests the student's understanding of normalization theory, which is central to relational database design. [Source]"
+      "model_answer": "Database normalization is the process of organizing a relational database to reduce redundancy and improve data integrity. It involves decomposing tables into smaller, well-structured relations. The main normal forms (1NF, 2NF, 3NF) progressively eliminate different types of data anomalies, ensuring that each piece of data is stored only once. [Source 2: db_normalization.pdf]",
+      "explanation": "This question tests the student's understanding of normalization theory, which is central to relational database design. [Source 2: db_normalization.pdf]"
     }}
   ]
 }}
@@ -55,13 +55,13 @@ If the context does not contain enough information for a question, state "Insuff
 - Each question MUST have exactly 4 plausible options.
 - The correct_answer MUST be one of the 4 options verbatim.
 - Wrong options should be plausible but clearly incorrect based on the context. Avoid obviously wrong distractors.
-- Use [Source] notation in explanations when citing the context.
+- CITATIONS: You MUST copy the exact source label from the context (e.g., [Source 1: lec2.pdf]) in your explanations. DO NOT invent or hallucinate filenames. DO NOT use a generic [Source] tag.
 - Respond ONLY with a valid JSON object. No markdown or extra text.
 
 ### EXAMPLE
 {MCQ_FEW_SHOT}
     """),
-    ("human", "CONTEXT:\n{context}\n\nINSTRUCTIONS:\n{instructions}")
+    ("human", "CONTEXT:\n{context}\n\nVALID SOURCES TO CITE:\n{valid_sources}\n\nINSTRUCTIONS:\n{instructions}")
 ])
 
 # ---------------------------------------------------------------------------
@@ -78,13 +78,13 @@ If the context does not contain enough information for a question, state "Insuff
 - Generate exactly the number of questions requested in the faculty instructions.
 - Each question must be a thought-provoking, open-ended question that requires a multi-sentence response.
 - The model_answer must be a concise but complete answer (3-6 sentences) based strictly on the context.
-- Use [Source] notation in explanations when citing the context.
+- CITATIONS: You MUST copy the exact source label from the context (e.g., [Source 1: lec2.pdf]) in your explanations. DO NOT invent or hallucinate filenames. DO NOT use a generic [Source] tag.
 - Respond ONLY with a valid JSON object. No markdown or extra text.
 
 ### EXAMPLE
 {WRITTEN_FEW_SHOT}
     """),
-    ("human", "CONTEXT:\n{context}\n\nINSTRUCTIONS:\n{instructions}")
+    ("human", "CONTEXT:\n{context}\n\nVALID SOURCES TO CITE:\n{valid_sources}\n\nINSTRUCTIONS:\n{instructions}")
 ])
 
 CRITIC_PROMPT = ChatPromptTemplate.from_messages([
@@ -138,7 +138,7 @@ You MUST use ONLY the provided RAG Context for all factual claims.
 - Every question MUST be answerable from the RAG Context only.
 - Each MCQ must have exactly 4 plausible options.
 - The correct_answer MUST be one of the 4 options verbatim.
-- Use [Source] notation in explanations when citing the context.
+- CITATIONS: You MUST copy the exact source label from the context (e.g., [Source 1: lec2.pdf]) in your explanations. DO NOT invent or hallucinate filenames. DO NOT use a generic [Source] tag.
 
 ### EXAMPLE
 {MCQ_FEW_SHOT}
@@ -151,6 +151,9 @@ RAG CONTEXT (Ground Truth):
 <<<
 {context}
 >>>
+
+VALID SOURCES TO CITE:
+{valid_sources}
 
 ORIGINAL DRAFT:
 {draft}
@@ -178,7 +181,7 @@ You MUST use ONLY the provided RAG Context for all factual claims.
 ### CONSTRAINTS
 - Every question MUST be answerable from the RAG Context only.
 - Each model_answer must be 3-6 sentences, concise and grounded in the context.
-- Use [Source] notation in model_answer and explanation when citing the context.
+- CITATIONS: You MUST copy the exact source label from the context (e.g., [Source 1: lec2.pdf]) in your model_answer and explanation. DO NOT invent or hallucinate filenames. DO NOT use a generic [Source] tag.
 
 ### EXAMPLE
 {WRITTEN_FEW_SHOT}
@@ -191,6 +194,9 @@ RAG CONTEXT (Ground Truth):
 <<<
 {context}
 >>>
+
+VALID SOURCES TO CITE:
+{valid_sources}
 
 ORIGINAL DRAFT:
 {draft}
