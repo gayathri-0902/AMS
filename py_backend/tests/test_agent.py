@@ -16,11 +16,6 @@ from agents.assignment_agent import assignment_agent, AssignType, parse_faculty_
 from retrieval.simple_retriever import get_simple_retriever
 from ingestion.build_vector_index import build_vector_index
 from llama_index.core import Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from config import cfg
-
-# Disable LlamaIndex OpenAI fallback for embeddings
-Settings.embed_model = HuggingFaceEmbedding(model_name=cfg.paths.embedding_model)
 
 # ── Simulated faculty free-text input ─────────────────────────────────────────
 # In production, this comes from the HTTP request body.
@@ -42,6 +37,9 @@ print(f"Retrieving context for Year {YEAR} {BRANCH.upper()}, Topic: '{parsed.top
 # 1. Load the existing vector index
 index = build_vector_index(year=YEAR, branch=BRANCH)
 
+# Disable LlamaIndex OpenAI fallback by reusing the internal embedder
+Settings.embed_model = index._embed_model
+
 # 2. Build the simple retriever
 retriever = get_simple_retriever(index)
 
@@ -50,9 +48,12 @@ nodes = retriever.retrieve(parsed.topic)
 
 # 4. Format into a single string with [Source] labels
 labelled_chunks = []
+extracted_sources = []
 for i, node in enumerate(nodes):
     source_name = node.metadata.get("file_name") or node.metadata.get("source") or f"Chunk {i+1}"
-    labelled_chunks.append(f"[Source {i+1}: {source_name}]\n{node.text}")
+    label = f"[Source {i+1}: {source_name}]"
+    extracted_sources.append(label)
+    labelled_chunks.append(f"{label}\n{node.text}")
 
 context = "\n\n---\n\n".join(labelled_chunks)
 print(f"Retrieved {len(context.split())} words of context from {len(nodes)} sources.\n")
@@ -70,6 +71,7 @@ if parsed.additional_instructions:
 initial_state = {
     "faculty_instructions": faculty_instructions,
     "retrieved_context": context,
+    "extracted_sources": extracted_sources,
     "assignment_type": assignment_type,
     "current_draft": {},
     "critique_notes": "",
