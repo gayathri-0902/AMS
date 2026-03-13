@@ -24,6 +24,7 @@ class MCQQuestion(BaseModel):
     options : List[str]
     correct_answer : str
     explanation : str
+    citations : List[str] = Field(description="List of EXACT filenames from the provided context that support this question")
 
 class WrittenQuestion(BaseModel):
     """
@@ -32,6 +33,7 @@ class WrittenQuestion(BaseModel):
     question_text : str
     model_answer : str
     explanation  : str
+    citations : List[str] = Field(description="List of EXACT filenames from the provided context that support this question")
 
 class CodingQuestion(BaseModel):
     """
@@ -41,6 +43,7 @@ class CodingQuestion(BaseModel):
     model_code : str
     algorithm : str
     explanation : str
+    citations : List[str] = Field(description="List of EXACT filenames from the provided context that support this question")
 
 class MCQAssignment(BaseModel):
     """
@@ -69,6 +72,7 @@ class AssignState(TypedDict):
     """
     faculty_instructions: str   
     retrieved_context: str
+    extracted_sources: List[str]
     assignment_type : AssignType  
     current_draft: Dict[str, Any]
     critique_notes: str            
@@ -148,7 +152,11 @@ def draft_assignment(state: AssignState) -> AssignState:
 
     # 3. Invoke the chain
     # The dictionary passed here fills in {context} and {instructions} in the prompt
-    result = chain.invoke({"context": context, "instructions": instructions})
+    result = chain.invoke({
+        "context": context, 
+        "instructions": instructions,
+        "valid_sources": "\n".join(state["extracted_sources"])
+    })
 
     # 4. Update the state with the generated Pydantic model (convert to dict)
     return {
@@ -193,7 +201,8 @@ def revise_node(state: AssignState)-> AssignState:
         "draft": json.dumps(draft,indent=2),
         "critic_notes": critic_notes,
         "context": context,
-        "instructions": instructions
+        "instructions": instructions,
+        "valid_sources": ", ".join(state["extracted_sources"])
     })
     return {
         "current_draft":result.model_dump(),
