@@ -14,6 +14,7 @@ const ClassSessionSchema = new mongoose.Schema(
     },
     date: { type: Date, required: true },
     is_conducted: { type: Boolean, default: true },
+    session_no: { type: Number, required: true },
   },
   { collection: "class_sessions" }
 );

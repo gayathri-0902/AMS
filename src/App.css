@@ -1,42 +1,72 @@
+/* App.css - FULL VERSION (Schibsted Grotesk) */
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font-family: 'Schibsted Grotesk', sans-serif !important;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Remapping all old utility names so your JSX code doesn't need to be changed */
+.font-brand, .font-antiqua, .font-modern, .font-lexend, .font-jakarta, .font-kanit {
+  font-family: 'Schibsted Grotesk', sans-serif !important;
+  letter-spacing: -0.01em; /* Schibsted looks very sleek with slightly tight spacing */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* --- Dashboard Specific Logic --- */
+
+/* Floating AI Button (Sparkles) */
+.fixed.bottom-10.right-10 {
+  position: fixed;
+  bottom: 2.5rem;
+  right: 2.5rem;
+  z-index: 1000;
+  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.3);
+  transition: all 0.3s ease;
+}
+
+/* Header/Portal Alignment */
+.flex.justify-between.items-start {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Table Styling for Academic Records */
+table {
+  width: 100%;
+  border-spacing: 0;
+  background-color: white;
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 1rem;
+}
+
+/* Custom Scrollbars */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .fixed.bottom-10.right-10 {
+    bottom: 1.5rem;
+    right: 1.5rem;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

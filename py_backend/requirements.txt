@@ -1,0 +1,38 @@
+# Core Dependencies (Pinned for stability)
+chromadb==1.5.1
+pydantic==2.12.5
+PyYAML==6.0.3
+requests==2.32.5
+httpx==0.28.1
+flask==3.1.1
+flask-cors==5.0.1
+tqdm==4.67.3
+numpy==2.4.2
+
+# LlamaIndex Ecosystem
+llama-index-core==0.14.15
+llama-index-embeddings-huggingface==0.6.1
+llama-index-vector-stores-chroma==0.5.5
+llama-index-readers-file==0.5.6
+llama-index-llms-ollama==0.6.1 # Added specifically for Ollama loading
+
+# LangChain & LangGraph (Agentic Framework)
+langchain-core==0.3.3
+langchain-ollama==0.1.0
+langchain-community==0.3.3
+langgraph==0.2.14
+
+# NLP & Machine Learning
+sentence-transformers==5.2.3
+transformers==5.2.0
+torch==2.6.0 # Ensure full PyTorch suite for local models
+tokenizers==0.22.2
+nltk==3.9.2
+
+# Formatting & Utils
+rich==14.3.3
+colorama==0.4.6
+python-dotenv==1.2.1
+aiohttp==3.13.3
+marshmallow==3.26.2
+jsonschema==4.26.0

@@ -5,7 +5,12 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        // Adding Book Antiqua with standard serif fallbacks
+        antiqua: ['"Book Antiqua"', 'Palatino', '"Palatino Linotype"', '"Palatino LT STD"', 'Georgia', 'serif'],
+      },
+    },
   },
   plugins: [],
 }
