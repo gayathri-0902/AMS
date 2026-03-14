@@ -36,3 +36,10 @@ python-dotenv==1.2.1
 aiohttp==3.13.3
 marshmallow==3.26.2
 jsonschema==4.26.0
+
+# Face Detection 
+insightface==0.7.3
+onnxruntime==1.16.3
+opencv-python==4.9.0.80
+numpy==1.26.4
+chromadb==1.5.1
