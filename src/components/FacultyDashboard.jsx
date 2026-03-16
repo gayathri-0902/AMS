@@ -74,6 +74,22 @@ function FacultyDashboard() {
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+  // Create axios instance with auth headers
+  const axiosInstance = axios.create({
+    baseURL: API_BASE,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  // Add auth token to all requests
+  axiosInstance.interceptors.request.use((config) => {
+    if (auth?.token) {
+      config.headers.Authorization = `Bearer ${auth.token}`;
+    }
+    return config;
+  });
+
   // Formatting Helpers
   const capitalizeName = (name) => {
     if (!name) return "";
@@ -93,15 +109,17 @@ function FacultyDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       const activeId = urlFacultyId || auth?.facultyId;
-      if (!activeId) return;
+      if (!activeId) {
+        return;
+      }
 
       try {
         // Fetch Today's Classes
-        const classesRes = await axios.get(`${API_BASE}/api/faculty-dashboard/${activeId}`);
+        const classesRes = await axiosInstance.get(`/api/faculty-dashboard/${activeId}`);
         setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
 
         // Fetch All Assigned Subjects (for weekend/off-day management)
-        const subjectsRes = await axios.get(`${API_BASE}/api/faculty/subjects/${activeId}`);
+        const subjectsRes = await axiosInstance.get(`/api/faculty/subjects/${activeId}`);
         setAllSubjects(Array.isArray(subjectsRes.data) ? subjectsRes.data : []);
       } catch (error) {
         console.error("Dashboard Data Fetch Error:", error);
@@ -123,16 +141,18 @@ function FacultyDashboard() {
   // 4. HANDLERS
   const handleClassSelection = async (cls) => {
     setSelectedClass(cls);
-    setSelectedSubjectOffering(null); // Clear manual selection if a scheduled class is picked
+    setSelectedSubjectOffering(null);
     setIsFormVisible(true);
     setAttendanceMarked(false);
     setAttendance({});
+
     try {
       const [sRes, nRes, aRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/faculty-dashboard/students/${cls.section_id}`),
-        axios.get(`${API_BASE}/api/notes/${cls.class_id}`),
-        axios.get(`${API_BASE}/api/assignment/subject/${cls.class_id}`)
+        axiosInstance.get(`/api/faculty-dashboard/students/${cls.section_id}`),
+        axiosInstance.get(`/api/notes/${cls.class_id}`),
+        axiosInstance.get(`/api/assignments/${cls.class_id}`)
       ]);
+
       setStudents(sRes.data || []);
       setNotes(nRes.data || []);
       setAssignments(aRes.data || []);
@@ -148,20 +168,20 @@ function FacultyDashboard() {
 
   const handleSubjectSelection = async (subject) => {
     setSelectedSubjectOffering(subject);
-    setSelectedClass(null); // Clear scheduled class if manual subject is picked
+    setSelectedClass(null);
     setIsFormVisible(true);
     setAttendanceMarked(false);
     setAttendance({});
+    setStudents([]);
+
     try {
-      const [sRes, nRes, aRes] = await Promise.all([
-        // Assuming we want to show students even for manual uploads if needed (e.g. for assignment targeting)
-        // But for notes/assignments, we just need the subject_offering_id
-        axios.get(`${API_BASE}/api/notes/${subject.subject_offering_id}`),
-        axios.get(`${API_BASE}/api/assignments/${subject.subject_offering_id}`)
+      const [nRes, aRes] = await Promise.all([
+        axiosInstance.get(`/api/notes/${subject.subject_offering_id}`),
+        axiosInstance.get(`/api/assignments/${subject.subject_offering_id}`)
       ]);
-      setNotes(sRes.data || []);
-      setAssignments(nRes.data || []);
-      // We don't necessarily need students for off-day resource management unless marking retroactive attendance
+
+      setNotes(nRes.data || []);
+      setAssignments(aRes.data || []);
     } catch (error) {
       console.error("Error fetching subject details:", error);
 >>>>>>> 3d179fe (faculty name and obj ID change)
@@ -179,7 +199,7 @@ function FacultyDashboard() {
   const handleMarkAttendance = async () => {
     if (!selectedClass) return;
     try {
-      await axios.post(`${API_BASE}/api/attendance`, {
+      await axiosInstance.post(`/api/attendance`, {
         classId: selectedClass.class_id,
         sessionNo: selectedClass.session_no,
         attendanceData: attendance,
@@ -187,27 +207,43 @@ function FacultyDashboard() {
       setAttendanceMarked(true);
       setIsModalVisible(true);
       setTimeout(() => setIsModalVisible(false), 2000);
-    } catch (error) { console.error("Error marking attendance:", error); }
+    } catch (error) { 
+      console.error("Error marking attendance:", error); 
+    }
   };
 
   const handleAddNote = async (e) => {
     e.preventDefault();
     const targetSubjectId = selectedClass?.class_id || selectedSubjectOffering?.subject_offering_id;
-    if (!targetSubjectId) return;
+    if (!targetSubjectId || !selectedNoteFile) return;
+
+    const formData = new FormData();
+    formData.append('file', selectedNoteFile);
+    formData.append('subject_offering_id', targetSubjectId);
+    formData.append('faculty_id', auth.facultyId);
+    formData.append('title', newNote.title);
+    formData.append('description', newNote.description || '');
 
     try {
-      const payload = {
-        subject_offering_id: targetSubjectId,
-        faculty_id: auth.facultyId,
-        ...newNote
-      };
-      await axios.post(`${API_BASE}/api/notes`, payload);
+      await axiosInstance.post(`/api/notes`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${auth.token}`
+        }
+      });
+
       alert("Note added successfully");
       setNewNote({ title: "", description: "", file_url: "" });
       setSelectedNoteFile(null);
-      const res = await axios.get(`${API_BASE}/api/notes/${targetSubjectId}`);
+      if (noteFileRef.current) noteFileRef.current.value = '';
+
+      // Refresh notes list
+      const res = await axiosInstance.get(`/api/notes/${targetSubjectId}`);
       setNotes(res.data);
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      console.error(error);
+      alert(error.response?.data?.message || 'Upload failed');
+    }
   };
 
   const handleAddAssignment = async (e) => {
@@ -215,19 +251,23 @@ function FacultyDashboard() {
     const targetSubjectId = selectedClass?.class_id || selectedSubjectOffering?.subject_offering_id;
     if (!targetSubjectId) return;
 
+    const formData = new FormData();
+    if (selectedAssignFile) {
+      formData.append('file', selectedAssignFile);
+    }
+    formData.append('subject_offering_id', targetSubjectId);
+    formData.append('title', newAssignment.title);
+    formData.append('instructions', newAssignment.instructions);
+    formData.append('due_date', newAssignment.due_date);
+
     try {
-<<<<<<< HEAD
-      const payload = { 
-        faculty_id: auth.facultyId,
-        subject_offering_id: selectedClass.class_id, 
-        ...newAssignment 
-=======
-      const payload = {
-        subject_offering_id: targetSubjectId,
-        ...newAssignment
->>>>>>> 3d179fe (faculty name and obj ID change)
-      };
-      await axios.post(`${API_BASE}/api/assignment/manual`, payload);
+      await axiosInstance.post(`/api/faculty/assignments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${auth.token}`
+        }
+      });
+
       alert("Assignment posted successfully!");
       setNewAssignment({ title: "", instructions: "", file_url: "", due_date: "" });
 <<<<<<< HEAD
@@ -237,10 +277,16 @@ function FacultyDashboard() {
       setAssignments(aRes.data || []);
 =======
       setSelectedAssignFile(null);
-      const res = await axios.get(`${API_BASE}/api/assignments/${targetSubjectId}`);
+      if (assignFileRef.current) assignFileRef.current.value = '';
+
+      // Refresh assignments list
+      const res = await axiosInstance.get(`/api/assignments/${targetSubjectId}`);
       setAssignments(res.data);
 >>>>>>> 3d179fe (faculty name and obj ID change)
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      console.error(error);
+      alert(error.response?.data?.message || 'Upload failed');
+    }
   };
 
   const handleDeleteAssignment = async (id) => {
@@ -326,7 +372,7 @@ function FacultyDashboard() {
                 </div>
                 <h3 className="text-3xl font-extrabold text-gray-800 mb-3">No Classes Today</h3>
                 <p className="text-lg text-gray-400 font-medium mb-6 max-w-md">
-                  It's <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span> — enjoy your day off!
+                  It's <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
                   <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
@@ -341,10 +387,15 @@ function FacultyDashboard() {
                 </div>
 
                 <button
-                  onClick={() => setShowSubjectPicker(!showSubjectPicker)}
-                  className="mt-10 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
+                  onClick={() => {
+                    setShowSubjectPicker(!showSubjectPicker);
+                    if (showSubjectPicker) {
+                      setSelectedSubjectOffering(null);
+                    }
+                  }}
+                  className="mt-10 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
                 >
-                  {showSubjectPicker ? "Hide Subject Manager" : "Manage Resources / Assignments"}
+                  {showSubjectPicker ? "Hide Manage Resources" : "Manage Resources"}
                 </button>
               </div>
 
@@ -462,18 +513,37 @@ function FacultyDashboard() {
                     Target: <span className="text-purple-600">{selectedSubjectOffering.course_name}</span>
                   </p>
                 )}
-                <div onClick={() => noteFileRef.current.click()} className="border-2 border-dashed border-purple-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 cursor-pointer mb-6 hover:bg-purple-50 transition-colors group">
-                  <input type="file" ref={noteFileRef} className="hidden" onChange={(e) => { setSelectedNoteFile(e.target.files[0]); setNewNote({ ...newNote, title: e.target.files[0]?.name }) }} />
+                <div onClick={() => noteFileRef.current?.click()} className="border-2 border-dashed border-purple-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 cursor-pointer mb-6 hover:bg-purple-50 transition-colors group">
+                  <input type="file" ref={noteFileRef} className="hidden" onChange={(e) => { setSelectedNoteFile(e.target.files[0]); setNewNote({ ...newNote, title: e.target.files[0]?.name || '' }) }} accept=".pdf,.doc,.docx,.txt" />
                   <HiOutlineDocumentText className="w-12 h-12 text-purple-300 mb-2 group-hover:scale-110 transition-transform" />
-                  <p className="text-sm font-bold text-purple-400 uppercase tracking-widest text-center">{selectedNoteFile ? selectedNoteFile.name : "Choose File to Upload"}</p>
+                  <p className="text-sm font-bold text-purple-400 uppercase tracking-widest text-center">{selectedNoteFile ? selectedNoteFile.name : "Choose PDF/DOC/TXT to Upload"}</p>
                 </div>
                 <form onSubmit={handleAddNote}>
                   <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({ ...newNote, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
-                  <button type="submit" className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-purple-700 transition-all uppercase tracking-widest">Publish Resource</button>
+                  <textarea placeholder="Description (optional)" value={newNote.description} onChange={(e) => setNewNote({ ...newNote, description: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 h-24 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" />
+                  <button type="submit" disabled={!selectedNoteFile} className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest">Publish Resource</button>
                 </form>
+
+                {/* Uploaded Notes List */}
+                {notes.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-purple-100">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4">Uploaded Notes ({notes.length})</h4>
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {notes.map((note) => (
+                        <div key={note._id} className="flex justify-between items-center p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-100">
+                          <div>
+                            <h5 className="font-bold text-gray-800">{note.title}</h5>
+                            <p className="text-sm text-gray-500">{new Date(note.upload_date).toLocaleDateString()}</p>
+                          </div>
+                          <a href={`${API_BASE}${note.file_url}`} target="_blank" rel="noreferrer" className="bg-purple-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-purple-700 transition-all">VIEW</a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Assignment */}
+              {/* Assignment - Only show if selectedClass (not for weekend/off-day subjects) */}
 <<<<<<< HEAD
               <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100">
                   <div className="flex justify-between items-center mb-6">
@@ -498,24 +568,25 @@ function FacultyDashboard() {
                     <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest">Post Assignment</button>
                  </form>
 =======
-              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-orange-500 border-x border-b border-gray-100">
-                <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
-                  <HiOutlineClipboardList className="mr-3 text-orange-600 w-8 h-8" /> Assign New Task
-                </h3>
-                {selectedSubjectOffering && (
-                  <p className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-widest bg-orange-50 p-3 rounded-xl inline-block">
-                    Target: <span className="text-orange-600">{selectedSubjectOffering.course_name}</span>
-                  </p>
-                )}
-                <form onSubmit={handleAddAssignment}>
-                  <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-orange-400 transition-all" required />
-                  <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({ ...newAssignment, instructions: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-orange-400 transition-all" />
-                  <div className="flex flex-col mb-6">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
-                    <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-orange-400 transition-all" required />
+              {selectedClass && (
+                <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-orange-500 border-x border-b border-gray-100">
+                  <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
+                    <HiOutlineClipboardList className="mr-3 text-orange-600 w-8 h-8" /> Assign New Task
+                  </h3>
+                  <div onClick={() => assignFileRef.current?.click()} className="border-2 border-dashed border-orange-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-orange-50/30 cursor-pointer mb-6 hover:bg-orange-50 transition-colors group">
+                    <input type="file" ref={assignFileRef} className="hidden" onChange={(e) => setSelectedAssignFile(e.target.files[0])} accept=".pdf,.doc,.docx,.txt" />
+                    <HiOutlineDocumentText className="w-12 h-12 text-orange-300 mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-sm font-bold text-orange-400 uppercase tracking-widest text-center">{selectedAssignFile ? selectedAssignFile.name : "Optional: Attach File"}</p>
                   </div>
-                  <button type="submit" className="w-full bg-orange-500 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-orange-600 transition-all uppercase tracking-widest">Post Assignment</button>
-                </form>
+                  <form onSubmit={handleAddAssignment}>
+                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-orange-400 transition-all" required />
+                    <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({ ...newAssignment, instructions: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-orange-400 transition-all" required />
+                    <div className="flex flex-col mb-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
+                      <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-orange-400 transition-all" required />
+                    </div>
+                    <button type="submit" className="w-full bg-orange-500 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-orange-600 transition-all uppercase tracking-widest">Post Assignment</button>
+                  </form>
 >>>>>>> 3d179fe (faculty name and obj ID change)
               </div>
 
@@ -569,7 +640,29 @@ function FacultyDashboard() {
                       <div className="text-center py-10 text-gray-400 font-medium">No assignments posted for this subject yet.</div>
                     )}
                   </div>
-              </div>
+
+                  {/* Posted Assignments List */}
+                  {assignments.length > 0 && (
+                    <div className="mt-8 pt-8 border-t border-orange-100">
+                      <h4 className="text-xl font-bold text-gray-800 mb-4">Posted Assignments ({assignments.length})</h4>
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                        {assignments.map((asm) => (
+                          <div key={asm._id} className="p-4 bg-gradient-to-r from-orange-50 to-rose-50 rounded-2xl border border-orange-100">
+                            <div className="flex justify-between items-start mb-2">
+                              <h5 className="font-bold text-gray-800">{asm.title}</h5>
+                              <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">Due: {new Date(asm.due_date).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">{asm.instructions.substring(0, 100)}...</p>
+                            {asm.file_url && (
+                              <a href={`${API_BASE}${asm.file_url}`} target="_blank" rel="noreferrer" className="text-orange-600 font-bold text-sm underline">Download Attachment</a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
           </div>

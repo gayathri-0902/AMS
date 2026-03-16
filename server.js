@@ -965,6 +965,9 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const { exec } = require('child_process'); // For automated port management
 
 // --- Models ---
@@ -1007,7 +1010,35 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('application/') || file.mimetype.includes('word') || file.mimetype.includes('pdf') || file.mimetype.includes('text')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, TXT allowed'), false);
+    }
+  }
+});
 
 // --- Database Connection ---
 if (!MONGO_URI) {
@@ -1098,11 +1129,11 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
-      day_of_week: currentDay,
+      day_of_week: currentDay
     })
       .populate({
         path: "subject_offering_id",
-        populate: { path: "course_master_id" },
+        populate: { path: "course_master_id" }
       })
       .populate("yr_sem_id")
       .sort({ session_no: 1 });
@@ -1514,9 +1545,13 @@ app.get("/api/faculty/subjects/:facultyId", async (req, res) => {
 });
 
 // 12. Notes Routes
-app.post("/api/notes", async (req, res) => {
-  const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
+app.post("/api/notes", upload.single('file'), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    const { subject_offering_id, faculty_id, title, description } = req.body;
+    const file_url = `/uploads/${req.file.filename}`;
     const note = new ClassNotes({
       subject_offering_id,
       faculty_id,
@@ -1527,8 +1562,11 @@ app.post("/api/notes", async (req, res) => {
       is_visible: true
     });
     await note.save();
-    res.status(201).json({ message: "Note added successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+    res.status(201).json({ message: "Note added successfully", note });
+  } catch (error) { 
+    console.error(error);
+    res.status(500).json({ message: "Server error" }); 
+  }
 });
 
 app.get("/api/notes/:subjectOfferingId", async (req, res) => {
@@ -1542,9 +1580,10 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
 });
 
 // 13. Assignment Routes
-app.post("/api/faculty/assignments", async (req, res) => {
-  const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
+app.post("/api/faculty/assignments", upload.single('file'), async (req, res) => {
   try {
+    const { subject_offering_id, title, instructions, due_date } = req.body;
+    const file_url = req.file ? `/uploads/${req.file.filename}` : '';
     const assignment = new Assignment({
       subject_offering_id,
       title,
@@ -1554,8 +1593,11 @@ app.post("/api/faculty/assignments", async (req, res) => {
       is_active: true
     });
     await assignment.save();
-    res.status(201).json({ message: "Assignment posted successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+    res.status(201).json({ message: "Assignment posted successfully", assignment });
+  } catch (error) { 
+    console.error(error);
+    res.status(500).json({ message: "Server error" }); 
+  }
 });
 
 app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
