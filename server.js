@@ -310,6 +310,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       };
     });
 
+    // ===== CHANGE 2: Added currentDay to response =====
     res.json({
       studentDetails: {
         student_id_no: student.roll_no,
@@ -318,8 +319,10 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         current_year: yrSem.yr,
         current_sem: yrSem.sem
       },
-      timetableData
+      timetableData,
+      currentDay
     });
+    // ===== END CHANGE 2 =====
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
