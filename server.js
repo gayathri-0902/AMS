@@ -409,6 +409,7 @@ app.post("/api/attendance", async (req, res) => {
   }
 });
 
+/* version 1 admin dashboard routes
 // 9. Admin: Create Student
 app.post("/api/admin/student", async (req, res) => {
   const { name, roll_no, email, stream, yr, sem, academic_yr, password } = req.body;
@@ -510,9 +511,9 @@ app.post("/api/admin/parent/map", async (req, res) => {
     await mapping.save();
     res.status(201).json({ message: "Parent linked successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
+});*/
 
-// 12. Notes Routes
+// 8. Notes Routes
 app.post("/api/notes", async (req, res) => {
   const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
   try {
@@ -540,7 +541,7 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 13. Assignment Routes
+// 9. Assignment Routes
 app.post("/api/faculty/assignments", async (req, res) => {
   const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
   try {
@@ -567,7 +568,7 @@ app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 14. Feedback Routes
+// 10. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
   try {
     const enrollment = await StudentEnrollment.findOne({ student_id: req.params.studentId });
@@ -586,7 +587,7 @@ app.post("/api/feedback", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 15. Admin Utility: Excel Bulk Setup Routes
+/* version 2 admin dashboard routes 
 app.post("/api/admin/setup-faculty", async (req, res) => {
   try {
     const { users_entries, faculties_entries } = req.body;
@@ -842,35 +843,9 @@ app.post("/api/admin/ensure-yrsem", async (req, res) => {
       message: "Server error while ensuring yr_sem"
     });
   }
-});
+}); */
 
-
-// manage faculty assignment (fetches courses then updates faculties)
-app.get("/api/admin/courses-by-batch", async (req, res) => {
-  try {
-    const { yr, sem, stream, academic_yr } = req.query;
-
-    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
-    if (!yrSem) {
-      return res.status(404).json({ message: "Batch not found" });
-    }
-
-    const offerings = await SubjectOffering.find({ yr_sem_id: yrSem._id })
-      .populate("course_master_id");
-
-    const courses = offerings.map(offering => ({
-      course_code: offering.course_master_id.course_code,
-      course_name: offering.course_master_id.course_name
-    }));
-
-    res.json({ yr_sem_id: yrSem._id, courses });
-    console.log(res)
-  } catch (error) {
-    console.error("Fetch courses error:", error);
-    res.status(500).json({ message: "Server error while fetching courses" });
-  }
-});
-
+/* old one, changes as faculty required changes
 app.get("/api/admin/batch-data", async (req, res) => {
   try {
     const { yr, sem, stream, academic_yr } = req.query;
@@ -932,8 +907,126 @@ app.get("/api/admin/batch-data", async (req, res) => {
     console.error("Fetch batch data error:", error);
     res.status(500).json({ message: "Server error while fetching batch data" });
   }
+});*/
+
+// 11. get data to corresponding year sem for admin dashboard
+app.get("/api/admin/batch-data", async (req, res) => {
+  try {
+    const { yr, sem, stream, academic_yr } = req.query;
+
+    const yrSem = await YrSem.findOne({
+      yr: Number(yr),
+      sem: Number(sem),
+      stream,
+      academic_yr
+    });
+
+    if (!yrSem) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    // 1. Fetch Students
+    const enrollments = await StudentEnrollment.find({
+      yr_sem_id: yrSem._id
+    }).populate("student_id");
+
+    const students = enrollments
+      .filter(e => e.student_id)
+      .map(e => ({
+        _id: e.student_id._id,
+        name: e.student_id.name,
+        roll_no: e.student_id.roll_no,
+        email: e.student_id.email,
+        status: e.status
+      }));
+
+    // 2. Fetch Courses & Faculties
+    const offerings = await SubjectOffering.find({
+      yr_sem_id: yrSem._id
+    }).populate("course_master_id");
+
+    const coursesData = [];
+    const facultiesMap = new Map();
+
+    for (const offering of offerings) {
+      const assignment = await FacultyAssignment.findOne({
+        subject_offering_id: offering._id
+      }).populate("faculty_id");
+
+      const courseName = offering.course_master_id?.course_name;
+      const courseCode = offering.course_master_id?.course_code;
+
+      const facultyName = assignment?.faculty_id?.name || "Not Assigned";
+      const facultyEmail = assignment?.faculty_id?.email || "";
+
+      // Course-wise data
+      coursesData.push({
+        subject_offering_id: offering._id,
+        course_code: courseCode,
+        course_name: courseName,
+        assigned_faculty: facultyName,
+        assigned_faculty_email: facultyEmail
+      });
+
+      // Faculty-wise aggregation
+      if (assignment?.faculty_id) {
+        const key = assignment.faculty_id._id.toString();
+
+        if (!facultiesMap.has(key)) {
+          facultiesMap.set(key, {
+            name: facultyName,
+            email: facultyEmail,
+            courses: []
+          });
+        }
+
+        facultiesMap.get(key).courses.push(courseName);
+      }
+    }
+
+    res.json({
+      yr_sem_id: yrSem._id,
+      students,
+      courses: coursesData,
+      faculties: Array.from(facultiesMap.values())
+    });
+
+  } catch (error) {
+    console.error("Fetch batch data error:", error);
+    res.status(500).json({
+      message: "Server error while fetching batch data"
+    });
+  }
 });
 
+/* old code
+// 12. Admin: Fetch Courses for a Batch
+app.get("/api/admin/courses-by-batch", async (req, res) => {
+  try {
+    const { yr, sem, stream, academic_yr } = req.query;
+
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr });
+    if (!yrSem) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    const offerings = await SubjectOffering.find({ yr_sem_id: yrSem._id })
+      .populate("course_master_id");
+
+    const courses = offerings.map(offering => ({
+      course_code: offering.course_master_id.course_code,
+      course_name: offering.course_master_id.course_name
+    }));
+
+    res.json({ yr_sem_id: yrSem._id, courses });
+    console.log(res)
+  } catch (error) {
+    console.error("Fetch courses error:", error);
+    res.status(500).json({ message: "Server error while fetching courses" });
+  }
+});*/
+
+/* version 2 for change faculty (overwrite logic)
 app.put("/api/admin/change-faculty", async (req, res) => {
   const { course_code, yr_sem_id, faculty_email } = req.body;
 
@@ -959,7 +1052,7 @@ app.put("/api/admin/change-faculty", async (req, res) => {
     await FacultyAssignment.updateOne(
       { subject_offering_id: subjectOffering._id },
       { faculty_id: faculty._id },
-      { session }
+      { session, upsert: true }
     );
 
     await TimeTable.updateMany(
@@ -989,9 +1082,9 @@ app.put("/api/admin/change-faculty", async (req, res) => {
     session.endSession();
 
   }
-});
+});*/
 
-// 15. Add New Student
+// 12. Add New Student
 app.post("/api/admin/add-student", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -1052,7 +1145,59 @@ app.post("/api/admin/add-student", async (req, res) => {
   }
 });
 
-// 16. Edit Student
+// 13. Add New Course
+app.post("/api/admin/add-course", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { course_code, course_name, credits, yr_sem_id } = req.body;
+
+    if (!course_code || !course_name || !credits || !yr_sem_id) {
+      throw new Error("Missing required fields");
+    }
+
+    // 1. Check if CourseMaster exists, if not create it
+    let course = await CourseMaster.findOne({ course_code }).session(session);
+    if (!course) {
+      const [newCourse] = await CourseMaster.create([{
+        course_code,
+        course_name,
+        credits: Number(credits.split(" ")[0]) || 0
+      }], { session });
+      course = newCourse;
+    }
+
+    // 2. Check if SubjectOffering exists for this batch
+    const existingOffering = await SubjectOffering.findOne({
+      course_master_id: course._id,
+      yr_sem_id
+    }).session(session);
+
+    if (existingOffering) {
+      throw new Error("Course is already assigned to this batch");
+    }
+
+    // 3. Create SubjectOffering
+    await SubjectOffering.create([{
+      course_master_id: course._id,
+      yr_sem_id,
+      is_active: true
+    }], { session });
+
+    await session.commitTransaction();
+    res.status(201).json({ message: "Course added to batch successfully" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Add course error:", error);
+    res.status(400).json({ message: error.message || "Server error while adding course" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14. Edit Student
 app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   const { studentId } = req.params;
   const session = await mongoose.startSession();
@@ -1123,7 +1268,7 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   }
 });
 
-// 17. Detailed Course View for Student
+// 15. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;
   try {
@@ -1163,6 +1308,78 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
   } catch (error) {
     console.error("Error in course-details route:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// 16. Promote Students
+app.post("/api/admin/promote-students", async (req, res) => {
+  const { studentIds, targetYrSem } = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    if (!studentIds || !studentIds.length || !targetYrSem) {
+      throw new Error("Missing required fields");
+    }
+
+    const { yr, sem, stream, academic_yr, isGraduating } = targetYrSem;
+
+    let targetYrSemDoc = null;
+    if (!isGraduating) {
+      targetYrSemDoc = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
+      if (!targetYrSemDoc) {
+        [targetYrSemDoc] = await YrSem.create([{ yr: Number(yr), sem: Number(sem), stream, academic_yr }], { session });
+      }
+    }
+
+    for (const studentId of studentIds) {
+      const student = await Student.findById(studentId).session(session);
+      if (!student) continue;
+
+      // Deactivate current active enrollment
+      await StudentEnrollment.updateMany(
+        { student_id: studentId, status: "active" },
+        { status: "inactive", end_date: new Date() },
+        { session }
+      );
+
+      if (isGraduating) {
+        // Mark as graduated
+        await StudentEnrollment.create([{
+          student_id: studentId,
+          yr_sem_id: student.yr_sem_id, // Keep the last yr_sem_id they were in
+          academic_yr,
+          status: "graduated",
+          start_date: new Date()
+        }], { session });
+
+        // Note: we don't change student.yr_sem_id so we know their last batch
+      } else {
+        // Create new active enrollment
+        await StudentEnrollment.create([{
+          student_id: studentId,
+          yr_sem_id: targetYrSemDoc._id,
+          academic_yr,
+          status: "active",
+          start_date: new Date()
+        }], { session });
+
+        // Update student's current yr_sem_id
+        student.yr_sem_id = targetYrSemDoc._id;
+        await student.save({ session });
+      }
+    }
+
+    await session.commitTransaction();
+    res.status(200).json({ message: isGraduating ? "Students marked as graduated" : "Students promoted successfully" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Promotion error:", error);
+    res.status(500).json({ message: error.message || "Server error during promotion" });
+  } finally {
+    session.endSession();
   }
 });
 
