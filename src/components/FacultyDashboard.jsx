@@ -298,13 +298,9 @@ function FacultyDashboard() {
                 </div>
                 <h3 className="text-3xl font-extrabold text-gray-800 mb-3">No Classes Today</h3>
                 <p className="text-lg text-gray-400 font-medium mb-6 max-w-md">
-                  It's <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
-                  <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
-                    <HiOutlineClock className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
                   <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
                     <HiOutlineCalendar className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
                     {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

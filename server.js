@@ -161,10 +161,13 @@ app.post("/api/login", async (req, res) => {
 });
 
 // 2. Faculty Dashboard: Get classes for today
+// ===== MODIFIED: Added debugDay query parameter support =====
 app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
   try {
     const { facultyId } = req.params;
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    const debugDay = req.query.debugDay;
+    const currentDay = debugDay || new Date().toLocaleString("en-US", { weekday: "short" });
+    
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
       day_of_week: currentDay
@@ -199,6 +202,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// ===== END MODIFICATION =====
 
 // 3. Fetch students for marking attendance
 app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
@@ -231,6 +235,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
 });
 
 // 4. Student Dashboard: Timetable and Attendance Status
+// ===== MODIFIED: Added debugDay query parameter support =====
 app.get("/api/student-dashboard/:studentId", async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -245,7 +250,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
 
     const yrSem = enrollment.yr_sem_id;
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    const debugDay = req.query.debugDay;
+    const currentDay = debugDay || new Date().toLocaleString("en-US", { weekday: "short" });
 
     const timetableEntries = await TimeTable.find({
       yr_sem_id: yrSem._id,
@@ -311,7 +317,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
+// ===== END MODIFICATION =====
 
 // 5. Parent Dashboard Route (STABILIZED)
 app.get("/api/parent/dashboard/:parentId", async (req, res) => {
@@ -376,6 +382,7 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
     res.status(500).json({ message: "Server encountered an error calculating student data." });
   }
 });
+
 // 6. Overall Attendance (Student Perspective)
 app.get("/api/attendance/:studentId", async (req, res) => {
   const { studentId } = req.params;
@@ -582,6 +589,59 @@ app.get("/api/faculty/subjects/:facultyId", async (req, res) => {
   }
 });
 
+// 11.6. Student: Get All Assigned Subjects (for weekend UI)
+app.get("/api/student/subjects/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: studentId,
+      status: "active",
+    }).populate("yr_sem_id");
+
+    if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
+
+    const subjects = await SubjectOffering.find({
+      yr_sem_id: enrollment.yr_sem_id._id,
+    })
+      .populate({
+        path: "course_master_id"
+      })
+      .populate({
+        path: "yr_sem_id"
+      });
+
+    const subjectsWithFaculty = await Promise.all(
+      subjects.map(async (subject) => {
+        const assignment = await FacultyAssignment.findOne({
+          subject_offering_id: subject._id
+        }).populate("faculty_id");
+
+        const course = subject.course_master_id;
+        const yrSem = subject.yr_sem_id;
+        return {
+          subject_offering_id: subject._id,
+          class_name: course.course_name,
+          class_code: course.course_code,
+          faculty_name: assignment?.faculty_id?.name || "Unknown",
+          stream: yrSem?.stream || "N/A",
+          yr: yrSem?.yr || "",
+          sem: yrSem?.sem || "",
+          section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A"
+        };
+      })
+    );
+
+    res.json(subjectsWithFaculty);
+  } catch (error) {
+    console.error("Error fetching student subjects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // 12. Notes Routes
 app.post("/api/notes", upload.single('file'), async (req, res) => {
   try {
@@ -672,6 +732,13 @@ app.post("/api/admin/setup-faculty", async (req, res) => {
   try {
     const { users_entries, faculties_entries } = req.body;
     const userMap = {};
+    const summary = {
+      users_created: [],
+      users_existing: [],
+      faculty_created: [],
+      faculty_existing: []
+    };
+
     for (const userData of users_entries) {
       let user = await User.findOne({ user_name: userData.user_name });
       if (!user) {
@@ -679,9 +746,13 @@ app.post("/api/admin/setup-faculty", async (req, res) => {
         const hashedPassword = await bcrypt.hash(userData.password, salt);
         user = new User({ user_name: userData.user_name, password: hashedPassword, role: userData.role });
         await user.save();
+        summary.users_created.push(userData.user_name);
+      } else {
+        summary.users_existing.push(userData.user_name);
       }
       userMap[user.user_name] = user;
     }
+
     for (const facultyData of faculties_entries) {
       const user = userMap[facultyData.email];
 
@@ -726,10 +797,18 @@ app.post("/api/admin/setup-faculty", async (req, res) => {
 app.post("/api/admin/ensure-course-masters", async (req, res) => {
   try {
     const { courses_entries } = req.body;
+    const created = [];
+    const skipped = [];
+
     for (const course of courses_entries) {
       if (!course.course_code) continue;
       const existing = await CourseMaster.findOne({ course_code: course.course_code });
-      if (!existing) await CourseMaster.create({ course_code: course.course_code, course_name: course.course_name, credits: course.credits ?? 0 });
+      if (!existing) {
+        await CourseMaster.create({ course_code: course.course_code, course_name: course.course_name, credits: course.credits ?? 0 });
+        created.push(course.course_code);
+      } else {
+        skipped.push(course.course_code);
+      }
     }
 
     const nothingCreated = created.length === 0;
@@ -755,6 +834,10 @@ app.post("/api/admin/ensure-course-masters", async (req, res) => {
 app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
   try {
     const { batch_info, courses_entries } = req.body;
+    const created = [];
+    const skipped = [];
+    const missing_courses = [];
+
     const yrSem = await YrSem.findOne({ yr: batch_info.yr, sem: batch_info.sem, academic_yr: batch_info.academic_yr, stream: batch_info.stream });
     if (!yrSem) return res.status(404).json({ message: "yr_sem not found" });
 
@@ -762,6 +845,11 @@ app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
       const cm = await CourseMaster.findOne({ course_code: course.course_code });
       if (cm && !(await SubjectOffering.findOne({ course_master_id: cm._id, yr_sem_id: yrSem._id }))) {
         await SubjectOffering.create({ course_master_id: cm._id, yr_sem_id: yrSem._id, is_active: true });
+        created.push(course.course_code);
+      } else if (!cm) {
+        missing_courses.push(course.course_code);
+      } else {
+        skipped.push(course.course_code);
       }
     }
 
@@ -771,7 +859,7 @@ app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
       message: nothingCreated
         ? "Subject offerings already exist. No operation performed."
         : "Subject offerings processed successfully",
-      yr_sem_id,
+      yr_sem_id: yrSem._id,
       created_count: created.length,
       skipped_count: skipped.length,
       missing_courses_count: missing_courses.length,
@@ -791,6 +879,10 @@ app.post("/api/admin/ensure-subject-offerings", async (req, res) => {
 app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
   try {
     const { batch_info, courses_entries } = req.body;
+    const created = [];
+    const skipped = [];
+    const missing = [];
+
     const yrSem = await YrSem.findOne({ yr: batch_info.yr, sem: batch_info.sem, academic_yr: batch_info.academic_yr, stream: batch_info.stream });
     if (!yrSem) return res.status(404).json({ message: "yr_sem not found" });
 
@@ -801,7 +893,12 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
         const so = await SubjectOffering.findOne({ course_master_id: cm._id, yr_sem_id: yrSem._id });
         if (so && !(await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: so._id }))) {
           await FacultyAssignment.create({ faculty_id: faculty._id, subject_offering_id: so._id, start_date: new Date() });
+          created.push(`${entry.faculty_name} - ${entry.course_code}`);
+        } else if (so) {
+          skipped.push(`${entry.faculty_name} - ${entry.course_code}`);
         }
+      } else {
+        missing.push(`${entry.faculty_name} - ${entry.course_code}`);
       }
     }
 
@@ -819,7 +916,6 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
       missing
     });
 
-
   } catch (error) {
     console.error("Error ensuring faculty assignments:", error);
     res.status(500).json({
@@ -831,6 +927,10 @@ app.post("/api/admin/ensure-faculty-assignments", async (req, res) => {
 app.post("/api/admin/ensure-timetable", async (req, res) => {
   try {
     const { batch_info, timetable_entries } = req.body;
+    const created = [];
+    const skipped = [];
+    const missing = [];
+
     const yrSem = await YrSem.findOne({ yr: batch_info.yr, sem: batch_info.sem, academic_yr: batch_info.academic_yr, stream: batch_info.stream });
     if (!yrSem) return res.status(404).json({ message: "yr_sem not found" });
 
@@ -844,7 +944,14 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
         const fa = await FacultyAssignment.findOne({ subject_offering_id: so?._id });
         if (fa && !(await TimeTable.findOne({ yr_sem_id: yrSem._id, day_of_week: mappedDay, session_no: tt.session_number }))) {
           await TimeTable.create({ yr_sem_id: yrSem._id, day_of_week: mappedDay, session_no: tt.session_number, start_time: tt.start_time, end_time: tt.end_time, subject_offering_id: so._id, faculty_id: fa.faculty_id, location: tt.location });
+          created.push(`${tt.course_code} - ${mappedDay} Session ${tt.session_number}`);
+        } else if (fa) {
+          skipped.push(`${tt.course_code} - ${mappedDay} Session ${tt.session_number}`);
+        } else {
+          missing.push(`${tt.course_code} - ${mappedDay} (No faculty assignment)`);
         }
+      } else {
+        missing.push(`${tt.course_code} - ${tt.day_of_week} (Invalid course or day)`);
       }
     }
 
@@ -869,7 +976,6 @@ app.post("/api/admin/ensure-timetable", async (req, res) => {
     });
   }
 });
-
 
 app.post("/api/admin/ensure-yrsem", async (req, res) => {
   try {
