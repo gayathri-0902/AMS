@@ -35,10 +35,10 @@ local_llm:
 # Ollama LLM (OllamaLoader — requires Ollama server running locally)
 # -----------------------------------------------------------------------------
 ollama_llm:
-  model: "qwen2.5:7b"
+  model: "qwen3:8b"
   request_timeout: 120.0
   context_window: 4096
-  temperature: 0.6
+  temperature: 0.3
 
 # -----------------------------------------------------------------------------
 # Pipeline defaults  (used by query_engine.py __main__ block)

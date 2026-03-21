@@ -19,6 +19,8 @@ Separate, secure portals for **Admin**, **Faculty**, **Student**, and **Parent**
 - **Daily Classes**: View auto-fetched timetable for the current day.
 - **Attendance Management**: Easily mark and manage student attendance.
 - **Academic Resources**: Upload class notes, course materials, and assignments.
+- **🤖 Assignment Reflexion Agent**: An intelligent AI agent (powered by LangGraph) that drafts, critiques, and refines high-quality assignments based on uploaded class context.
+
 
 ### 🎓 Student Dashboard
 - **Schedule & Timetable**: Track daily classes and subjects.
@@ -52,7 +54,9 @@ Separate, secure portals for **Admin**, **Faculty**, **Student**, and **Parent**
 - **Flask**: Serves the ModularRAG query engine as an HTTP API.
 - **ChromaDB**: Vector database for storing document embeddings.
 - **PyTorch & Hugging Face**: Local models for inference.
-- **LlamaIndex / Custom RAG**: Intelligent retrieval and local LLM ingestion.
+- **LlamaIndex & LangGraph**: Intelligent retrieval and multi-step agentic reasoning loops.
+- **Ollama**: Local LLM inference for privacy and performance.
+
 
 ---
 
@@ -65,8 +69,10 @@ C R Rao Campus Management System/
 |-- models/                   # Mongoose Database Models (User, Student, Faculty, etc.)
 |-- py_backend/               # Python AI Service (RAG, Flask API, ChromaDB)
 |   |-- app.py                # Flask entry point (port defaults to 5001)
+|   |-- agents/               # LangGraph Agentic logic (State, Nodes, Workflow)
+|   |-- prompts/              # System/Human templates for RAG and Agents
 |   |-- query_engine.py       # Modular RAG Pipeline
-|   `-- ...                   # Loaders, prompts, retrieval logic
+|   `-- ...                   # Loaders, retrieval logic, and configs
 |-- server.js                 # Node.js Express Server entry point (port defaults to 3002)
 |-- package.json              # Node dependencies and scripts
 `-- README.md                 # Project Documentation
@@ -78,7 +84,8 @@ C R Rao Campus Management System/
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v16+)
-- [Python](https://www.python.org/) (v3.10+)
+- [Python](https://www.python.org/) (v3.11+)
+- [Ollama](https://ollama.ai/) (Required for local LLM inference)
 - [MongoDB](https://www.mongodb.com/) (Local or Atlas instance)
 
 ### 1. Clone the Repository
