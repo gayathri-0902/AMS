@@ -51,6 +51,11 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// ===== CHANGE 1: Serve uploaded files statically =====
+app.use(express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ===== END CHANGE 1 =====
+
 // Multer config for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -235,7 +240,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
 });
 
 // 4. Student Dashboard: Timetable and Attendance Status
-// ===== MODIFIED: Added debugDay query parameter support =====
+// ===== MODIFIED: Added debugDay query parameter support & currentDay in response =====
 app.get("/api/student-dashboard/:studentId", async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -303,6 +308,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       };
     });
 
+    // ===== CHANGE 2: Added currentDay to response =====
     res.json({
       studentDetails: {
         student_id_no: student.roll_no,
@@ -311,8 +317,10 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         current_year: yrSem.yr,
         current_sem: yrSem.sem
       },
-      timetableData
+      timetableData,
+      currentDay
     });
+    // ===== END CHANGE 2 =====
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
