@@ -1,24 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   HiOutlineLogout,
   HiOutlineBookOpen,
   HiOutlineClipboardList,
   HiOutlineUser,
->>>>>>> 3d179fe (faculty name and obj ID change)
-=======
-  HiOutlineLogout,
-  HiOutlineBookOpen,
-  HiOutlineClipboardList,
-  HiOutlineUser,
-=======
-  HiOutlineLogout,
-  HiOutlineBookOpen,
-  HiOutlineClipboardList,
-  HiOutlineUser,
->>>>>>> 3d179fe (faculty name and obj ID change)
   HiOutlineCloudUpload,
   HiOutlineDocumentText,
   HiOutlineCalendar,
@@ -29,7 +17,6 @@ import {
   HiOutlinePlusCircle,
   HiOutlineChartBar
 } from "react-icons/hi";
-import { useLocation } from "react-router-dom";
 
 function FacultyDashboard() {
   // 1. URL & CONTEXT
@@ -43,16 +30,10 @@ function FacultyDashboard() {
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
-<<<<<<< HEAD
-  const [isFormVisible, setIsFormVisible] = useState(true); 
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [viewingAssignment, setViewingAssignment] = useState(null);
-  
-=======
   const [isFormVisible, setIsFormVisible] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [viewingAssignment, setViewingAssignment] = useState(null);
 
->>>>>>> 3d179fe (faculty name and obj ID change)
   // File Picker Refs
   const noteFileRef = useRef(null);
   const assignFileRef = useRef(null);
@@ -156,11 +137,6 @@ function FacultyDashboard() {
       setStudents(sRes.data || []);
       setNotes(nRes.data || []);
       setAssignments(aRes.data || []);
-<<<<<<< HEAD
-    } catch (error) { 
-        console.error("Error fetching details:", error);
-        setStudents([]); // Ensure empty array on error
-=======
     } catch (error) {
       console.error("Error fetching details:", error);
     }
@@ -184,7 +160,6 @@ function FacultyDashboard() {
       setAssignments(aRes.data || []);
     } catch (error) {
       console.error("Error fetching subject details:", error);
->>>>>>> 3d179fe (faculty name and obj ID change)
     }
   };
 
@@ -270,19 +245,12 @@ function FacultyDashboard() {
 
       alert("Assignment posted successfully!");
       setNewAssignment({ title: "", instructions: "", file_url: "", due_date: "" });
-<<<<<<< HEAD
-      setSelectedAssignFile(null); // Reset file input
-      // Refetch assignments to show the new one
-      const aRes = await axios.get(`${API_BASE}/api/assignment/subject/${selectedClass.class_id}`);
-      setAssignments(aRes.data || []);
-=======
       setSelectedAssignFile(null);
       if (assignFileRef.current) assignFileRef.current.value = '';
 
       // Refresh assignments list
       const res = await axiosInstance.get(`/api/assignments/${targetSubjectId}`);
       setAssignments(res.data);
->>>>>>> 3d179fe (faculty name and obj ID change)
     } catch (error) { 
       console.error(error);
       alert(error.response?.data?.message || 'Upload failed');
@@ -348,20 +316,6 @@ function FacultyDashboard() {
         {/* --- SCHEDULE CARDS --- */}
         <div className="mb-10">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">Today's Academic Schedule</h2>
-<<<<<<< HEAD
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {classes.map((cls) => (
-              <div 
-                key={`${cls.class_id}-${cls.session_no}`} 
-                onClick={() => handleClassSelection(cls)}
-                className={`bg-white rounded-[40px] p-8 shadow-sm border-2 cursor-pointer transition-all duration-300 relative group ${selectedClass?.class_id === cls.class_id ? "border-blue-500 shadow-xl" : "border-transparent hover:border-blue-200"}`}
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${selectedClass?.class_id === cls.class_id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-500'}`}>
-                    <HiOutlineBookOpen className="w-8 h-8" />
-                  </div>
-                  <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">Session {cls.session_no}</span>
-=======
 
           {classes.length === 0 ? (
             /* --- NO CLASSES STATE (Weekends / Holidays) --- */
@@ -372,18 +326,13 @@ function FacultyDashboard() {
                 </div>
                 <h3 className="text-3xl font-extrabold text-gray-800 mb-3">No Classes Today</h3>
                 <p className="text-lg text-gray-400 font-medium mb-6 max-w-md">
-                  It's <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                  <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
-                  <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
-                    <HiOutlineClock className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
                   <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
                     <HiOutlineCalendar className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
                     {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </span>
->>>>>>> 3d179fe (faculty name and obj ID change)
                 </div>
 
                 <button
@@ -427,7 +376,7 @@ function FacultyDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {classes.map((cls) => (
                 <div
-                  key={cls.class_id}
+                  key={`${cls.class_id}-${cls.session_no}`}
                   onClick={() => handleClassSelection(cls)}
                   className={`bg-white rounded-[40px] p-8 shadow-sm border-2 cursor-pointer transition-all duration-300 relative group ${selectedClass?.class_id === cls.class_id ? "border-blue-500 shadow-xl" : "border-transparent hover:border-blue-200"}`}
                 >
@@ -443,7 +392,6 @@ function FacultyDashboard() {
                     {cls.section_name}
                   </span>
 
-                  {/* --- DATE AND TIME UNDER SECTION --- */}
                   <div className="mt-8 space-y-3">
                     <div className="flex items-center space-x-3 text-gray-600">
                       <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
@@ -503,6 +451,7 @@ function FacultyDashboard() {
 
             {/* --- RESOURCES & ASSIGNMENTS --- */}
             <div className={`space-y-8 ${!selectedClass ? 'lg:col-span-2 max-w-4xl mx-auto w-full' : ''}`}>
+
               {/* Resources */}
               <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-purple-500 border-x border-b border-gray-100">
                 <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
@@ -544,30 +493,30 @@ function FacultyDashboard() {
               </div>
 
               {/* Assignment - Only show if selectedClass (not for weekend/off-day subjects) */}
-<<<<<<< HEAD
               <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold flex items-center text-gray-800">
-                      <HiOutlineClipboardList className="mr-3 text-blue-600 w-8 h-8" /> Assign New Task
-                    </h3>
-                    <Link
-                      to={`/assignment-hub?subjectId=${selectedClass.class_id}`}
-                      className="flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all shadow-sm"
-                    >
-                      <HiOutlineSparkles size={16} />
-                      <span>GENERATE WITH AI</span>
-                    </Link>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold flex items-center text-gray-800">
+                    <HiOutlineClipboardList className="mr-3 text-blue-600 w-8 h-8" /> Assign New Task
+                  </h3>
+                  <Link
+                    to={`/assignment-hub?subjectId=${selectedClass?.class_id}`}
+                    className="flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all shadow-sm"
+                  >
+                    <HiOutlineSparkles size={16} />
+                    <span>GENERATE WITH AI</span>
+                  </Link>
+                </div>
+                <form onSubmit={handleAddAssignment}>
+                  <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                  <input type="url" placeholder="Document / Drive Link" value={newAssignment.file_url} onChange={(e) => setNewAssignment({...newAssignment, file_url: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                  <div className="flex flex-col mb-6">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
+                    <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-blue-400 transition-all" required />
                   </div>
-                 <form onSubmit={handleAddAssignment}>
-                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
-                    <input type="url" placeholder="Document / Drive Link" value={newAssignment.file_url} onChange={(e) => setNewAssignment({...newAssignment, file_url: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
-                    <div className="flex flex-col mb-6">
-                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
-                       <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-blue-400 transition-all" required />
-                    </div>
-                    <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest">Post Assignment</button>
-                 </form>
-=======
+                  <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest">Post Assignment</button>
+                </form>
+              </div>
+
               {selectedClass && (
                 <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-orange-500 border-x border-b border-gray-100">
                   <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
@@ -587,84 +536,83 @@ function FacultyDashboard() {
                     </div>
                     <button type="submit" className="w-full bg-orange-500 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-orange-600 transition-all uppercase tracking-widest">Post Assignment</button>
                   </form>
->>>>>>> 3d179fe (faculty name and obj ID change)
-              </div>
-
-              {/* Assignment History */}
-              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-gray-800 border-x border-b border-gray-100 mt-8">
-                  <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
-                    <HiOutlineDocumentText className="mr-3 text-gray-600 w-8 h-8" /> Posted Assignments
-                  </h3>
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {assignments.length > 0 ? (
-                      assignments.map((asm) => (
-                        <div key={asm._id} className="p-6 bg-gray-50 rounded-3xl border border-transparent hover:border-gray-200 transition-all flex justify-between items-center group">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                asm.assignment_type === 'mcq' ? 'bg-blue-100 text-blue-600' :
-                                asm.assignment_type === 'coding' ? 'bg-purple-100 text-purple-600' :
-                                'bg-orange-100 text-orange-600'
-                              }`}>{asm.assignment_type}</span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                                asm.assignment_mode === 'AI_Generated' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'
-                              }`}>{asm.assignment_mode?.replace('_', ' ')}</span>
-                            </div>
-                            <h4 className="font-bold text-gray-800 text-lg mb-1">{asm.title}</h4>
-                            <div className="flex items-center space-x-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
-                              <span className="flex items-center"><HiOutlineCalendar className="mr-1" /> {new Date(asm.publish_date).toLocaleDateString()}</span>
-                              <span className="flex items-center"><HiOutlineClock className="mr-1" /> Due: {new Date(asm.submission_deadline).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Link
-                              to={`/assignment-grader/${asm._id}`}
-                              className="p-3 bg-white text-emerald-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-emerald-50 flex items-center gap-1.5 text-xs font-bold px-4"
-                            >
-                              <HiOutlineChartBar size={16} /> View Submissions
-                            </Link>
-                            <button 
-                              onClick={() => setViewingAssignment(asm)}
-                              className="p-3 bg-white text-blue-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-50">
-                              <HiOutlineEye size={20} />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteAssignment(asm._id)}
-                              className="p-3 bg-white text-red-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-red-50">
-                              <HiOutlineTrash size={20} />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-10 text-gray-400 font-medium">No assignments posted for this subject yet.</div>
-                    )}
-                  </div>
-
-                  {/* Posted Assignments List */}
-                  {assignments.length > 0 && (
-                    <div className="mt-8 pt-8 border-t border-orange-100">
-                      <h4 className="text-xl font-bold text-gray-800 mb-4">Posted Assignments ({assignments.length})</h4>
-                      <div className="space-y-3 max-h-80 overflow-y-auto">
-                        {assignments.map((asm) => (
-                          <div key={asm._id} className="p-4 bg-gradient-to-r from-orange-50 to-rose-50 rounded-2xl border border-orange-100">
-                            <div className="flex justify-between items-start mb-2">
-                              <h5 className="font-bold text-gray-800">{asm.title}</h5>
-                              <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">Due: {new Date(asm.due_date).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-3">{asm.instructions.substring(0, 100)}...</p>
-                            {asm.file_url && (
-                              <a href={`${API_BASE}${asm.file_url}`} target="_blank" rel="noreferrer" className="text-orange-600 font-bold text-sm underline">Download Attachment</a>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
 
+              {/* Assignment History */}
+              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-gray-800 border-x border-b border-gray-100">
+                <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
+                  <HiOutlineDocumentText className="mr-3 text-gray-600 w-8 h-8" /> Posted Assignments
+                </h3>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {assignments.length > 0 ? (
+                    assignments.map((asm) => (
+                      <div key={asm._id} className="p-6 bg-gray-50 rounded-3xl border border-transparent hover:border-gray-200 transition-all flex justify-between items-center group">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                              asm.assignment_type === 'mcq' ? 'bg-blue-100 text-blue-600' :
+                              asm.assignment_type === 'coding' ? 'bg-purple-100 text-purple-600' :
+                              'bg-orange-100 text-orange-600'
+                            }`}>{asm.assignment_type}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              asm.assignment_mode === 'AI_Generated' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'
+                            }`}>{asm.assignment_mode?.replace('_', ' ')}</span>
+                          </div>
+                          <h4 className="font-bold text-gray-800 text-lg mb-1">{asm.title}</h4>
+                          <div className="flex items-center space-x-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            <span className="flex items-center"><HiOutlineCalendar className="mr-1" /> {new Date(asm.publish_date).toLocaleDateString()}</span>
+                            <span className="flex items-center"><HiOutlineClock className="mr-1" /> Due: {new Date(asm.submission_deadline).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            to={`/assignment-grader/${asm._id}`}
+                            className="p-3 bg-white text-emerald-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-emerald-50 flex items-center gap-1.5 text-xs font-bold px-4"
+                          >
+                            <HiOutlineChartBar size={16} /> View Submissions
+                          </Link>
+                          <button 
+                            onClick={() => setViewingAssignment(asm)}
+                            className="p-3 bg-white text-blue-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-50">
+                            <HiOutlineEye size={20} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteAssignment(asm._id)}
+                            className="p-3 bg-white text-red-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-red-50">
+                            <HiOutlineTrash size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-gray-400 font-medium">No assignments posted for this subject yet.</div>
+                  )}
+                </div>
+
+                {/* Posted Assignments List */}
+                {assignments.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-orange-100">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4">Posted Assignments ({assignments.length})</h4>
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {assignments.map((asm) => (
+                        <div key={asm._id} className="p-4 bg-gradient-to-r from-orange-50 to-rose-50 rounded-2xl border border-orange-100">
+                          <div className="flex justify-between items-start mb-2">
+                            <h5 className="font-bold text-gray-800">{asm.title}</h5>
+                            <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">Due: {new Date(asm.due_date).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-3">{asm.instructions.substring(0, 100)}...</p>
+                          {asm.file_url && (
+                            <a href={`${API_BASE}${asm.file_url}`} target="_blank" rel="noreferrer" className="text-orange-600 font-bold text-sm underline">Download Attachment</a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
         )}
       </div>
@@ -699,44 +647,44 @@ function FacultyDashboard() {
             </div>
             
             <div className="p-10 space-y-8">
-               <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 ml-2">Context / Instructions</h4>
-                  <p className="text-gray-700 font-medium leading-relaxed">{viewingAssignment.instructions}</p>
-                  {viewingAssignment.file_url && (
-                    <a href={viewingAssignment.file_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all">
-                      <HiOutlineCloudUpload className="mr-2" /> View Resource Link
-                    </a>
-                  )}
-               </div>
+              <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 ml-2">Context / Instructions</h4>
+                <p className="text-gray-700 font-medium leading-relaxed">{viewingAssignment.instructions}</p>
+                {viewingAssignment.file_url && (
+                  <a href={viewingAssignment.file_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all">
+                    <HiOutlineCloudUpload className="mr-2" /> View Resource Link
+                  </a>
+                )}
+              </div>
 
-               {viewingAssignment.questions && viewingAssignment.questions.length > 0 && (
-                 <div className="space-y-6">
-                   <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Assessment Content</h4>
-                   {viewingAssignment.questions.map((q, idx) => (
-                     <div key={idx} className="p-8 bg-white border border-gray-100 rounded-[32px] hover:border-blue-100 transition-all">
-                        <div className="flex items-start space-x-4 mb-4">
-                          <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</span>
-                          <p className="text-lg font-bold text-gray-800">{q.question_text}</p>
+              {viewingAssignment.questions && viewingAssignment.questions.length > 0 && (
+                <div className="space-y-6">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Assessment Content</h4>
+                  {viewingAssignment.questions.map((q, idx) => (
+                    <div key={idx} className="p-8 bg-white border border-gray-100 rounded-[32px] hover:border-blue-100 transition-all">
+                      <div className="flex items-start space-x-4 mb-4">
+                        <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</span>
+                        <p className="text-lg font-bold text-gray-800">{q.question_text}</p>
+                      </div>
+                      {q.options && q.options.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+                          {q.options.map((opt, oIdx) => (
+                            <div key={oIdx} className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 border-transparent text-gray-500"}`}>
+                              {opt === q.correct_answer && "✓ "}{opt}
+                            </div>
+                          ))}
                         </div>
-                        {q.options && q.options.length > 0 && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
-                            {q.options.map((opt, oIdx) => (
-                              <div key={oIdx} className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 border-transparent text-gray-500"}`}>
-                                {opt === q.correct_answer && "✓ "}{opt}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {q.model_answer && (
-                           <div className="mt-4 pl-12">
-                              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Model Answer</p>
-                              <p className="text-gray-600 italic font-medium">{q.model_answer}</p>
-                           </div>
-                        )}
-                     </div>
-                   ))}
-                 </div>
-               )}
+                      )}
+                      {q.model_answer && (
+                        <div className="mt-4 pl-12">
+                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Model Answer</p>
+                          <p className="text-gray-600 italic font-medium">{q.model_answer}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
