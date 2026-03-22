@@ -46,8 +46,10 @@ class OllamaLoader(BaseLLMLoader):
             request_timeout=request_timeout,
             context_window=context_window,
             temperature=temperature,
-            additional_kwargs={
-                "num_gpu": 1,
+            request_kwargs={
+                "options": {
+                    "num_gpu": 1
+                }
             },
         )
 
