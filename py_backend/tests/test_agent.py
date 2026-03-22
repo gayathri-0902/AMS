@@ -19,7 +19,7 @@ from llama_index.core import Settings
 
 # ── Simulated faculty free-text input ─────────────────────────────────────────
 # In production, this comes from the HTTP request body.
-FACULTY_FREE_TEXT = "Create 5 MCQ questions on Predictive Data Analytics, medium difficulty"
+FACULTY_FREE_TEXT = "Create 5 MCQ and 3 written questions assignment on Data Analytics, hard difficulty"
 YEAR   = 4
 BRANCH = "ds"
 
