@@ -5,9 +5,10 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from enum import auto, StrEnum
 from pydantic import BaseModel, Field
+from llm_factory import get_langchain_llm
 from prompts.assignment_prompts import (
-    MCQ_DRAFT_PROMPT, WRITTEN_DRAFT_PROMPT,
-    REVISE_MCQ_PROMPT, REVISE_WRITTEN_PROMPT,
+    MCQ_DRAFT_PROMPT, WRITTEN_DRAFT_PROMPT, CODING_DRAFT_PROMPT,
+    REVISE_MCQ_PROMPT, REVISE_WRITTEN_PROMPT, REVISE_CODING_PROMPT,
     CRITIC_PROMPT
 )
 
@@ -40,6 +41,7 @@ class CodingQuestion(BaseModel):
     Represents a single coding question
     """
     question_text : str
+    starter_code : str
     model_code : str
     algorithm : str
     explanation : str
@@ -93,12 +95,6 @@ class CriticFeedback(BaseModel):
     summary: str
 
 
-llm = ChatOllama(
-    model = "qwen3:8b",
-    temperature=0.5,
-    format="json",
-    keep_alive=-1,
-)
 
 # ---------------------------------------------------------------------------
 # Faculty Request Parser
@@ -110,7 +106,15 @@ class AssignmentRequest(BaseModel):
     quantity: Optional[int] = Field(default=5, description="Number of questions requested")
     additional_instructions: Optional[str] = Field(default=None, description="Any extra constraints or style guides")
 
-_request_parser = llm.with_structured_output(AssignmentRequest)
+# We will initialize this lazily inside functions
+_request_parser = None
+
+def _get_parser():
+    global _request_parser
+    if _request_parser is None:
+        llm = get_langchain_llm()
+        _request_parser = llm.with_structured_output(AssignmentRequest)
+    return _request_parser
 
 def parse_faculty_request(free_text: str) -> AssignmentRequest:
     """
@@ -123,11 +127,16 @@ def parse_faculty_request(free_text: str) -> AssignmentRequest:
                             quantity=5, additional_instructions='medium difficulty')
     """
     system_msg = (
-        "You are a parser. Extract the assignment details from the faculty's request. "
-        "assignment_type must be one of: 'mcq', 'written', 'coding'. "
-        "Return a valid JSON object only."
+        "You are a highly efficient parser. Your ONLY job is to extract 3-4 specific fields from a faculty request. "
+        "assignment_type MUST be one of: 'mcq', 'written', 'coding'. "
+        "Be concise. Do not explain your reasoning. Return valid JSON only."
     )
-    return _request_parser.invoke(f"{system_msg}\n\nFaculty Request: {free_text}")
+    import time
+    start = time.time()
+    parser = _get_parser()
+    result = parser.invoke(f"{system_msg}\n\nFaculty Request: {free_text}")
+    print(f"  [Parser] Structured parse completed in {time.time() - start:.2f}s")
+    return result
 
 def draft_assignment(state: AssignState) -> AssignState:
     """
@@ -137,14 +146,17 @@ def draft_assignment(state: AssignState) -> AssignState:
     instructions = state["faculty_instructions"]
     if state["assignment_type"] == AssignType.MCQ:
         schema = MCQAssignment
-        # Define prompt without .invoke yet, so we can pipe it into the chain
         prompt = MCQ_DRAFT_PROMPT
+    elif state["assignment_type"] == AssignType.CODING:
+        schema = CodingAssignment
+        prompt = CODING_DRAFT_PROMPT
     else:
         # Fallback for Written assignments
         schema = WrittenAssignment
         prompt = WRITTEN_DRAFT_PROMPT
 
     # 1. Bind Pydantic schema to force structured JSON output
+    llm = get_langchain_llm()
     structured_llm = llm.with_structured_output(schema)
 
     # 2. Chain prompt and LLM together
@@ -169,6 +181,7 @@ def critic_node(state: AssignState) -> AssignState:
     instructions = state["faculty_instructions"]
     context = state["retrieved_context"]
 
+    llm = get_langchain_llm()
     structured_critic = llm.with_structured_output(CriticFeedback)
     chain = CRITIC_PROMPT | structured_critic
 
@@ -190,10 +203,14 @@ def revise_node(state: AssignState)-> AssignState:
     if state["assignment_type"] == AssignType.MCQ:
         schema = MCQAssignment
         prompt = REVISE_MCQ_PROMPT
+    elif state["assignment_type"] == AssignType.CODING:
+        schema = CodingAssignment
+        prompt = REVISE_CODING_PROMPT
     else:
         schema = WrittenAssignment
         prompt = REVISE_WRITTEN_PROMPT
 
+    llm = get_langchain_llm()
     structured_llm = llm.with_structured_output(schema)
     chain = prompt | structured_llm
 
@@ -202,7 +219,7 @@ def revise_node(state: AssignState)-> AssignState:
         "critic_notes": critic_notes,
         "context": context,
         "instructions": instructions,
-        "valid_sources": ", ".join(state["extracted_sources"])
+        "valid_sources": "\n".join(state["extracted_sources"])
     })
     return {
         "current_draft":result.model_dump(),
