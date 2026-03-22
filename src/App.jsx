@@ -10,6 +10,9 @@ import StudentDashboard from "./components/StudentDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import ParentDashboard from "./components/ParentDashboard"; 
 import SubjectDetails from "./components/SubjectDetails";
+import AssignmentHub from "./components/AssignmentHub";
+import HandIn from "./components/HandIn";
+import AssignmentGrader from "./components/AssignmentGrader";
 
 /**
  * HELPER: Determines the correct URL for a user based on their role and stored IDs.
@@ -139,6 +142,24 @@ function App() {
           } 
         />
 
+        <Route
+          path="/assignment-hub"
+          element={
+            <ProtectedRoute allowedRoles={["faculty"]}>
+              <AssignmentHub />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/assignment-grader/:assignmentId"
+          element={
+            <ProtectedRoute allowedRoles={["faculty"]}>
+              <AssignmentGrader />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Student & Parent Access: Shared view for student details */}
         <Route 
           path="/student-dashboard/:studentId" 
@@ -154,6 +175,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <SubjectDetails />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/hand-in/:assignmentId" 
+          element={
+            <ProtectedRoute allowedRoles={["student", "parent"]}>
+              <HandIn />
             </ProtectedRoute>
           } 
         />
