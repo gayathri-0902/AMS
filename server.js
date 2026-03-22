@@ -23,6 +23,11 @@ const ParentStudentMap = require("./models/ParentStudentMap");
 const ClassNotes = require("./models/ClassNotes");
 const Feedback = require("./models/Feedback");
 const Assignment = require("./models/Assignment");
+const Submission = require("./models/Submission");
+
+// --- Routes ---
+const assignmentRoutes = require("./routes/assignmentRoutes");
+const submissionRoutes = require("./routes/submissionRoutes");
 
 dotenv.config();
 const app = express();
@@ -57,6 +62,10 @@ mongoose
   .connect(MONGO_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Error connecting to MongoDB:", err));
+
+// --- Route Middlewares ---
+app.use("/api/assignment", assignmentRoutes);
+app.use("/api/submission", submissionRoutes);
 
 // --- ROUTES ---
 
@@ -540,32 +549,8 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 13. Assignment Routes
-app.post("/api/faculty/assignments", async (req, res) => {
-  const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
-  try {
-    const assignment = new Assignment({
-      subject_offering_id,
-      title,
-      instructions,
-      file_url,
-      due_date: new Date(due_date),
-      is_active: true
-    });
-    await assignment.save();
-    res.status(201).json({ message: "Assignment posted successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
-
-app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
-  try {
-    const assignments = await Assignment.find({
-      subject_offering_id: req.params.subjectOfferingId,
-      is_active: true
-    }).sort({ due_date: 1 });
-    res.json(assignments);
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
+// 13. Assignment Routes (Deprecated in favor of /api/assignment router)
+// Old routes /api/faculty/assignments and /api/assignments/:id are now handled by assignmentRoutes.js
 
 // 14. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
@@ -929,6 +914,8 @@ let server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
+server.setTimeout(1800000); // 30 minutes timeout for long AI generation requests
+
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is busy. Please run "fuser -k ${PORT}/tcp"`);
@@ -936,4 +923,4 @@ server.on('error', (e) => {
   } else {
     console.error("Server Error:", e);
   }
-});
+});
