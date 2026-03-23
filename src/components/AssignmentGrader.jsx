@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   HiOutlineChevronLeft,
   HiOutlineCheckCircle,
@@ -80,9 +81,15 @@ const GradingForm = ({ submission, onGraded }) => {
 // ─── Main Grader Component ────────────────────────────────────────────────────
 const AssignmentGrader = () => {
   const { assignmentId } = useParams();
+  const { auth } = useAuth();
   const [assignment, setAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Build back URL only once the assignment is loaded so we know the subjectId
+  const backUrl = assignment
+    ? `/faculty-dashboard/${auth?.facultyId}?selectClass=${assignment.subject_offering_id?._id || assignment.subject_offering_id}`
+    : `/faculty-dashboard/${auth?.facultyId}`;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,7 +138,7 @@ const AssignmentGrader = () => {
         {/* Header */}
         <div className="flex items-start gap-4 mb-8">
           <Link
-            to={-1}
+            to={backUrl}
             className="p-3 bg-white rounded-2xl shadow-sm text-gray-500 hover:text-gray-800 transition-colors mt-1"
           >
             <HiOutlineChevronLeft size={22} />
