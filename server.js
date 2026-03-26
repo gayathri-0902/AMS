@@ -1409,6 +1409,91 @@ app.put("/api/admin/edit-faculty/:facultyId", async (req, res) => {
   }
 });
 
+// 14.2 Edit Course
+app.put("/api/admin/edit-course/:offeringId", async (req, res) => {
+  const { offeringId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { course_code, course_name, credits, assigned_faculty_email } = req.body;
+
+    if (!course_code || !course_name || !credits) {
+      throw new Error("Missing required fields");
+    }
+
+    // Find the offering to get the CourseMaster ID
+    const offering = await SubjectOffering.findById(offeringId).session(session);
+    if (!offering) {
+      throw new Error("Course offering not found");
+    }
+
+    // Update the linked CourseMaster
+    await CourseMaster.findByIdAndUpdate(offering.course_master_id, {
+      course_code,
+      course_name,
+      credits: Number(credits) || 0
+    }, { session, runValidators: true });
+
+    // Handle Faculty Assignment if email is provided
+    if (assigned_faculty_email) {
+      const faculty = await Faculty.findOne({ email: assigned_faculty_email }).session(session);
+      if (!faculty) throw new Error("Faculty not found with this email");
+
+      await FacultyAssignment.updateOne(
+        { subject_offering_id: offeringId },
+        { faculty_id: faculty._id, start_date: new Date() },
+        { session, upsert: true }
+      );
+
+      await TimeTable.updateMany(
+        { subject_offering_id: offeringId },
+        { faculty_id: faculty._id },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    res.status(200).json({ message: "Course updated successfully" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Edit course error:", error);
+    res.status(400).json({ message: error.message || "Server error while editing course" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14.3 Remove Faculty Assignment
+app.delete("/api/admin/remove-faculty/:offeringId", async (req, res) => {
+  const { offeringId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1. Remove from FacultyAssignment
+    await FacultyAssignment.deleteMany({ subject_offering_id: offeringId }).session(session);
+
+    // 2. Update TimeTable to set faculty_id to null
+    await TimeTable.updateMany(
+      { subject_offering_id: offeringId },
+      { $set: { faculty_id: null } },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({ message: "Faculty removed from course" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Remove faculty error:", error);
+    res.status(400).json({ message: error.message || "Server error while removing faculty" });
+  } finally {
+    session.endSession();
+  }
+});
+
 // 15. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;

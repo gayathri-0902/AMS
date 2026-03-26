@@ -90,16 +90,28 @@ function Admin_ModalEditCourse({ isOpen, onClose, form, onChange, onSubmit, onRe
                                         <p className="text-xs text-slate-500">{form.assigned_faculty_email}</p>
                                     </div>
                                 </div>
+                                {form.assigned_faculty !== "Not Assigned" && form.assigned_faculty && (
+                                    <button
+                                        onClick={onRemoveFaculty}
+                                        className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors"
+                                    >
+                                        Remove Assignment
+                                    </button>
+                                )}
                             </div>
 
-                            {/* Faculty Search */}
+                            {/* Faculty Assignment / Update */}
                             <div className="pt-4 border-t border-slate-200">
-                                <label className="block text-sm font-medium mb-2">Change or Assign New Faculty</label>
+                                <label className="block text-sm font-medium mb-2">Change or Assign New Faculty (Email)</label>
                                 <input
-                                    type="text"
-                                    placeholder="Search faculty by name or ID..."
+                                    name="new_faculty_email"
+                                    value={form.new_faculty_email}
+                                    onChange={onChange}
+                                    type="email"
+                                    placeholder="Enter faculty email..."
                                     className="w-full border border-slate-300 rounded-md p-2 text-sm"
                                 />
+                                <p className="text-xs text-slate-500 mt-1">Provide the exact email address of the faculty member.</p>
                             </div>
                         </div>
                     )}

@@ -109,6 +109,7 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
         credits: "3",
         assigned_faculty: "",
         assigned_faculty_email: "",
+        new_faculty_email: "", // Separated for better UX
     });
     const [editCourseTab, setEditCourseTab] = useState("general");
     const [editCourseLoading, setEditCourseLoading] = useState(false);
@@ -123,6 +124,7 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
             credits: course.credits || "3",
             assigned_faculty: course.assigned_faculty || "Not Assigned",
             assigned_faculty_email: course.assigned_faculty_email || "",
+            new_faculty_email: "", // Initialize as empty for input
         });
         setEditCourseTab("general");
         setEditCourseError(null);
@@ -134,13 +136,52 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
 
     const handleEditCourseSubmit = async (e) => {
         e?.preventDefault();
-        // Placeholder — implement alongside the backend PUT endpoint
-        console.log("Edit Course Submitted:", editCourseForm);
+        if (!editCourseForm.subject_offering_id) return;
+
+        setEditCourseLoading(true);
+        setEditCourseError(null);
+        try {
+            await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/edit-course/${editCourseForm.subject_offering_id}`,
+                {
+                    course_code: editCourseForm.course_code,
+                    course_name: editCourseForm.course_name,
+                    credits: editCourseForm.credits,
+                    assigned_faculty_email: editCourseForm.new_faculty_email || editCourseForm.assigned_faculty_email,
+                }
+            );
+            setActiveModal(null);
+            await refetchBatchData();
+        } catch (err) {
+            setEditCourseError(err.response?.data?.message || err.message || "Failed to update course");
+        } finally {
+            setEditCourseLoading(false);
+        }
     };
 
     const handleRemoveFaculty = async () => {
-        // Placeholder — implement alongside the backend endpoint
-        console.log("Remove Faculty Clicked for:", editCourseForm.course_code);
+        if (!editCourseForm.subject_offering_id) return;
+
+        setEditCourseLoading(true);
+        setEditCourseError(null);
+        try {
+            await axios.delete(
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/remove-faculty/${editCourseForm.subject_offering_id}`
+            );
+            
+            // Update local state to reflect removal immediately
+            setEditCourseForm(prev => ({
+                ...prev,
+                assigned_faculty: "Not Assigned",
+                assigned_faculty_email: ""
+            }));
+
+            await refetchBatchData();
+        } catch (err) {
+            setEditCourseError(err.response?.data?.message || err.message || "Failed to remove faculty");
+        } finally {
+            setEditCourseLoading(false);
+        }
     };
 
     return {
