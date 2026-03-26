@@ -951,13 +951,17 @@ app.get("/api/admin/batch-data", async (req, res) => {
     for (const offering of offerings) {
       const assignment = await FacultyAssignment.findOne({
         subject_offering_id: offering._id
-      }).populate("faculty_id");
+      }).populate({
+        path: "faculty_id",
+        populate: { path: "user_id", select: "user_name" }
+      });
 
       const courseName = offering.course_master_id?.course_name;
       const courseCode = offering.course_master_id?.course_code;
 
       const facultyName = assignment?.faculty_id?.name || "Not Assigned";
       const facultyEmail = assignment?.faculty_id?.email || "";
+      const userName = assignment?.faculty_id?.user_id?.user_name || "";
 
       // Course-wise data
       coursesData.push({
@@ -974,8 +978,10 @@ app.get("/api/admin/batch-data", async (req, res) => {
 
         if (!facultiesMap.has(key)) {
           facultiesMap.set(key, {
+            _id: assignment.faculty_id._id,
             name: facultyName,
             email: facultyEmail,
+            user_name: userName,
             courses: []
           });
         }
@@ -984,11 +990,28 @@ app.get("/api/admin/batch-data", async (req, res) => {
       }
     }
 
+    const timetable = await TimeTable.find({
+      yr_sem_id: yrSem._id
+    }).populate({
+        path: "subject_offering_id",
+        populate: { path: "course_master_id", select: "course_name course_code" }
+    }).populate("faculty_id", "name");
+
     res.json({
       yr_sem_id: yrSem._id,
       students,
       courses: coursesData,
-      faculties: Array.from(facultiesMap.values())
+      faculties: Array.from(facultiesMap.values()),
+      timetable: timetable.map(t => ({
+        day_of_week: t.day_of_week,
+        session_no: t.session_no,
+        start_time: t.start_time,
+        end_time: t.end_time,
+        course_name: t.subject_offering_id?.course_master_id?.course_name || "N/A",
+        course_code: t.subject_offering_id?.course_master_id?.course_code || "N/A",
+        faculty_name: t.faculty_id?.name || "N/A",
+        location: t.location
+      }))
     });
 
   } catch (error) {
@@ -1026,7 +1049,7 @@ app.get("/api/admin/courses-by-batch", async (req, res) => {
   }
 });*/
 
-/* version 2 for change faculty (overwrite logic)
+// version 2 for change faculty (overwrite logic)
 app.put("/api/admin/change-faculty", async (req, res) => {
   const { course_code, yr_sem_id, faculty_email } = req.body;
 
@@ -1082,7 +1105,7 @@ app.put("/api/admin/change-faculty", async (req, res) => {
     session.endSession();
 
   }
-});*/
+});
 
 // 12. Add New Student
 app.post("/api/admin/add-student", async (req, res) => {
@@ -1140,6 +1163,61 @@ app.post("/api/admin/add-student", async (req, res) => {
     const isDuplicate = error.code === 11000;
     const errorMsg = isDuplicate ? "Student with this roll number or email already exists." : error.message;
     res.status(400).json({ message: errorMsg || "Server error while adding student" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 12.1 Add New Faculty
+app.post("/api/admin/add-faculty", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { name, email, user_name, password } = req.body;
+
+    if (!name || !email || !user_name || !password) {
+      throw new Error("Missing required fields");
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ user_name }).session(session);
+    if (existingUser) {
+      throw new Error("User with this username already exists");
+    }
+
+    // Check if faculty already exists with this email
+    const existingFaculty = await Faculty.findOne({ email }).session(session);
+    if (existingFaculty) {
+      throw new Error("Faculty with this email already exists");
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create User
+    const [newUser] = await User.create([{
+      user_name,
+      password: hashedPassword,
+      role: "faculty"
+    }], { session });
+
+    // Create Faculty
+    const [newFaculty] = await Faculty.create([{
+      user_id: newUser._id,
+      name,
+      email
+    }], { session });
+
+    await session.commitTransaction();
+
+    res.status(201).json({ message: "Faculty added successfully", faculty: newFaculty });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Add faculty error:", error);
+    const isDuplicate = error.code === 11000;
+    const errorMsg = isDuplicate ? "Faculty with this username or email already exists." : error.message;
+    res.status(400).json({ message: errorMsg || "Server error while adding faculty" });
   } finally {
     session.endSession();
   }
@@ -1268,6 +1346,69 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   }
 });
 
+// 14.1 Edit Faculty
+app.put("/api/admin/edit-faculty/:facultyId", async (req, res) => {
+  const { facultyId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { name, email, user_name, password } = req.body;
+
+    if (!name || !email || !user_name) {
+      throw new Error("Missing required fields");
+    }
+
+    // Find the faculty
+    const faculty = await Faculty.findById(facultyId).session(session);
+    if (!faculty) {
+      throw new Error("Faculty not found");
+    }
+
+    // Check if new username conflicts with another user
+    const user = await User.findById(faculty.user_id).session(session);
+    if (user.user_name !== user_name) {
+      const existingUser = await User.findOne({ user_name }).session(session);
+      if (existingUser) {
+        throw new Error("User with this username already exists");
+      }
+    }
+
+    // Check if new email conflicts with another faculty
+    if (faculty.email !== email) {
+      const existingFaculty = await Faculty.findOne({ email: email }).session(session);
+      if (existingFaculty && existingFaculty._id.toString() !== facultyId) {
+        throw new Error("Faculty with this email already exists");
+      }
+    }
+
+    // Update User
+    const userUpdate = { user_name };
+    if (password) {
+      userUpdate.password = await bcrypt.hash(password, 10);
+    }
+    await User.findByIdAndUpdate(faculty.user_id, userUpdate, { session, runValidators: true });
+
+    // Update Faculty
+    await Faculty.findByIdAndUpdate(facultyId, {
+      name,
+      email
+    }, { session, runValidators: true });
+
+    await session.commitTransaction();
+    res.status(200).json({ message: "Faculty updated successfully" });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Edit faculty error:", error);
+    const isDuplicate = error.code === 11000;
+    const errorMsg = isDuplicate ? "Faculty with this username or email already exists." : error.message;
+    res.status(400).json({ message: errorMsg || "Server error while editing faculty" });
+  } finally {
+    session.endSession();
+  }
+});
+
 // 15. Detailed Course View for Student
 app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req, res) => {
   const { studentId, subjectOfferingId } = req.params;
@@ -1329,7 +1470,7 @@ app.post("/api/admin/promote-students", async (req, res) => {
     if (!isGraduating) {
       targetYrSemDoc = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
       if (!targetYrSemDoc) {
-        [targetYrSemDoc] = await YrSem.create([{ yr: Number(yr), sem: Number(sem), stream, academic_yr }], { session });
+        throw new Error(`Target batch (${yr}-${sem}, ${stream}, ${academic_yr}) not found. Please ensure the target batch exists before promoting students.`);
       }
     }
 
@@ -1417,6 +1558,30 @@ app.post("/api/academic-ai/query", async (req, res) => {
     res.status(502).json({
       message: "Academic AI service is unavailable. Make sure the Flask server is running.",
     });
+  }
+});
+
+// 18. Get All Faculties
+app.get("/api/admin/faculties", async (req, res) => {
+  try {
+    const faculties = await Faculty.find().sort({ name: 1 });
+
+    // For each faculty, we might want to know their username (from User model)
+    const result = await Promise.all(faculties.map(async (f) => {
+      const user = await User.findById(f.user_id);
+      return {
+        _id: f._id,
+        name: f.name,
+        email: f.email,
+        user_name: user ? user.user_name : "",
+        courses: [] // We could populate this from FacultyAssignment if needed, but start simple
+      };
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Get faculties error:", error);
+    res.status(500).json({ message: "Server error while fetching faculties" });
   }
 });
 

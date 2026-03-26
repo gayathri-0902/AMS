@@ -6,6 +6,7 @@ import { MdInfoOutline } from "react-icons/md";
 import { useBatchData } from "../hooks/useBatchData";
 import { useStudentActions } from "../hooks/useStudentActions";
 import { useCourseActions } from "../hooks/useCourseActions";
+import { useFacultyActions } from "../hooks/useFacultyActions";
 
 // ── Layout ─────────────────────────────────────────────────────────────────────
 import Admin_Sidebar from "./Admin_Sidebar";
@@ -25,6 +26,8 @@ import Admin_ModalAddCourse from "./Admin_ModalAddCourse";
 import Admin_ModalAssignFaculty from "./Admin_ModalAssignFaculty";
 import Admin_ModalEditCourse from "./Admin_ModalEditCourse";
 import Admin_ModalPromote from "./Admin_ModalPromote";
+import Admin_ModalAddFaculty from "./Admin_ModalAddFaculty";
+import Admin_ModalEditFaculty from "./Admin_ModalEditFaculty";
 
 // Modal key constants — avoids raw string typos across the tree.
 export const MODALS = {
@@ -34,6 +37,8 @@ export const MODALS = {
     ASSIGN_FACULTY: "assignFaculty",
     EDIT_COURSE: "editCourse",
     PROMOTE: "promote",
+    ADD_FACULTY: "addFaculty",
+    EDIT_FACULTY: "editFaculty",
 };
 
 function AdminDash2() {
@@ -56,6 +61,11 @@ function AdminDash2() {
         batchData: batch.batchData,
         refetchBatchData: batch.refetchBatchData,
         setActiveModal,
+    });
+
+    const faculties = useFacultyActions({
+        setActiveModal,
+        refetchBatchData: batch.refetchBatchData,
     });
 
     const isBatchSelected = batch.batchData !== null;
@@ -116,11 +126,16 @@ function AdminDash2() {
                         )}
 
                         {batch.activeTab === "Faculties" && isBatchSelected && (
-                            <Admin_FacultiesTab batchData={batch.batchData} />
+                            <Admin_FacultiesTab
+                                batchData={batch.batchData}
+                                faculties={faculties.faculties}
+                                onAddFaculty={() => setActiveModal(MODALS.ADD_FACULTY)}
+                                onEditFaculty={faculties.handleEditFacultyClick}
+                            />
                         )}
 
                         {batch.activeTab === "Schedule" && isBatchSelected && (
-                            <Admin_ScheduleTab />
+                            <Admin_ScheduleTab batchData={batch.batchData} />
                         )}
 
                     </div>
@@ -190,6 +205,26 @@ function AdminDash2() {
                     onSubmit={students.handlePromoteSubmit}
                     loading={students.promoteLoading}
                     error={students.promoteError}
+                />
+
+                <Admin_ModalAddFaculty
+                    isOpen={activeModal === MODALS.ADD_FACULTY}
+                    onClose={() => setActiveModal(null)}
+                    form={faculties.addFacultyForm}
+                    onChange={faculties.handleAddFacultyChange}
+                    onSubmit={faculties.handleAddFacultySubmit}
+                    loading={faculties.addLoading}
+                    error={faculties.addError}
+                />
+
+                <Admin_ModalEditFaculty
+                    isOpen={activeModal === MODALS.EDIT_FACULTY}
+                    onClose={() => setActiveModal(null)}
+                    form={faculties.editFacultyForm}
+                    onChange={faculties.handleEditFacultyChange}
+                    onSubmit={faculties.handleEditFacultySubmit}
+                    loading={faculties.editLoading}
+                    error={faculties.editError}
                 />
 
 

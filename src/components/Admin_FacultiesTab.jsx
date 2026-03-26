@@ -1,7 +1,7 @@
 import React from "react";
 import { MdPersonAdd, MdSearch, MdEdit, MdDelete } from "react-icons/md";
 
-function Admin_FacultiesTab({ batchData }) {
+function Admin_FacultiesTab({ batchData, onAddFaculty, onEditFaculty }) {
     return (
         <div className="w-full flex-1 max-w-7xl mx-auto py-4">
             {/* Header */}
@@ -12,7 +12,10 @@ function Admin_FacultiesTab({ batchData }) {
                         Manage institutional staff and academic departments.
                     </p>
                 </div>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2">
+                <button
+                    onClick={onAddFaculty}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
+                >
                     <MdPersonAdd className="text-[18px]" />
                     Add Faculty Member
                 </button>
@@ -44,7 +47,7 @@ function Admin_FacultiesTab({ batchData }) {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {batchData.faculties.length > 0 ? batchData.faculties.map((f, i) => (
-                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                <tr key={f._id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
@@ -52,21 +55,29 @@ function Admin_FacultiesTab({ batchData }) {
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold">{f.name}</p>
+                                                {/*<p className="text-xs text-slate-400">@{f.user_name || "no-username"}</p>*/}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{f.email}</td>
                                     <td className="px-6 py-4">
-                                        <span className="px-2.5 py-1 rounded-full text-xs bg-blue-100 text-blue-600">
-                                            {f.courses.join(', ')}
-                                        </span>
+                                        {f.courses && f.courses.length > 0 ? (
+                                            <span className="px-2.5 py-1 rounded-full text-xs bg-blue-100 text-blue-600">
+                                                {f.courses.join(', ')}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italics">No courses assigned</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button className="p-1.5 text-slate-400 hover:text-blue-600">
+                                            <button
+                                                onClick={() => onEditFaculty(f)}
+                                                className="p-1.5 text-slate-400 hover:text-blue-600"
+                                            >
                                                 <MdEdit className="text-[20px]" />
                                             </button>
-                                            <button className="p-1.5 text-slate-400 hover:text-red-500">
+                                            <button className="p-1.5 text-slate-400 hover:text-red-500 opacity-50 cursor-not-allowed" title="Delete on hold">
                                                 <MdDelete className="text-[20px]" />
                                             </button>
                                         </div>
