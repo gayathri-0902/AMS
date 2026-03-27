@@ -95,8 +95,8 @@ function FacultyDashboard() {
       }
 
       try {
-        // Fetch Today's Classes
-        const classesRes = await axiosInstance.get(`/api/faculty-dashboard/${activeId}`);
+        // ===== CHANGED: Added ?debugDay=Sat to simulate Saturday (remove before production) =====
+        const classesRes = await axiosInstance.get(`/api/faculty-dashboard/${activeId}?debugDay=Sat`);
         setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
 
         // Fetch All Assigned Subjects (for weekend/off-day management)
