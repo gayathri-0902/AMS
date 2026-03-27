@@ -7,6 +7,7 @@ import { useBatchData } from "../hooks/useBatchData";
 import { useStudentActions } from "../hooks/useStudentActions";
 import { useCourseActions } from "../hooks/useCourseActions";
 import { useFacultyActions } from "../hooks/useFacultyActions";
+import { useTimetableActions } from "../hooks/useTimetableActions";
 
 // ── Layout ─────────────────────────────────────────────────────────────────────
 import Admin_Sidebar from "./Admin_Sidebar";
@@ -28,6 +29,7 @@ import Admin_ModalEditCourse from "./Admin_ModalEditCourse";
 import Admin_ModalPromote from "./Admin_ModalPromote";
 import Admin_ModalAddFaculty from "./Admin_ModalAddFaculty";
 import Admin_ModalEditFaculty from "./Admin_ModalEditFaculty";
+import Admin_ModalAddSession from "./Admin_ModalAddSession";
 
 // Modal key constants — avoids raw string typos across the tree.
 export const MODALS = {
@@ -39,6 +41,7 @@ export const MODALS = {
     PROMOTE: "promote",
     ADD_FACULTY: "addFaculty",
     EDIT_FACULTY: "editFaculty",
+    ADD_SESSION: "addSession",
 };
 
 function AdminDash2() {
@@ -66,6 +69,12 @@ function AdminDash2() {
     const faculties = useFacultyActions({
         setActiveModal,
         refetchBatchData: batch.refetchBatchData,
+    });
+
+    const timetable = useTimetableActions({
+        batchData: batch.batchData,
+        refetchBatchData: batch.refetchBatchData,
+        setActiveModal,
     });
 
     const isBatchSelected = batch.batchData !== null;
@@ -135,7 +144,10 @@ function AdminDash2() {
                         )}
 
                         {batch.activeTab === "Schedule" && isBatchSelected && (
-                            <Admin_ScheduleTab batchData={batch.batchData} />
+                            <Admin_ScheduleTab 
+                                batchData={batch.batchData} 
+                                onAddSession={timetable.handleOpenAddSession}
+                            />
                         )}
 
                     </div>
@@ -225,6 +237,18 @@ function AdminDash2() {
                     onSubmit={faculties.handleEditFacultySubmit}
                     loading={faculties.editLoading}
                     error={faculties.editError}
+                />
+
+                <Admin_ModalAddSession
+                    isOpen={activeModal === MODALS.ADD_SESSION}
+                    onClose={() => setActiveModal(null)}
+                    form={timetable.addSessionForm}
+                    onChange={timetable.handleAddSessionChange}
+                    onSubmit={timetable.handleAddSessionSubmit}
+                    loading={timetable.addSessionLoading}
+                    error={timetable.addSessionError}
+                    courses={batch.batchData?.courses || []}
+                    faculties={faculties.faculties || []}
                 />
 
 

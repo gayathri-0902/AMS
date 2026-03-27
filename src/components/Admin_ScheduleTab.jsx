@@ -1,6 +1,6 @@
 import React from "react";
 
-function Admin_ScheduleTab({ batchData }) {
+function Admin_ScheduleTab({ batchData, onAddSession }) {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     const fullDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -83,7 +83,10 @@ function Admin_ScheduleTab({ batchData }) {
                             <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl text-sm font-medium hover:bg-slate-50">
                                 Export PDF
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90">
+                            <button 
+                                onClick={onAddSession}
+                                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90"
+                            >
                                 New Session
                             </button>
                         </div>

@@ -442,48 +442,106 @@ app.post("/api/admin/student", async (req, res) => {
 
     res.status(201).json({ message: "Student created successfully" });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
+});*/
 
-// 10. Admin: Create Schedule
+// 10. Admin: Create Schedule (Timetable Session)
 app.post("/api/admin/schedule", async (req, res) => {
-  const { course_code, faculty_email, stream, yr, sem, day, start_time, end_time, location, session_no } = req.body;
+  const { yr_sem_id, course_code, faculty_email, day, start_time, end_time, location, session_no } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const faculty = await Faculty.findOne({ email: faculty_email });
-    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream });
-    if (!faculty || !yrSem) return res.status(404).json({ message: "Faculty or Section not found" });
-
-    let course = await CourseMaster.findOne({ course_code });
-    if (!course) {
-      course = new CourseMaster({ course_code, course_name: course_code, credits: 3 });
-      await course.save();
+    // 1. Basic Validation
+    if (!yr_sem_id || !course_code || !faculty_email || !day || !start_time || !end_time || !session_no) {
+      throw new Error("Missing required fields for timetable session");
     }
 
-    let subjectOffering = await SubjectOffering.findOne({ course_master_id: course._id, yr_sem_id: yrSem._id });
+    if (start_time >= end_time) {
+      throw new Error("Start time must be earlier than end time");
+    }
+
+    const dayMap = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat", Sunday: "Sun" };
+    const shortDay = dayMap[day] || day;
+
+    // 2. Fetch Models
+    const faculty = await Faculty.findOne({ email: faculty_email }).session(session);
+    if (!faculty) throw new Error(`Faculty with email ${faculty_email} not found`);
+
+    const course = await CourseMaster.findOne({ course_code }).session(session);
+    if (!course) throw new Error(`Course with code ${course_code} not found`);
+
+    // 3. Ensure Subject Offering exists for this batch
+    const subjectOffering = await SubjectOffering.findOne({
+      course_master_id: course._id,
+      yr_sem_id
+    }).session(session);
+
     if (!subjectOffering) {
-      subjectOffering = new SubjectOffering({ course_master_id: course._id, yr_sem_id: yrSem._id, is_active: true });
-      await subjectOffering.save();
+      throw new Error(`The course ${course_code} is not offered for this batch.`);
     }
 
-    const assignment = await FacultyAssignment.findOne({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id });
+    // 4. Ensure Faculty is assigned to this Subject Offering (NEW STRICT CHECK)
+    const assignment = await FacultyAssignment.findOne({
+      faculty_id: faculty._id,
+      subject_offering_id: subjectOffering._id
+    }).session(session);
+
     if (!assignment) {
-      await new FacultyAssignment({ faculty_id: faculty._id, subject_offering_id: subjectOffering._id }).save();
+      throw new Error("This faculty is not assigned for this class.");
     }
 
+    // 5. BUSINESS LOGIC VALIDATION
+    
+    // A. Check Batch Availability (Unique Session per Section per Day)
+    const batchConflict = await TimeTable.findOne({
+      yr_sem_id,
+      day_of_week: shortDay,
+      session_no: Number(session_no)
+    }).session(session);
+
+    if (batchConflict) {
+      throw new Error(`This batch already has a session assigned for ${day} at Session ${session_no}`);
+    }
+
+    // B. Check Faculty Availability
+    const facultyConflict = await TimeTable.findOne({
+      faculty_id: faculty._id,
+      day_of_week: shortDay,
+      session_no: Number(session_no)
+    }).session(session);
+
+    if (facultyConflict) {
+      throw new Error(`${faculty.name} is already teaching another class during ${day} Session ${session_no}`);
+    }
+
+    // 6. Create the Entry
     const timetable = new TimeTable({
-      yr_sem_id: yrSem._id,
-      day_of_week: day,
+      yr_sem_id,
+      day_of_week: shortDay,
       session_no: Number(session_no),
       start_time,
       end_time,
       subject_offering_id: subjectOffering._id,
       faculty_id: faculty._id,
-      location
+      location: location || "TBD"
     });
-    await timetable.save();
+
+    await timetable.save({ session });
+
+    await session.commitTransaction();
     res.status(201).json({ message: "Schedule created successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Create schedule error:", error);
+    res.status(400).json({ message: error.message || "Server error while creating schedule" });
+  } finally {
+    session.endSession();
+  }
 });
 
+/*
 // 11. Admin: Parent and Mapping
 app.post("/api/admin/parent", async (req, res) => {
   const { name, email, password, phno } = req.body;
@@ -993,8 +1051,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
     const timetable = await TimeTable.find({
       yr_sem_id: yrSem._id
     }).populate({
-        path: "subject_offering_id",
-        populate: { path: "course_master_id", select: "course_name course_code" }
+      path: "subject_offering_id",
+      populate: { path: "course_master_id", select: "course_name course_code" }
     }).populate("faculty_id", "name");
 
     res.json({
