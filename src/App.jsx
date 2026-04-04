@@ -4,7 +4,6 @@ import { useAuth } from "./context/AuthContext";
 
 // Components 
 import LoginPage from "./components/LoginPage";
-import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 //import AdminDashboard from "./components/AdminDashboard";
@@ -124,15 +123,6 @@ function App() {
           }
         />
 
-        {/* Admin Timetable */}
-        <Route
-          path="/admin/timetable"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminTimetable />
-            </ProtectedRoute>
-          }
-        />
 
         {/* Faculty Access */}
         <Route
@@ -181,13 +171,13 @@ function App() {
           }
         />
 
-        <Route 
-          path="/hand-in/:assignmentId" 
+        <Route
+          path="/hand-in/:assignmentId"
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <HandIn />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Parent Access */}
