@@ -1152,6 +1152,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
   }
 });
 
+/* Retained this just incase if required to show timetable for faculty in their dashboard in future
 // 11.1 Fetch Timetable by Faculty Email (Faculty Perspective)
 app.get("/api/admin/faculty-schedule/:email", async (req, res) => {
   try {
@@ -1189,7 +1190,7 @@ app.get("/api/admin/faculty-schedule/:email", async (req, res) => {
     res.status(500).json({ message: "Server error fetching faculty schedule" });
   }
 });
-
+*/
 
 /* old code
 // 12. Admin: Fetch Courses for a Batch
