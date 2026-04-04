@@ -78,6 +78,8 @@ function AdminDash2() {
         setActiveModal,
     });
 
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    
     const isBatchSelected = !!batch.batchData?.yr_sem_id;
 
     // ── Search State ───────────────────────────────────────────────────────────
@@ -87,16 +89,18 @@ function AdminDash2() {
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+        <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
             <div className="flex h-screen overflow-hidden">
 
                 <Admin_Sidebar
                     activeTab={batch.activeTab}
-                    isBatchSelected={true} // Always allow navigation in the sidebar now
+                    isBatchSelected={true}
                     setActiveTab={batch.setActiveTab}
+                    isCollapsed={isSidebarCollapsed}
+                    setIsCollapsed={setIsSidebarCollapsed}
                 />
 
-                <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 relative">
+                <main className={`flex-1 overflow-y-auto bg-white dark:bg-slate-900 relative transition-all duration-300 ${isSidebarCollapsed ? "ml-0" : ""}`}>
                     <Admin_Header 
                         activeTab={batch.activeTab} 
                         logout={logout} 

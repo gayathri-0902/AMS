@@ -8,32 +8,32 @@ import {
 } from "react-icons/md";
 import Admin_FilterBar from "./Admin_FilterBar";
 
-function Admin_CoursesTab({ 
-    batchData, 
-    formData, 
-    searchTerm, 
-    setIsAddCourseModalOpen, 
-    handleOpenAssignFaculty, 
+function Admin_CoursesTab({
+    batchData,
+    formData,
+    searchTerm,
+    setIsAddCourseModalOpen,
+    handleOpenAssignFaculty,
     handleEditCourseClick,
     handleChange,
     handleFetch,
     clearFilters,
-    loading 
+    loading
 }) {
     // Local filter based on searchTerm
-    const filteredCourses = (batchData?.courses || []).filter(c => 
-        c.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.course_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.assigned_faculty && c.assigned_faculty.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (c.batch && c.batch.toLowerCase().includes(searchTerm.toLowerCase()))
+    const filteredCourses = (batchData?.courses || []).filter(c =>
+        (c.course_name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+        (c.course_code || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+        (c.assigned_faculty && c.assigned_faculty.toLowerCase().includes((searchTerm || "").toLowerCase())) ||
+        (c.batch && c.batch.toLowerCase().includes((searchTerm || "").toLowerCase()))
     );
 
     const isFiltered = !!batchData?.isFiltered;
 
     return (
         <div className="w-full flex-1 max-w-7xl mx-auto py-4 animate-in fade-in duration-500">
-            
-            <Admin_FilterBar 
+
+            <Admin_FilterBar
                 formData={formData}
                 handleChange={handleChange}
                 handleFetch={handleFetch}
@@ -48,7 +48,7 @@ function Admin_CoursesTab({
                         {isFiltered ? "Batch Curriculum" : "Institutional Course Directory"}
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">
-                        {isFiltered 
+                        {isFiltered
                             ? `Course offerings and faculty assignments for the selected batch.`
                             : `Full repository of all academic courses and elective offerings.`}
                     </p>
@@ -95,20 +95,18 @@ function Admin_CoursesTab({
                                     </td>
                                     <td className="px-6 py-5">
                                         {c.assigned_faculty === "Not Assigned" || !c.assigned_faculty ? (
-                                            <button 
-                                                onClick={() => handleOpenAssignFaculty(c)} 
+                                            <button
+                                                onClick={() => handleOpenAssignFaculty(c)}
                                                 className="inline-flex items-center px-4 py-1.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-600/10 active:scale-[0.98]"
                                             >
                                                 Assign Faculty
                                             </button>
                                         ) : (
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
-                                                    <MdPerson size={18} />
-                                                </div>
+
                                                 <div className="flex flex-col">
                                                     <span className="text-xs text-slate-900 dark:text-slate-100 font-bold uppercase tracking-tight">{c.assigned_faculty}</span>
-                                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ID: {c.assigned_faculty_email?.split('@')[0] || "N/A"}</span>
+
                                                 </div>
                                             </div>
                                         )}

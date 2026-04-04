@@ -986,12 +986,14 @@ app.get("/api/admin/batch-data", async (req, res) => {
 
       const yrSemIds = matchingYrSems.map(y => y._id);
       studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
-      offeringQuery = { yr_sem_id: { $in: yrSemIds }, is_active: true };
+      offeringQuery = { yr_sem_id: { $in: yrSemIds } };
+      timetableQuery = { yr_sem_id: { $in: yrSemIds } }; // Timetable doesn't have is_active
       isFiltered = true;
     } else {
       // If no ID filters are provided, we show all students matching the requested status (Default: Active)
       studentQuery = { status };
-      offeringQuery = { is_active: true };
+      offeringQuery = {};
+      timetableQuery = {}; // Fetch all for global view
       isFiltered = false;
     }
 
@@ -1117,7 +1119,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
     });
 
     // 4. Fetch Timetable
-    const timetable = await TimeTable.find(offeringQuery)
+    const timetable = await TimeTable.find(timetableQuery)
       .populate({
         path: "subject_offering_id",
         populate: { path: "course_master_id", select: "course_name course_code" }
