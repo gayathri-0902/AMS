@@ -1047,7 +1047,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
     // 3. Fetch ALL Faculties & Assignments (Enriched)
     const allFaculty = await Faculty.find({}).lean();
     const assignments = await FacultyAssignment.find({
-      subject_offering_id: { $in: offerings.map(o => o._id) }
+      subject_offering_id: { $in: offerings.map(o => o._id) },
+      status: "active"
     })
       .populate("faculty_id")
       .populate({
@@ -1239,14 +1240,22 @@ app.put("/api/admin/change-faculty", async (req, res) => {
     const faculty = await Faculty.findOne({ email: faculty_email }).session(session);
     if (!faculty) throw new Error(`Faculty not found with email: ${faculty_email}`);
 
-    // 3. Update/Upsert Assignment
-    await FacultyAssignment.updateOne(
-      { subject_offering_id: subjectOffering._id },
-      { faculty_id: faculty._id },
-      { session, upsert: true }
+    // 3. Inactivate any existing active assignments for this offering
+    await FacultyAssignment.updateMany(
+      { subject_offering_id: subjectOffering._id, status: "active" },
+      { status: "inactive", end_date: new Date() },
+      { session }
     );
 
-    // 6. Update existing sessions in TimeTable
+    // 4. Create New History-Preserving Assignment
+    await FacultyAssignment.create([{
+      faculty_id: faculty._id,
+      subject_offering_id: subjectOffering._id,
+      status: "active",
+      start_date: new Date()
+    }], { session });
+
+    // 5. Update linked TimeTable sessions to the new faculty
     await TimeTable.updateMany(
       { subject_offering_id: subjectOffering._id },
       { faculty_id: faculty._id },
@@ -1627,12 +1636,22 @@ app.put("/api/admin/edit-course/:offeringId", async (req, res) => {
       const faculty = await Faculty.findOne({ email: assigned_faculty_email }).session(session);
       if (!faculty) throw new Error("Faculty not found with this email");
 
-      await FacultyAssignment.updateOne(
-        { subject_offering_id: offeringId },
-        { faculty_id: faculty._id, start_date: new Date() },
-        { session, upsert: true }
+      // 3. Inactivate any existing active assignments for this offering
+      await FacultyAssignment.updateMany(
+        { subject_offering_id: offeringId, status: "active" },
+        { status: "inactive", end_date: new Date() },
+        { session }
       );
 
+      // 4. Create New History-Preserving Assignment
+      await FacultyAssignment.create([{
+        faculty_id: faculty._id,
+        subject_offering_id: offeringId,
+        status: "active",
+        start_date: new Date()
+      }], { session });
+
+      // 5. Update linked TimeTable sessions to the new faculty
       await TimeTable.updateMany(
         { subject_offering_id: offeringId },
         { faculty_id: faculty._id },
