@@ -24,49 +24,15 @@ from llama_index.core.query_engine import RetrieverQueryEngine
 from config import cfg
 from ingestion.build_vector_index import DB_DIR, build_vector_index
 from interfaces import BaseLLMLoader
-from llm_loaders.local_llm_loader import QuantizedLocalLLM
-from llm_loaders.ollama_loader import OllamaLoader
 from prompts.base import get_custom_prompt
 from retrieval.hybrid_retriever import get_hybrid_rrf_retriever
+from llm_factory import get_llama_index_llm
 
 
 # ---------------------------------------------------------------------------
 # LLM factory
 # ---------------------------------------------------------------------------
 
-def _build_llm(backend: str) -> BaseLLMLoader:
-    """
-    Instantiate the correct LLM loader based on the ``backend`` string.
-
-    Args:
-        backend: ``"local"`` for QuantizedLocalLLM or ``"ollama"`` for OllamaLoader.
-
-    Returns:
-        A :class:`~interfaces.BaseLLMLoader` whose ``.get_llm()`` returns the LLM.
-
-    Raises:
-        ValueError: If ``backend`` is not ``"local"`` or ``"ollama"``.
-    """
-    if backend == "local":
-        c = cfg.local_llm
-        return QuantizedLocalLLM(
-            model_name=c.model,
-            max_new_tokens=c.max_new_tokens,
-            context_window=c.context_window,
-            temperature=c.temperature,
-        )
-    if backend == "ollama":
-        c = cfg.ollama_llm
-        return OllamaLoader(
-            model_name=c.model,
-            request_timeout=c.request_timeout,
-            context_window=c.context_window,
-            temperature=c.temperature,
-        )
-    raise ValueError(
-        f"Unknown llm_backend '{backend}'. "
-        "Valid options: 'local', 'ollama'. Update config.yaml."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -109,10 +75,9 @@ def setup_query_engine(
     #   This must happen before any retriever or synthesizer is constructed.
     #   LlamaIndex's QueryFusionRetriever.__init__ calls resolve_llm("default"),
     #   which will crash trying to reach OpenAI if Settings.llm is not set yet.
-    print("Loading LLM...")
-    llm_loader = _build_llm(backend)
-    llm = llm_loader.get_llm()
-    Settings.llm = llm
+    # Step 1: Load the LLM and register it globally FIRST.
+    print("Loading LLM (Singleton)...")
+    llm = get_llama_index_llm(backend)
 
     # Step 2: Build / sync the ChromaDB-backed vector index.
     index = build_vector_index(year, branch)

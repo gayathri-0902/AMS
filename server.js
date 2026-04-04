@@ -23,6 +23,11 @@ const ParentStudentMap = require("./models/ParentStudentMap");
 const ClassNotes = require("./models/ClassNotes");
 const Feedback = require("./models/Feedback");
 const Assignment = require("./models/Assignment");
+const Submission = require("./models/Submission");
+
+// --- Routes ---
+const assignmentRoutes = require("./routes/assignmentRoutes");
+const submissionRoutes = require("./routes/submissionRoutes");
 
 dotenv.config();
 const app = express();
@@ -57,6 +62,10 @@ mongoose
   .connect(MONGO_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Error connecting to MongoDB:", err));
+
+// --- Route Middlewares ---
+app.use("/api/assignment", assignmentRoutes);
+app.use("/api/submission", submissionRoutes);
 
 // --- ROUTES ---
 
@@ -492,7 +501,7 @@ app.post("/api/admin/schedule", async (req, res) => {
     }
 
     // 5. BUSINESS LOGIC VALIDATION
-    
+
     // A. Check Batch Availability (Unique Session per Section per Day)
     const batchConflict = await TimeTable.findOne({
       yr_sem_id,
@@ -599,32 +608,8 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 9. Assignment Routes
-app.post("/api/faculty/assignments", async (req, res) => {
-  const { subject_offering_id, title, instructions, due_date, file_url } = req.body;
-  try {
-    const assignment = new Assignment({
-      subject_offering_id,
-      title,
-      instructions,
-      file_url,
-      due_date: new Date(due_date),
-      is_active: true
-    });
-    await assignment.save();
-    res.status(201).json({ message: "Assignment posted successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
-
-app.get("/api/assignments/:subjectOfferingId", async (req, res) => {
-  try {
-    const assignments = await Assignment.find({
-      subject_offering_id: req.params.subjectOfferingId,
-      is_active: true
-    }).sort({ due_date: 1 });
-    res.json(assignments);
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
-});
+// 13. Assignment Routes (Deprecated in favor of /api/assignment router)
+// Old routes /api/faculty/assignments and /api/assignments/:id are now handled by assignmentRoutes.js
 
 // 10. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
@@ -986,7 +971,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
       if (academic_yr) matchCriteria.academic_yr = academic_yr;
 
       const matchingYrSems = await YrSem.find(matchCriteria).select("_id").lean();
-      
+
       if (!matchingYrSems.length) {
         return res.json({
           students: [],
@@ -998,7 +983,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
           isFiltered: true
         });
       }
-      
+
       const yrSemIds = matchingYrSems.map(y => y._id);
       studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
       offeringQuery = { yr_sem_id: { $in: yrSemIds }, is_active: true };
@@ -1015,7 +1000,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
     const enrollments = await StudentEnrollment.find(studentQuery)
       .populate({ path: "student_id", select: "name roll_no email" })
       .populate({ path: "yr_sem_id", select: "yr sem stream academic_yr" })
-      .sort({ "student_id.name": 1 }) 
+      .sort({ "student_id.name": 1 })
       .skip(skip)
       .limit(Number(limit))
       .lean();
@@ -1037,7 +1022,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
       }));
 
     // If any orphans were filtered out, the total count should match the visible list
-    const totalStudents = students.length < enrollments.length 
+    const totalStudents = students.length < enrollments.length
       ? totalStudentsRaw - (enrollments.length - students.length)
       : totalStudentsRaw;
 
@@ -1064,15 +1049,15 @@ app.get("/api/admin/batch-data", async (req, res) => {
     const assignments = await FacultyAssignment.find({
       subject_offering_id: { $in: offerings.map(o => o._id) }
     })
-    .populate("faculty_id")
-    .populate({
-      path: "subject_offering_id",
-      populate: [
-        { path: "course_master_id", select: "course_name" },
-        { path: "yr_sem_id", select: "yr sem stream academic_yr" }
-      ]
-    })
-    .lean();
+      .populate("faculty_id")
+      .populate({
+        path: "subject_offering_id",
+        populate: [
+          { path: "course_master_id", select: "course_name" },
+          { path: "yr_sem_id", select: "yr sem stream academic_yr" }
+        ]
+      })
+      .lean();
 
     const facultiesMap = new Map();
     const offeringToFacultyMap = new Map();
@@ -1094,7 +1079,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
       if (a.faculty_id) {
         const fId = a.faculty_id._id.toString();
         const fData = facultiesMap.get(fId);
-        
+
         if (fData) {
           const courseName = a.subject_offering_id?.course_master_id?.course_name;
           const yrSem = a.subject_offering_id?.yr_sem_id;
@@ -1106,10 +1091,10 @@ app.get("/api/admin/batch-data", async (req, res) => {
 
         // Map offering -> faculty for the Courses Tab
         if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
-            offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
-                name: a.faculty_id.name,
-                email: a.faculty_id.email
-            });
+          offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
+            name: a.faculty_id.name,
+            email: a.faculty_id.email
+          });
         }
       }
     });
@@ -1122,12 +1107,12 @@ app.get("/api/admin/batch-data", async (req, res) => {
 
     // Enrich coursesData with assigned faculty details
     const coursesData = coursesDataRaw.map(c => {
-        const faculty = offeringToFacultyMap.get(c.subject_offering_id.toString());
-        return {
-            ...c,
-            assigned_faculty: faculty ? faculty.name : "Not Assigned",
-            assigned_faculty_email: faculty ? faculty.email : null
-        };
+      const faculty = offeringToFacultyMap.get(c.subject_offering_id.toString());
+      return {
+        ...c,
+        assigned_faculty: faculty ? faculty.name : "Not Assigned",
+        assigned_faculty_email: faculty ? faculty.email : null
+      };
     });
 
     // 4. Fetch Timetable
@@ -1197,8 +1182,8 @@ app.get("/api/admin/faculty-schedule/:email", async (req, res) => {
     }));
 
     res.json({
-        facultyName: faculty.name,
-        timetable: formattedSessions
+      facultyName: faculty.name,
+      timetable: formattedSessions
     });
   } catch (error) {
     res.status(500).json({ message: "Server error fetching faculty schedule" });
@@ -1246,7 +1231,7 @@ app.put("/api/admin/change-faculty", async (req, res) => {
     const subjectOffering = await SubjectOffering.findById(subject_offering_id).session(session);
 
     if (!subjectOffering) {
-        throw new Error(`Course offering not found. Please refresh the page.`);
+      throw new Error(`Course offering not found. Please refresh the page.`);
     }
 
     // 2. Find the Faculty
@@ -1414,15 +1399,15 @@ app.post("/api/admin/add-course", async (req, res) => {
     }
 
     // 1. Find the Batch (YrSem)
-    const yrSem = await YrSem.findOne({ 
-        yr: Number(yr), 
-        sem: Number(sem), 
-        stream, 
-        academic_yr 
+    const yrSem = await YrSem.findOne({
+      yr: Number(yr),
+      sem: Number(sem),
+      stream,
+      academic_yr
     }).session(session);
 
     if (!yrSem) {
-        throw new Error(`Batch not found for: Yr ${yr}, Sem ${sem}, ${stream} (${academic_yr})`);
+      throw new Error(`Batch not found for: Yr ${yr}, Sem ${sem}, ${stream} (${academic_yr})`);
     }
 
     // 2. Check if CourseMaster exists, if not create it
@@ -1453,9 +1438,9 @@ app.post("/api/admin/add-course", async (req, res) => {
     }], { session });
 
     await session.commitTransaction();
-    res.status(201).json({ 
-        message: "Course registered and offering created successfully", 
-        offering: newOffering 
+    res.status(201).json({
+      message: "Course registered and offering created successfully",
+      offering: newOffering
     });
 
   } catch (error) {
@@ -1901,6 +1886,8 @@ app.get("/api/admin/faculties", async (req, res) => {
 let server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+server.setTimeout(1800000); // 30 minutes timeout for long AI generation requests
 
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {

@@ -11,7 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -26,5 +25,8 @@ dist-ssr
 .env
 py_backend/models
 py_backend/chromadb
+py_backend/facedetection/chroma_db
+py_backend/facedetection/data
+py_backend/facedetection/face_env
 
 __pycache__

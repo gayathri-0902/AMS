@@ -9,7 +9,8 @@ import {
   HiOutlineArrowRight,
   HiOutlineLogout,
   HiOutlineUser,
-  HiOutlineSparkles
+  HiOutlineSparkles,
+  HiOutlineClock
 } from "react-icons/hi";
 import AcademicAI from "./AcademicAI";
 
@@ -23,6 +24,7 @@ const StudentDashboard = ({ overrideId }) => {
   const [currentSem, setCurrentSem] = useState("");
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
+  const [assignments, setAssignments] = useState([]);
 
   const formatTime = (timeString) => {
     if (!timeString) return "";
@@ -84,6 +86,40 @@ const StudentDashboard = ({ overrideId }) => {
     fetchDashboardData();
   }, [auth?.studentId, urlStudentId, overrideId]);
 
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      // Must have timetable and a valid student ID to proceed
+      if (timetable.length === 0 || !auth?.studentId) return;
+      try {
+        const allAssignments = [];
+        const seenSubjectIds = new Set();
+        
+        for (const course of timetable) {
+          if (!seenSubjectIds.has(course.subject_offering_id)) {
+            seenSubjectIds.add(course.subject_offering_id);
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/assignment/subject/${course.subject_offering_id}`);
+            allAssignments.push(...res.data);
+          }
+        }
+        
+        // Final safety deduplication by assignment _id to ensure no React key collisions
+        const uniqueAssignments = Array.from(new Map(allAssignments.map(a => [a._id, a])).values());
+
+        // Fetch student's submissions to filter out completed ones
+        const subRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/submission/student/${auth.studentId}`);
+        // Extract assignment IDs from the populated assignment_id field
+        const submittedIds = new Set(subRes.data.map(sub => sub.assignment_id ? sub.assignment_id._id : sub.assignment_id));
+
+        const pendingAssignments = uniqueAssignments.filter(a => !submittedIds.has(a._id));
+
+        setAssignments(pendingAssignments);
+      } catch (err) {
+        console.error("Error fetching assignments:", err);
+      }
+    };
+    fetchAssignments();
+  }, [timetable, auth?.studentId]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center font-antiqua">Loading...</div>;
 
   return (
@@ -125,6 +161,38 @@ const StudentDashboard = ({ overrideId }) => {
             Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name}</span>
           </p>
         </div>
+
+        {/* --- ASSIGNMENT TIMELINE --- */}
+        {assignments.length > 0 && (
+          <div className="mb-14 px-2">
+            <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Pending Assignments</h2>
+            <div className="flex overflow-x-auto pb-6 space-x-6 scrollbar-hide">
+              {assignments.map((assign, idx) => (
+                <div key={idx} className="min-w-[320px] bg-white rounded-[32px] p-6 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-50 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                        {assign.assignment_type}
+                      </span>
+                      <div className="flex items-center text-xs font-bold text-gray-400">
+                        <HiOutlineClock size={14} className="mr-1" />
+                        {new Date(assign.submission_deadline).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-1 leading-tight">{assign.title}</h3>
+                    <p className="text-sm text-gray-400 font-medium truncate">{assign.instructions}</p>
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/hand-in/${assign._id}`)}
+                    className="mt-6 w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 hover:text-white transition-all transition-all active:scale-95"
+                  >
+                    ATTEMPT TASK
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Course Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
