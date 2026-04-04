@@ -1,10 +1,24 @@
 import React from "react";
+import Admin_FilterBar from "./Admin_FilterBar";
+import { MdLayers } from "react-icons/md";
 
-function Admin_ScheduleTab({ batchData, onAddSession }) {
+/**
+ * Schedule Tab with Days as Rows and Sessions as Columns.
+ * Focuses on data integration and hook-driven filtering.
+ */
+function Admin_ScheduleTab({ 
+    batchData, 
+    formData,
+    onAddSession,
+    handleChange,
+    handleFetch,
+    clearFilters,
+    loading 
+}) {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    const fullDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
+    const dayLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const timetable = batchData?.timetable || [];
+    const isFiltered = Object.values(formData).some(val => val !== "" && val !== "active");
 
     // 1. Helper: Time string to minutes (e.g., "09:30" -> 570)
     const timeToMin = (t) => {
@@ -13,14 +27,7 @@ function Admin_ScheduleTab({ batchData, onAddSession }) {
         return h * 60 + m;
     };
 
-    // 2. Helper: Minutes to time string
-    const minToTime = (m) => {
-        const h = Math.floor(m / 60).toString().padStart(2, "0");
-        const min = (m % 60).toString().padStart(2, "0");
-        return `${h}:${min}`;
-    };
-
-    // 3. Find unique sessions and their times (assumes consistency for session_no)
+    // 2. Find unique sessions and their times
     const sessionInfoMap = {};
     timetable.forEach(entry => {
         if (!sessionInfoMap[entry.session_no]) {
@@ -37,158 +44,163 @@ function Admin_ScheduleTab({ batchData, onAddSession }) {
         .map(Number)
         .sort((a, b) => a - b);
 
-    // 4. Detect common gaps across all days
-    // We look for gaps between the end of one session and start of another
-    // that exist in the sessionInfoMap (which represents the grid structure)
-    const lunchGaps = [];
+    // 3. Detect common gaps (breaks) between sessions
+    const recessGaps = [];
     for (let i = 0; i < sessionList.length - 1; i++) {
         const current = sessionInfoMap[sessionList[i]];
         const next = sessionInfoMap[sessionList[i + 1]];
-        if (next.startMin - current.endMin == 60) { // 60 min gap
-            lunchGaps.push({
-                start: current.end,
-                end: next.start,
-                afterSession: sessionList[i]
-            });
+        if (next.startMin - current.endMin >= 45) { 
+            recessGaps.push({ start: current.end, end: next.start, afterSession: sessionList[i] });
         }
     }
 
-    // 5. Organize data into a grid: { [session_no]: { [day]: entry } }
+    // 4. Organize data into a grid: { [day]: { [session_no]: entry } }
     const gridData = {};
     timetable.forEach(entry => {
-        if (!gridData[entry.session_no]) gridData[entry.session_no] = {};
-        gridData[entry.session_no][entry.day_of_week] = entry;
+        if (!gridData[entry.day_of_week]) gridData[entry.day_of_week] = {};
+        gridData[entry.day_of_week][entry.session_no] = entry;
     });
 
-    const getSessionColor = (index) => {
+    const getSessionColor = (dayIdx, sessIdx) => {
         const colors = [
-            "bg-blue-100 border-blue-500",
-            "bg-emerald-100 border-emerald-500",
-            "bg-orange-100 border-orange-500",
-            "bg-rose-100 border-rose-500",
-            "bg-indigo-100 border-indigo-500",
-            "bg-slate-100 border-slate-400"
+            "bg-blue-50 border-blue-500",
+            "bg-emerald-50 border-emerald-500",
+            "bg-orange-50 border-orange-500",
+            "bg-rose-50 border-rose-500",
+            "bg-indigo-50 border-indigo-500",
+            "bg-slate-50 border-slate-400"
         ];
-        return colors[index % colors.length];
+        return colors[(dayIdx + sessIdx) % colors.length];
     };
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
-            <main className="py-12 px-8">
-                <div className="max-w-7xl mx-auto">
+        <div className="w-full flex-1 max-w-7xl mx-auto py-4">
+            
+            <Admin_FilterBar 
+                formData={formData}
+                handleChange={handleChange}
+                handleFetch={handleFetch}
+                clearFilters={clearFilters}
+                loading={loading}
+            />
 
-                    {/* Header */}
-                    <div className="flex justify-between items-end mb-8">
-                        <div className="flex gap-3">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl text-sm font-medium hover:bg-slate-50">
-                                Export PDF
-                            </button>
-                            <button 
-                                onClick={onAddSession}
-                                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90"
-                            >
-                                New Session
-                            </button>
-                        </div>
+            {(!isFiltered) ? (
+                <div className="w-full bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800 py-32 flex flex-col items-center justify-center text-center px-6">
+                    <div className="w-20 h-20 rounded-3xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center mb-8">
+                        <MdLayers size={32} />
                     </div>
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200 mb-3 tracking-tight">Select a Batch to Filter</h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed italic">
+                        Select a Year, Semester, and Stream to view the synchronized timetable grid.
+                    </p>
+                </div>
+            ) : (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <div className="min-w-full">
+                            
+                            {/* Header Row: Sessions as Columns */}
+                            <div className="flex bg-slate-50/80 dark:bg-slate-800/50 border-b">
+                                <div className="min-w-[120px] p-4 border-r bg-slate-50 dark:bg-slate-800"></div>
+                                {sessionList.map((sessionNo) => {
+                                    const info = sessionInfoMap[sessionNo];
+                                    const items = [];
+                                    items.push(
+                                        <div key={sessionNo} className="flex-1 min-w-[180px] p-4 text-center border-r">
+                                            <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Session {sessionNo}</div>
+                                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{info.start} - {info.end}</div>
+                                        </div>
+                                    );
+                                    
+                                    // Gap column in header
+                                    const gap = recessGaps.find(g => g.afterSession === sessionNo);
+                                    if (gap) {
+                                        items.push(
+                                            <div key={`gap-h-${sessionNo}`} className="w-[50px] flex items-center justify-center border-r bg-slate-100/30">
+                                                <span className="text-[8px] font-black uppercase -rotate-90 text-slate-400">Break</span>
+                                            </div>
+                                        );
+                                    }
+                                    return items;
+                                })}
+                            </div>
 
-                    {/* Timetable */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border overflow-hidden">
-
-                        {/* Days Header */}
-                        <div className="grid grid-cols-6 border-b">
-                            <div className="p-4 border-r bg-slate-50/50 dark:bg-slate-800/50"></div>
-                            {fullDays.map(day => (
-                                <div key={day} className="p-4 text-center text-xs font-bold uppercase text-slate-500">
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Grid */}
-                        <div className="grid grid-cols-6">
-                            {sessionList.map((sessionNo, index) => {
-                                const info = sessionInfoMap[sessionNo];
-                                const rows = [];
-
-                                // Render the session row
-                                rows.push(
-                                    <React.Fragment key={`session-${sessionNo}`}>
-                                        {/* Time Column */}
-                                        <div className="p-4 text-right border-r border-b text-xs text-slate-500 flex flex-col items-end justify-center h-32">
-                                            <span className="font-bold text-slate-400">Session {sessionNo}</span>
-                                            <span className="mt-1">{info.start} - {info.end}</span>
+                            {/* Row Body: Days as Rows */}
+                            <div className="bg-white dark:bg-slate-900">
+                                {days.map((day, dayIdx) => (
+                                    <div key={day} className="flex border-b last:border-b-0 hover:bg-slate-50/50 transition-colors">
+                                        {/* Day Column (Side Header) */}
+                                        <div className="min-w-[120px] p-4 border-r flex flex-col justify-center bg-white dark:bg-slate-900 z-10">
+                                            <span className="text-sm font-black text-slate-900 dark:text-slate-100">{dayLabels[dayIdx].slice(0, 3)}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{day}</span>
                                         </div>
 
-                                        {/* Day Columns */}
-                                        {days.map((day, idx) => {
-                                            const entry = gridData[sessionNo]?.[day];
-                                            return (
-                                                <div key={day} className="p-2 border-r border-b min-h-[128px]">
+                                        {/* Session Columns */}
+                                        {sessionList.map((sessionNo, sessIdx) => {
+                                            const entry = gridData[day]?.[sessionNo];
+                                            const items = [];
+                                            
+                                            items.push(
+                                                <div key={`${day}-${sessionNo}`} className="flex-1 min-w-[180px] p-2 border-r flex">
                                                     {entry ? (
-                                                        <div className={`h-full border-l-4 p-3 rounded-lg shadow-sm ${getSessionColor(idx + index)}`}>
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <h4 className="text-xs font-bold truncate flex-1" title={entry.course_name}>
+                                                        <div className={`w-full border-l-4 p-3 rounded-lg shadow-sm border ${getSessionColor(dayIdx, sessIdx)}`}>
+                                                            <div className="flex justify-between items-start mb-1 overflow-hidden">
+                                                                <h4 className="text-xs font-black truncate flex-1 uppercase tracking-tight" title={entry.course_name}>
                                                                     {entry.course_name}
                                                                 </h4>
                                                             </div>
-                                                            <p className="text-[10px] font-medium opacity-80">{entry.course_code}</p>
-                                                            <div className="mt-2 pt-2 border-t border-black/5">
-                                                                <p className="text-[10px] font-semibold">{entry.faculty_name}</p>
-                                                                <p className="text-[9px] opacity-70 flex items-center gap-1 mt-0.5">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50"></span>
-                                                                    {entry.location}
+                                                            <p className="text-[10px] font-bold opacity-70 mb-2">{entry.course_code}</p>
+                                                            <div className="mt-auto pt-2 border-t border-black/5 flex flex-col gap-0.5">
+                                                                <p className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 truncate">
+                                                                    {entry.faculty_name.split(' ')[0]}
                                                                 </p>
+                                                                <p className="text-[9px] opacity-60 italic">{entry.location}</p>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="h-full w-full rounded-lg border-2 border-dashed border-slate-100 dark:border-slate-800/50 flex items-center justify-center">
-                                                            <span className="text-[9px] text-slate-300 dark:text-slate-700 font-medium">Free Slot</span>
+                                                        <div className="w-full rounded-lg border border-dashed border-slate-100 dark:border-slate-800/50 flex items-center justify-center opacity-30">
+                                                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Free</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             );
+
+                                            // Gap column in body
+                                            const gap = recessGaps.find(g => g.afterSession === sessionNo);
+                                            if (gap) {
+                                                items.push(
+                                                    <div key={`gap-b-${day}-${sessionNo}`} className="w-[50px] flex items-center justify-center border-r bg-slate-50/20">
+                                                        <div className="w-0.5 h-12 bg-slate-200 dark:bg-slate-800 rounded-full opacity-30"></div>
+                                                    </div>
+                                                );
+                                            }
+                                            return items;
                                         })}
-                                    </React.Fragment>
-                                );
-
-                                // Check if a lunch break follows this session
-                                const gap = lunchGaps.find(g => g.afterSession === sessionNo);
-                                if (gap) {
-                                    rows.push(
-                                        <React.Fragment key={`lunch-${sessionNo}`}>
-                                            <div className="p-4 text-right border-r text-xs text-slate-400 flex flex-col items-center justify-center h-20 bg-slate-50/30 dark:bg-slate-800/20">
-                                                <span className="font-bold">Break</span>
-                                                <span>{gap.start} - {gap.end}</span>
-                                            </div>
-                                            <div className="col-span-5 flex items-center justify-center bg-slate-50/50 dark:bg-slate-800/30 text-xs font-bold uppercase text-slate-400 border-b">
-                                                Lunch Break
-                                            </div>
-                                        </React.Fragment>
-                                    );
-                                }
-
-                                return rows;
-                            })}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Legend/Info */}
-                    <div className="mt-6 flex items-center gap-6 text-[11px] text-slate-400">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                            <span>Major Courses</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>Labs & Practicals</span>
-                        </div>
-                        <div className="flex items-center gap-2 ml-auto">
-                            <span>* All times are in IST</span>
-                        </div>
+                    {/* Legend */}
+                    <div className="p-4 bg-slate-50/50 dark:bg-slate-800/30 flex items-center gap-6 border-t">
+                         <div className="flex items-center gap-2">
+                             <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                             <span className="text-[10px] font-black uppercase text-slate-400">Regular Session</span>
+                         </div>
+                         <p className="text-[10px] font-bold text-slate-400 ml-auto italic">* Standard institutional view (Days vs Sessions)</p>
                     </div>
                 </div>
-            </main>
+            )}
+            
+            <div className="mt-8 flex justify-end px-2">
+                 <button 
+                    onClick={onAddSession}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20"
+                >
+                    Add New Session
+                </button>
+            </div>
         </div>
     );
 }

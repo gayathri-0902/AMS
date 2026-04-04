@@ -20,6 +20,10 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         email: "",
         password: "",
         status: "active",
+        yr: "",
+        sem: "",
+        stream: "",
+        academic_yr: "",
     });
     const [addLoading, setAddLoading] = useState(false);
     const [addError, setAddError] = useState(null);
@@ -29,22 +33,33 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
 
     How it works: It looks at the name of the input field (like "email") and updates only that specific part of the form while keeping everything else exactly as it was.
     */
-    const handleAddStudentChange = (e) =>
+    const handleAddStudentChange = (e) => {
         setAddStudentForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        if (addError) setAddError(null);
+    };
 
 
     const handleAddStudentSubmit = async (e) => {
         e.preventDefault();
-        if (!batchData?.yr_sem_id) return;
         setAddLoading(true);
         setAddError(null);
         try {
             await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/admin/add-student`,
-                { ...addStudentForm, yr_sem_id: batchData.yr_sem_id, academic_yr: formData.academic_yr }
+                addStudentForm
             );
             setActiveModal(null);
-            setAddStudentForm({ name: "", roll_no: "", email: "", password: "", status: "active" });
+            setAddStudentForm({
+                name: "",
+                roll_no: "",
+                email: "",
+                password: "",
+                status: "active",
+                yr: "",
+                sem: "",
+                stream: "",
+                academic_yr: ""
+            });
             await refetchBatchData();
         } catch (err) {
             setAddError(err.response?.data?.message || err.message || "Failed to add student");
@@ -61,6 +76,10 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         email: "",
         password: "",
         status: "active",
+        yr: "",
+        sem: "",
+        stream: "",
+        academic_yr: "",
     });
     const [editStudentOriginal, setEditStudentOriginal] = useState(null);
     const [editLoading, setEditLoading] = useState(false);
@@ -75,6 +94,10 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
             email: student.email,
             password: "",
             status: student.status || "active",
+            yr: student.yr || "",
+            sem: student.sem || "",
+            stream: student.stream || "",
+            academic_yr: student.academic_yr || "",
         };
         setEditStudentForm(form);
         setEditStudentOriginal({ ...form });
@@ -82,8 +105,10 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         setActiveModal("editStudent");
     };
 
-    const handleEditStudentChange = (e) =>
+    const handleEditStudentChange = (e) => {
         setEditStudentForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        if (editError) setEditError(null);
+    };
 
     const handleEditStudentSubmit = async (e) => {
         e.preventDefault();
@@ -93,6 +118,10 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
                 editStudentForm.roll_no !== editStudentOriginal.roll_no ||
                 editStudentForm.email !== editStudentOriginal.email ||
                 editStudentForm.status !== editStudentOriginal.status ||
+                editStudentForm.yr !== editStudentOriginal.yr ||
+                editStudentForm.sem !== editStudentOriginal.sem ||
+                editStudentForm.stream !== editStudentOriginal.stream ||
+                editStudentForm.academic_yr !== editStudentOriginal.academic_yr ||
                 editStudentForm.password !== ""
             ));
 
@@ -103,7 +132,7 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         setEditLoading(true);
         setEditError(null);
         try {
-            await axios.put(
+            const res = await axios.put(
                 `${import.meta.env.VITE_API_BASE_URL}/api/admin/edit-student/${editStudentForm._id}`,
                 editStudentForm
             );
@@ -135,18 +164,23 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         }
     };
 
-    const handlePromoteSubmit = async (targetYrSem) => {
+    const handlePromoteSubmit = async () => {
         if (!selectedStudentIds.length) return;
         setPromoteLoading(true);
         setPromoteError(null);
         try {
-            await axios.post(
+            const res = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/admin/promote-students`,
-                { studentIds: selectedStudentIds, targetYrSem }
+                { studentIds: selectedStudentIds }
             );
-            setSelectedStudentIds([]);
-            setActiveModal(null);
-            await refetchBatchData();
+            
+            if (res.data.failures && res.data.failures.length > 0) {
+              setPromoteError(`Partially complete: ${res.data.failures.join(", ")}`);
+            } else {
+              setSelectedStudentIds([]);
+              setActiveModal(null);
+              await refetchBatchData();
+            }
         } catch (err) {
             setPromoteError(err.response?.data?.message || err.message || "Failed to promote students");
         } finally {

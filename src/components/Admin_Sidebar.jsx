@@ -7,56 +7,42 @@ import {
     MdCalendarToday,
 } from "react-icons/md";
 
-function Admin_Sidebar({ activeTab, isBatchSelected, setActiveTab }) {
-    const navLinkClass = (tabName) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer
+function Admin_Sidebar({ activeTab, setActiveTab }) {
+    const navLinkClass = (tabName) => `
+        flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer group
         ${activeTab === tabName
-            ? "bg-blue-600/10 text-blue-600"
-            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}
-        ${!isBatchSelected && tabName !== "Change Batch" ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}
+            ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600"}
     `;
 
+    const menuItems = [
+        { label: "Students", icon: MdPeople },
+        { label: "Faculties", icon: MdPerson },
+        { label: "Courses", icon: MdMenuBook },
+        { label: "Schedule", icon: MdCalendarToday },
+    ];
+
     return (
-        <aside className="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
-            <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-
-                <div className="py-2">
-                    <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        Configuration
-                    </p>
-                    <a onClick={() => setActiveTab("Change Batch")} className={navLinkClass("Change Batch")}>
-                        <MdPublishedWithChanges className="text-[22px]" />
-                        <span className="text-sm font-medium">Change Batch</span>
-                    </a>
+        <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 transition-all duration-300">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3 text-blue-600">
+                    <span className="font-bold text-xl tracking-tight">Admin Dashboard</span>
                 </div>
+            </div>
 
-                <div className="py-2">
-                    <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        Menu
-                    </p>
-
-                    <a onClick={() => isBatchSelected && setActiveTab("Students")} className={navLinkClass("Students")}>
-                        <MdPeople className="text-[22px]" />
-                        <span className="text-sm font-medium">Students</span>
+            <nav className="flex-1 px-4 py-8 space-y-2">
+                {menuItems.map((item) => (
+                    <a
+                        key={item.label}
+                        onClick={() => setActiveTab(item.label)}
+                        className={navLinkClass(item.label)}
+                    >
+                        <item.icon size={22} className={activeTab === item.label ? 'scale-110' : 'group-hover:scale-110 transition-transform'} />
+                        <span className="text-sm font-bold tracking-tight">{item.label}</span>
                     </a>
-
-                    <a onClick={() => isBatchSelected && setActiveTab("Faculties")} className={navLinkClass("Faculties")}>
-                        <MdPerson className="text-[22px]" />
-                        <span className="text-sm font-medium">Faculties</span>
-                    </a>
-
-                    <a onClick={() => isBatchSelected && setActiveTab("Courses")} className={navLinkClass("Courses")}>
-                        <MdMenuBook className="text-[22px]" />
-                        <span className="text-sm font-medium">Courses</span>
-                    </a>
-
-                    <a onClick={() => isBatchSelected && setActiveTab("Schedule")} className={navLinkClass("Schedule")}>
-                        <MdCalendarToday className="text-[22px]" />
-                        <span className="text-sm font-medium">Schedule</span>
-                    </a>
-                </div>
-
+                ))}
             </nav>
+
         </aside>
     );
 }

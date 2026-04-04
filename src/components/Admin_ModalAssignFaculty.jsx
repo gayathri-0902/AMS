@@ -23,17 +23,28 @@ function Admin_ModalAssignFaculty({ isOpen, onClose, courseData, form, onChange,
 
                 {/* Modal Body / Form */}
                 <form onSubmit={onSubmit}>
-                    <div className="px-6 md:px-8 pb-4">
+                    <div className="px-6 md:px-8 pb-4 space-y-6">
+                        
+                        {/* Course Display (Read Only) */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Target Course</span>
+                            <div className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[10px] uppercase">{courseData?.course_code || "---"}</span>
+                                {courseData?.course_name || "Course Selection"}
+                            </div>
+                        </div>
+
+                        {/* Faculty Email */}
                         <label className="flex flex-col gap-2">
-                            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">Faculty Email Address</span>
+                            <span className="text-slate-700 dark:text-slate-300 text-sm font-bold uppercase tracking-tight">Faculty Email Address</span>
                             <div className="relative flex items-center">
                                 <input
                                     name="email"
                                     value={form.email}
-                                    onChange={(e) => onChange({ email: e.target.value })}
+                                    onChange={(e) => onChange({ ...form, email: e.target.value })}
                                     required
-                                    className="w-full h-12 pl-4 pr-12 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600/50 focus:border-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                                    placeholder="e.g. professor@university.edu"
+                                    className="w-full h-12 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-600/50 focus:border-blue-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    placeholder="professor@university.edu"
                                     type="email"
                                 />
                                 <div className="absolute right-4 text-slate-400">
@@ -43,7 +54,8 @@ function Admin_ModalAssignFaculty({ isOpen, onClose, courseData, form, onChange,
                         </label>
 
                         {error && (
-                            <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg border border-red-100 text-sm font-medium">
+                            <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-xs font-bold flex flex-col gap-1">
+                                <span className="uppercase text-[10px] opacity-70">Assignment Error</span>
                                 {error}
                             </div>
                         )}
@@ -51,10 +63,10 @@ function Admin_ModalAssignFaculty({ isOpen, onClose, courseData, form, onChange,
 
                     {/* Modal Footer */}
                     <div className="p-6 md:p-8 flex flex-col gap-3">
-                        <button type="submit" disabled={loading} className="flex w-full h-12 items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-base font-bold tracking-wide transition-colors shadow-md shadow-blue-600/20">
-                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Assign Faculty'}
+                        <button type="submit" disabled={loading} className="flex w-full h-12 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-base font-bold tracking-wide transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]">
+                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Register Assignment'}
                         </button>
-                        <button type="button" onClick={onClose} className="flex w-full h-12 items-center justify-center rounded-lg bg-transparent text-slate-600 dark:text-slate-400 text-base font-medium hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all border border-slate-200 dark:border-slate-700">
+                        <button type="button" onClick={onClose} disabled={loading} className="flex w-full h-12 items-center justify-center rounded-xl bg-transparent text-slate-500 dark:text-slate-400 text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
                             Cancel
                         </button>
                     </div>

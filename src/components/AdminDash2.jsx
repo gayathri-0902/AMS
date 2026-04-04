@@ -14,7 +14,8 @@ import Admin_Sidebar from "./Admin_Sidebar";
 import Admin_Header from "./Admin_Header";
 
 // ── Tab Panels ─────────────────────────────────────────────────────────────────
-import Admin_BatchSelector from "./Admin_BatchSelector";
+// ── Tab Panels ─────────────────────────────────────────────────────────────────
+import Admin_FilterBar from "./Admin_FilterBar";
 import Admin_StudentsTab from "./Admin_StudentsTab";
 import Admin_CoursesTab from "./Admin_CoursesTab";
 import Admin_FacultiesTab from "./Admin_FacultiesTab";
@@ -77,7 +78,12 @@ function AdminDash2() {
         setActiveModal,
     });
 
-    const isBatchSelected = batch.batchData !== null;
+    const isBatchSelected = !!batch.batchData?.yr_sem_id;
+
+    // ── Search State ───────────────────────────────────────────────────────────
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // ── Render Helpers ─────────────────────────────────────────────────────────
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
@@ -86,67 +92,86 @@ function AdminDash2() {
 
                 <Admin_Sidebar
                     activeTab={batch.activeTab}
-                    isBatchSelected={isBatchSelected}
+                    isBatchSelected={true} // Always allow navigation in the sidebar now
                     setActiveTab={batch.setActiveTab}
                 />
 
                 <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 relative">
-                    <Admin_Header activeTab={batch.activeTab} logout={logout} />
+                    <Admin_Header 
+                        activeTab={batch.activeTab} 
+                        logout={logout} 
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        showSearch={["Students", "Courses", "Faculties"].includes(batch.activeTab)}
+                    />
 
                     <div className="max-w-6xl mx-auto py-12 px-8 flex flex-col items-center">
 
-                        {!isBatchSelected && (
-                            <div className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 mb-8 flex items-center gap-3">
-                                <MdInfoOutline className="text-[24px]" />
-                                <p className="font-medium">Please select an academic batch configuration to unlock the menu and view information.</p>
-                            </div>
-                        )}
 
-                        {batch.activeTab === "Change Batch" && (
-                            <Admin_BatchSelector
-                                formData={batch.formData}
-                                handleChange={batch.handleChange}
-                                handleFetch={batch.handleFetch}
-                                loading={batch.loading}
-                                error={batch.error}
-                            />
-                        )}
-
-                        {batch.activeTab === "Students" && isBatchSelected && (
+                        {!batch.loading && batch.activeTab === "Students" && (
                             <Admin_StudentsTab
                                 batchData={batch.batchData}
                                 formData={batch.formData}
+                                searchTerm={searchTerm}
                                 onAddStudent={() => setActiveModal(MODALS.ADD_STUDENT)}
                                 onEditStudent={students.handleEditStudentClick}
                                 selectedIds={students.selectedStudentIds}
                                 onToggleSelect={students.handleToggleStudentSelection}
                                 onSelectAll={students.handleSelectAll}
                                 onPromote={() => setActiveModal(MODALS.PROMOTE)}
+                                // Pagination props
+                                hasMore={batch.hasMore}
+                                loadMore={batch.loadMore}
+                                loadingMore={batch.loadingMore}
+                                // Props for FilterBar
+                                handleChange={batch.handleChange}
+                                handleFetch={batch.handleFetch}
+                                clearFilters={batch.clearFilters}
+                                loading={batch.loading}
                             />
                         )}
 
-                        {batch.activeTab === "Courses" && isBatchSelected && (
+                        {!batch.loading && batch.activeTab === "Courses" && (
                             <Admin_CoursesTab
                                 batchData={batch.batchData}
+                                searchTerm={searchTerm}
                                 setIsAddCourseModalOpen={() => setActiveModal(MODALS.ADD_COURSE)}
                                 handleOpenAssignFaculty={courses.handleOpenAssignFaculty}
                                 handleEditCourseClick={courses.handleEditCourseClick}
+                                // Props for FilterBar
+                                formData={batch.formData}
+                                handleChange={batch.handleChange}
+                                handleFetch={batch.handleFetch}
+                                clearFilters={batch.clearFilters}
+                                loading={batch.loading}
                             />
                         )}
 
-                        {batch.activeTab === "Faculties" && isBatchSelected && (
+                        {!batch.loading && batch.activeTab === "Faculties" && (
                             <Admin_FacultiesTab
                                 batchData={batch.batchData}
-                                faculties={faculties.faculties}
+                                searchTerm={searchTerm}
                                 onAddFaculty={() => setActiveModal(MODALS.ADD_FACULTY)}
                                 onEditFaculty={faculties.handleEditFacultyClick}
+                                // Props for FilterBar
+                                formData={batch.formData}
+                                handleChange={batch.handleChange}
+                                handleFetch={batch.handleFetch}
+                                clearFilters={batch.clearFilters}
+                                loading={batch.loading}
                             />
                         )}
 
-                        {batch.activeTab === "Schedule" && isBatchSelected && (
+                        {!batch.loading && batch.activeTab === "Schedule" && (
                             <Admin_ScheduleTab 
                                 batchData={batch.batchData} 
+                                formData={batch.formData}
                                 onAddSession={timetable.handleOpenAddSession}
+                                // Props for FilterBar and Logic
+                                handleChange={batch.handleChange}
+                                handleFetch={batch.handleFetch}
+                                clearFilters={batch.clearFilters}
+                                loading={batch.loading}
                             />
                         )}
 
@@ -212,8 +237,7 @@ function AdminDash2() {
                 <Admin_ModalPromote
                     isOpen={activeModal === MODALS.PROMOTE}
                     onClose={() => setActiveModal(null)}
-                    selectedCount={students.selectedStudentIds.length}
-                    currentBatch={batch.formData}
+                    selectedStudents={(batch.batchData?.students || []).filter(s => students.selectedStudentIds.includes(s._id))}
                     onSubmit={students.handlePromoteSubmit}
                     loading={students.promoteLoading}
                     error={students.promoteError}

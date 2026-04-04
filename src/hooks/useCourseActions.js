@@ -27,32 +27,35 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
      * @param {Event}   e
      * @param {boolean} shouldAssignFaculty - When true, chains into the Assign Faculty modal.
      */
-    const handleAddCourseSubmit = async (e, shouldAssignFaculty = false) => {
+    const handleAddCourseSubmit = async (e, shouldOpenAssignFaculty = false) => {
         e.preventDefault();
-        const form = e.target.closest("form");
-        if (form && !form.checkValidity()) { form.reportValidity(); return; }
-        if (!batchData?.yr_sem_id) return;
-
+        
         setAddCourseLoading(true);
         setAddCourseError(null);
         try {
-            await axios.post(
+            const response = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/admin/add-course`,
-                { ...addCourseForm, yr_sem_id: batchData.yr_sem_id }
+                addCourseForm
             );
-
-            // Prepare the chained modal before clearing the form
-            if (shouldAssignFaculty) {
-                setAssignFacultyCourseData({ ...addCourseForm, yr_sem_id: batchData.yr_sem_id });
-                setAssignFacultyForm({ email: "" });
-                setAssignFacultyError(null);
-                setActiveModal("assignFaculty");
-            } else {
-                setActiveModal(null);
-            }
-
-            setAddCourseForm({ course_code: "", course_name: "", credits: "" });
+            
+            const newOffering = response.data.offering;
+            setActiveModal(null);
+            setAddCourseForm({ 
+                course_code: "", 
+                course_name: "", 
+                credits: "", 
+                yr: "", sem: "", stream: "", academic_yr: "" 
+            });
             await refetchBatchData();
+
+            if (shouldOpenAssignFaculty) {
+                // Open assign faculty for the newly created offering
+                handleOpenAssignFaculty({
+                    subject_offering_id: newOffering._id,
+                    course_code: addCourseForm.course_code,
+                    course_name: addCourseForm.course_name
+                });
+            }
         } catch (err) {
             setAddCourseError(err.response?.data?.message || err.message || "Failed to add course");
         } finally {
@@ -66,9 +69,9 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
     const [assignFacultyLoading, setAssignFacultyLoading] = useState(false);
     const [assignFacultyError, setAssignFacultyError] = useState(null);
 
-    /** Opens the Assign Faculty modal pre-loaded with the selected course row. */
+    /** Opens the Assign Faculty modal for a specific offering. */
     const handleOpenAssignFaculty = (course) => {
-        setAssignFacultyCourseData({ ...course, yr_sem_id: batchData.yr_sem_id });
+        setAssignFacultyCourseData(course);
         setAssignFacultyForm({ email: "" });
         setAssignFacultyError(null);
         setActiveModal("assignFaculty");
@@ -76,15 +79,14 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
 
     const handleAssignFacultySubmit = async (e) => {
         e.preventDefault();
-        if (!assignFacultyCourseData) return;
+        if (!assignFacultyCourseData?.subject_offering_id) return;
         setAssignFacultyLoading(true);
         setAssignFacultyError(null);
         try {
             await axios.put(
                 `${import.meta.env.VITE_API_BASE_URL}/api/admin/change-faculty`,
                 {
-                    yr_sem_id: assignFacultyCourseData.yr_sem_id,
-                    course_code: assignFacultyCourseData.course_code,
+                    subject_offering_id: assignFacultyCourseData.subject_offering_id,
                     faculty_email: assignFacultyForm.email,
                 }
             );

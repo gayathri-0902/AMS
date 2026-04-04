@@ -966,28 +966,61 @@ app.get("/api/admin/batch-data", async (req, res) => {
     res.status(500).json({ message: "Server error while fetching batch data" });
   }
 });*/
-
 // 11. get data to corresponding year sem for admin dashboard
+// 11. get data for admin dashboard (SUPPORT MULTIPLE BATCHES & PAGINATION)
 app.get("/api/admin/batch-data", async (req, res) => {
   try {
-    const { yr, sem, stream, academic_yr } = req.query;
+    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const yrSem = await YrSem.findOne({
-      yr: Number(yr),
-      sem: Number(sem),
-      stream,
-      academic_yr
-    });
+    let studentQuery = {};
+    let offeringQuery = { is_active: true };
+    let isFiltered = false;
 
-    if (!yrSem) {
-      return res.status(404).json({ message: "Batch not found" });
+    // If any filter is provided, find all matching metadata IDs
+    if (yr || sem || stream || academic_yr) {
+      const matchCriteria = {};
+      if (yr) matchCriteria.yr = Number(yr);
+      if (sem) matchCriteria.sem = Number(sem);
+      if (stream) matchCriteria.stream = stream;
+      if (academic_yr) matchCriteria.academic_yr = academic_yr;
+
+      const matchingYrSems = await YrSem.find(matchCriteria).select("_id").lean();
+      
+      if (!matchingYrSems.length) {
+        return res.json({
+          students: [],
+          totalStudents: 0,
+          courses: [],
+          faculties: [],
+          timetable: [],
+          hasMore: false,
+          isFiltered: true
+        });
+      }
+      
+      const yrSemIds = matchingYrSems.map(y => y._id);
+      studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
+      offeringQuery = { yr_sem_id: { $in: yrSemIds }, is_active: true };
+      isFiltered = true;
+    } else {
+      // If no ID filters are provided, we show all students matching the requested status (Default: Active)
+      studentQuery = { status };
+      offeringQuery = { is_active: true };
+      isFiltered = false;
     }
 
-    // 1. Fetch Students
-    const enrollments = await StudentEnrollment.find({
-      yr_sem_id: yrSem._id
-    }).populate("student_id");
+    // 1. Fetch Students (reverting to find/populate for immediate compatibility)
+    const totalStudentsRaw = await StudentEnrollment.countDocuments(studentQuery);
+    const enrollments = await StudentEnrollment.find(studentQuery)
+      .populate({ path: "student_id", select: "name roll_no email" })
+      .populate({ path: "yr_sem_id", select: "yr sem stream academic_yr" })
+      .sort({ "student_id.name": 1 }) 
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
 
+    // Map and count valid students (Self-Correction for Orphan Records)
     const students = enrollments
       .filter(e => e.student_id)
       .map(e => ({
@@ -995,90 +1028,183 @@ app.get("/api/admin/batch-data", async (req, res) => {
         name: e.student_id.name,
         roll_no: e.student_id.roll_no,
         email: e.student_id.email,
-        status: e.status
+        status: e.status,
+        batch: e.yr_sem_id ? `${e.yr_sem_id.stream} Y${e.yr_sem_id.yr}-S${e.yr_sem_id.sem}` : "N/A",
+        yr: e.yr_sem_id?.yr,
+        sem: e.yr_sem_id?.sem,
+        stream: e.yr_sem_id?.stream,
+        academic_yr: e.yr_sem_id?.academic_yr
       }));
 
-    // 2. Fetch Courses & Faculties
-    const offerings = await SubjectOffering.find({
-      yr_sem_id: yrSem._id
-    }).populate("course_master_id");
+    // If any orphans were filtered out, the total count should match the visible list
+    const totalStudents = students.length < enrollments.length 
+      ? totalStudentsRaw - (enrollments.length - students.length)
+      : totalStudentsRaw;
 
-    const coursesData = [];
+    // 2. Fetch Courses
+    const offerings = await SubjectOffering.find(offeringQuery)
+      .populate("course_master_id")
+      .populate({ path: "yr_sem_id", select: "yr sem stream academic_yr" })
+      .lean();
+
+    const coursesDataRaw = offerings.map(offering => ({
+      subject_offering_id: offering._id,
+      course_code: offering.course_master_id?.course_code,
+      course_name: offering.course_master_id?.course_name,
+      batch: offering.yr_sem_id ? `${offering.yr_sem_id.stream} Y${offering.yr_sem_id.yr}-S${offering.yr_sem_id.sem}` : "N/A",
+      // Raw batch fields for the Assign Faculty modal
+      yr: offering.yr_sem_id?.yr,
+      sem: offering.yr_sem_id?.sem,
+      stream: offering.yr_sem_id?.stream,
+      academic_yr: offering.yr_sem_id?.academic_yr
+    }));
+
+    // 3. Fetch ALL Faculties & Assignments (Enriched)
+    const allFaculty = await Faculty.find({}).lean();
+    const assignments = await FacultyAssignment.find({
+      subject_offering_id: { $in: offerings.map(o => o._id) }
+    })
+    .populate("faculty_id")
+    .populate({
+      path: "subject_offering_id",
+      populate: [
+        { path: "course_master_id", select: "course_name" },
+        { path: "yr_sem_id", select: "yr sem stream academic_yr" }
+      ]
+    })
+    .lean();
+
     const facultiesMap = new Map();
+    const offeringToFacultyMap = new Map();
 
-    for (const offering of offerings) {
-      const assignment = await FacultyAssignment.findOne({
-        subject_offering_id: offering._id
-      }).populate({
-        path: "faculty_id",
-        populate: { path: "user_id", select: "user_name" }
+    // Initialize with all Faculty members first
+    allFaculty.forEach(f => {
+      const fId = f._id.toString();
+      facultiesMap.set(fId, {
+        _id: f._id,
+        name: f.name,
+        email: f.email,
+        courses: new Set(),
+        batches: new Set()
       });
+    });
 
-      const courseName = offering.course_master_id?.course_name;
-      const courseCode = offering.course_master_id?.course_code;
+    // Populate assignments for those who have them
+    assignments.forEach(a => {
+      if (a.faculty_id) {
+        const fId = a.faculty_id._id.toString();
+        const fData = facultiesMap.get(fId);
+        
+        if (fData) {
+          const courseName = a.subject_offering_id?.course_master_id?.course_name;
+          const yrSem = a.subject_offering_id?.yr_sem_id;
+          const batchStr = yrSem ? `${yrSem.stream} Y${yrSem.yr}-S${yrSem.sem}` : "N/A";
 
-      const facultyName = assignment?.faculty_id?.name || "Not Assigned";
-      const facultyEmail = assignment?.faculty_id?.email || "";
-      const userName = assignment?.faculty_id?.user_id?.user_name || "";
-
-      // Course-wise data
-      coursesData.push({
-        subject_offering_id: offering._id,
-        course_code: courseCode,
-        course_name: courseName,
-        assigned_faculty: facultyName,
-        assigned_faculty_email: facultyEmail
-      });
-
-      // Faculty-wise aggregation
-      if (assignment?.faculty_id) {
-        const key = assignment.faculty_id._id.toString();
-
-        if (!facultiesMap.has(key)) {
-          facultiesMap.set(key, {
-            _id: assignment.faculty_id._id,
-            name: facultyName,
-            email: facultyEmail,
-            user_name: userName,
-            courses: []
-          });
+          if (courseName) fData.courses.add(courseName);
+          if (batchStr !== "N/A") fData.batches.add(batchStr);
         }
 
-        facultiesMap.get(key).courses.push(courseName);
+        // Map offering -> faculty for the Courses Tab
+        if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
+            offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
+                name: a.faculty_id.name,
+                email: a.faculty_id.email
+            });
+        }
       }
-    }
+    });
 
-    const timetable = await TimeTable.find({
-      yr_sem_id: yrSem._id
-    }).populate({
-      path: "subject_offering_id",
-      populate: { path: "course_master_id", select: "course_name course_code" }
-    }).populate("faculty_id", "name");
+    const faculties = Array.from(facultiesMap.values()).map(f => ({
+      ...f,
+      courses: Array.from(f.courses).sort(),
+      batches: Array.from(f.batches).sort()
+    }));
+
+    // Enrich coursesData with assigned faculty details
+    const coursesData = coursesDataRaw.map(c => {
+        const faculty = offeringToFacultyMap.get(c.subject_offering_id.toString());
+        return {
+            ...c,
+            assigned_faculty: faculty ? faculty.name : "Not Assigned",
+            assigned_faculty_email: faculty ? faculty.email : null
+        };
+    });
+
+    // 4. Fetch Timetable
+    const timetable = await TimeTable.find(offeringQuery)
+      .populate({
+        path: "subject_offering_id",
+        populate: { path: "course_master_id", select: "course_name course_code" }
+      })
+      .populate("faculty_id", "name")
+      .lean();
+
+    const timetableData = timetable.map(t => ({
+      day_of_week: t.day_of_week,
+      session_no: t.session_no,
+      start_time: t.start_time,
+      end_time: t.end_time,
+      course_name: t.subject_offering_id?.course_master_id?.course_name || "N/A",
+      course_code: t.subject_offering_id?.course_master_id?.course_code || "N/A",
+      faculty_name: t.faculty_id?.name || "N/A",
+      batch: t.yr_sem_id ? `${t.yr_sem_id.stream} Y${t.yr_sem_id.yr}-S${t.yr_sem_id.sem}` : "N/A",
+      location: t.location
+    }));
 
     res.json({
-      yr_sem_id: yrSem._id,
       students,
+      totalStudents,
+      hasMore: skip + students.length < totalStudents,
       courses: coursesData,
-      faculties: Array.from(facultiesMap.values()),
-      timetable: timetable.map(t => ({
-        day_of_week: t.day_of_week,
-        session_no: t.session_no,
-        start_time: t.start_time,
-        end_time: t.end_time,
-        course_name: t.subject_offering_id?.course_master_id?.course_name || "N/A",
-        course_code: t.subject_offering_id?.course_master_id?.course_code || "N/A",
-        faculty_name: t.faculty_id?.name || "N/A",
-        location: t.location
-      }))
+      faculties,
+      timetable: timetableData,
+      isFiltered
     });
 
   } catch (error) {
     console.error("Fetch batch data error:", error);
-    res.status(500).json({
-      message: "Server error while fetching batch data"
-    });
+    res.status(500).json({ message: "Server error while fetching batch data" });
   }
 });
+
+// 11.1 Fetch Timetable by Faculty Email (Faculty Perspective)
+app.get("/api/admin/faculty-schedule/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const faculty = await Faculty.findOne({ email }).lean();
+    if (!faculty) return res.status(404).json({ message: "Faculty not found" });
+
+    const timetable = await TimeTable.find({ faculty_id: faculty._id })
+      .populate({
+        path: "subject_offering_id",
+        populate: { path: "course_master_id", select: "course_name course_code" }
+      })
+      .populate({
+        path: "yr_sem_id",
+        select: "yr sem stream academic_yr"
+      })
+      .lean();
+
+    const formattedSessions = timetable.map(t => ({
+      day_of_week: t.day_of_week,
+      session_no: t.session_no,
+      start_time: t.start_time,
+      end_time: t.end_time,
+      course_name: t.subject_offering_id?.course_master_id?.course_name || "N/A",
+      course_code: t.subject_offering_id?.course_master_id?.course_code || "N/A",
+      batch: t.yr_sem_id ? `${t.yr_sem_id.stream} Y${t.yr_sem_id.yr}-S${t.yr_sem_id.sem}` : "N/A",
+      location: t.location
+    }));
+
+    res.json({
+        facultyName: faculty.name,
+        timetable: formattedSessions
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error fetching faculty schedule" });
+  }
+});
+
 
 /* old code
 // 12. Admin: Fetch Courses for a Batch
@@ -1107,35 +1233,34 @@ app.get("/api/admin/courses-by-batch", async (req, res) => {
   }
 });*/
 
-// version 2 for change faculty (overwrite logic)
+// version 2 for change faculty (Direct ID lookup)
 app.put("/api/admin/change-faculty", async (req, res) => {
-  const { course_code, yr_sem_id, faculty_email } = req.body;
+  const { subject_offering_id, faculty_email } = req.body;
 
   const session = await mongoose.startSession();
 
   try {
-
     session.startTransaction();
 
-    const course = await CourseMaster.findOne({ course_code }).session(session);
-    if (!course) throw new Error("Course not found");
+    // 1. Find the specific Subject Offering
+    const subjectOffering = await SubjectOffering.findById(subject_offering_id).session(session);
 
-    const subjectOffering = await SubjectOffering.findOne({
-      course_master_id: course._id,
-      yr_sem_id: yr_sem_id
-    }).session(session);
+    if (!subjectOffering) {
+        throw new Error(`Course offering not found. Please refresh the page.`);
+    }
 
-    if (!subjectOffering) throw new Error("Subject offering not found for this batch");
-
+    // 2. Find the Faculty
     const faculty = await Faculty.findOne({ email: faculty_email }).session(session);
-    if (!faculty) throw new Error("Faculty not found with this email");
+    if (!faculty) throw new Error(`Faculty not found with email: ${faculty_email}`);
 
+    // 3. Update/Upsert Assignment
     await FacultyAssignment.updateOne(
       { subject_offering_id: subjectOffering._id },
       { faculty_id: faculty._id },
       { session, upsert: true }
     );
 
+    // 6. Update existing sessions in TimeTable
     await TimeTable.updateMany(
       { subject_offering_id: subjectOffering._id },
       { faculty_id: faculty._id },
@@ -1165,62 +1290,57 @@ app.put("/api/admin/change-faculty", async (req, res) => {
   }
 });
 
-// 12. Add New Student
+// 12. Add New Student (WITH BATCH VALIDATION)
 app.post("/api/admin/add-student", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { name, roll_no, email, password, status, yr_sem_id, academic_yr } = req.body;
+    const { name, roll_no, email, password, status, yr, sem, stream, academic_yr } = req.body;
 
-    if (!name || !roll_no || !email || !password || !yr_sem_id || !academic_yr) {
-      throw new Error("Missing required fields");
+    if (!name || !roll_no || !email || !password || !yr || !sem || !stream || !academic_yr) {
+      throw new Error("Missing required fields. Please fill all student and batch information.");
     }
 
-    // Check if user already exists
+    // 1. Verify if Batch Metadata exists
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
+    if (!yrSem) {
+      throw new Error("Target Batch not found. Please ensure Year/Sem/Stream/Cycle are created in Batch Setup first.");
+    }
+
     const existingUser = await User.findOne({ user_name: roll_no }).session(session);
-    if (existingUser) {
-      throw new Error("User with this roll number already exists");
-    }
+    if (existingUser) throw new Error("Student with this roll number already exists.");
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create User
     const [newUser] = await User.create([{
       user_name: roll_no,
       password: hashedPassword,
       role: "student"
     }], { session });
 
-    // Create Student
     const [newStudent] = await Student.create([{
       user_id: newUser._id,
       name,
-      yr_sem_id,
       roll_no,
-      email
+      email,
+      yr_sem_id: yrSem._id
     }], { session });
 
-    // Create Student Enrollment
     await StudentEnrollment.create([{
       student_id: newStudent._id,
-      yr_sem_id,
+      yr_sem_id: yrSem._id,
       academic_yr,
       status: status || "active",
       start_date: new Date()
     }], { session });
 
     await session.commitTransaction();
+    res.status(201).json({ message: "Student added successfully" });
 
-    res.status(201).json({ message: "Student added successfully", student: newStudent });
   } catch (error) {
     await session.abortTransaction();
-    console.error("Add student error:", error);
-    // Return appropriate error if duplicate email vs roll_no
-    const isDuplicate = error.code === 11000;
-    const errorMsg = isDuplicate ? "Student with this roll number or email already exists." : error.message;
-    res.status(400).json({ message: errorMsg || "Server error while adding student" });
+    res.status(400).json({ message: error.message });
   } finally {
     session.endSession();
   }
@@ -1281,48 +1401,62 @@ app.post("/api/admin/add-faculty", async (req, res) => {
   }
 });
 
-// 13. Add New Course
+// 13. Add New Course (Directly to a Batch)
 app.post("/api/admin/add-course", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { course_code, course_name, credits, yr_sem_id } = req.body;
+    const { course_code, course_name, credits, yr, sem, stream, academic_yr } = req.body;
 
-    if (!course_code || !course_name || !credits || !yr_sem_id) {
-      throw new Error("Missing required fields");
+    if (!course_code || !course_name || !credits || !yr || !sem || !stream || !academic_yr) {
+      throw new Error("Missing required fields (Course or Batch info)");
     }
 
-    // 1. Check if CourseMaster exists, if not create it
+    // 1. Find the Batch (YrSem)
+    const yrSem = await YrSem.findOne({ 
+        yr: Number(yr), 
+        sem: Number(sem), 
+        stream, 
+        academic_yr 
+    }).session(session);
+
+    if (!yrSem) {
+        throw new Error(`Batch not found for: Yr ${yr}, Sem ${sem}, ${stream} (${academic_yr})`);
+    }
+
+    // 2. Check if CourseMaster exists, if not create it
     let course = await CourseMaster.findOne({ course_code }).session(session);
     if (!course) {
       const [newCourse] = await CourseMaster.create([{
         course_code,
         course_name,
-        credits: Number(credits.split(" ")[0]) || 0
+        credits: Number(credits) || 0
       }], { session });
       course = newCourse;
     }
 
-    // 2. Check if SubjectOffering exists for this batch
+    // 3. Create SubjectOffering for this batch
     const existingOffering = await SubjectOffering.findOne({
       course_master_id: course._id,
-      yr_sem_id
+      yr_sem_id: yrSem._id
     }).session(session);
 
     if (existingOffering) {
-      throw new Error("Course is already assigned to this batch");
+      throw new Error(`This course is already registered for the selected batch.`);
     }
 
-    // 3. Create SubjectOffering
-    await SubjectOffering.create([{
+    const [newOffering] = await SubjectOffering.create([{
       course_master_id: course._id,
-      yr_sem_id,
+      yr_sem_id: yrSem._id,
       is_active: true
     }], { session });
 
     await session.commitTransaction();
-    res.status(201).json({ message: "Course added to batch successfully" });
+    res.status(201).json({ 
+        message: "Course registered and offering created successfully", 
+        offering: newOffering 
+    });
 
   } catch (error) {
     await session.abortTransaction();
@@ -1333,72 +1467,81 @@ app.post("/api/admin/add-course", async (req, res) => {
   }
 });
 
-// 14. Edit Student
+// 14. Edit Student (HISTORY-PRESERVING VERSION)
 app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   const { studentId } = req.params;
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { name, roll_no, email, password, status } = req.body;
+    const { name, roll_no, email, password, status, yr, sem, stream, academic_yr } = req.body;
 
-    if (!name || !roll_no || !email || !status) {
-      throw new Error("Missing required fields");
+    if (!name || !roll_no || !email || !status || !yr || !sem || !stream || !academic_yr) {
+      throw new Error("Missing required fields for student or batch details.");
     }
 
-    // Find the student
-    const student = await Student.findById(studentId).session(session);
-    if (!student) {
-      throw new Error("Student not found");
+    // 1. Verify Target Batch existence
+    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
+    if (!yrSem) {
+      throw new Error("New combination for Year/Sem/Stream/Cycle not found in Batch Setup.");
     }
 
-    // Check if new roll_no conflicts with another user
+    const student = await Student.findById(studentId).populate("yr_sem_id").session(session);
+    if (!student) throw new Error("Student not found");
+
+    // Conflict Check: Roll No
     if (student.roll_no !== roll_no) {
-      const existingUser = await User.findOne({ user_name: roll_no }).session(session);
-      if (existingUser) {
-        throw new Error("User with this roll number already exists");
-      }
+      const conflict = await User.findOne({ user_name: roll_no }).session(session);
+      if (conflict) throw new Error("Roll Number is already taken by another user.");
     }
 
-    // Check if new email conflicts with another student
+    // Conflict Check: Email
     if (student.email !== email) {
-      const existingStudent = await Student.findOne({ email: email }).session(session);
-      if (existingStudent && existingStudent._id.toString() !== studentId) {
-        throw new Error("Student with this email already exists");
-      }
+      const conflict = await Student.findOne({ email }).session(session);
+      if (conflict && conflict._id.toString() !== studentId) throw new Error("Email is already taken.");
     }
 
     // Update User
     const userUpdate = { user_name: roll_no };
-    if (password) {
-      userUpdate.password = await bcrypt.hash(password, 10);
-    }
-    await User.findByIdAndUpdate(student.user_id, userUpdate, { session, runValidators: true });
+    if (password) userUpdate.password = await bcrypt.hash(password, 10);
+    await User.findByIdAndUpdate(student.user_id, userUpdate, { session });
 
     // Update Student
-    await Student.findByIdAndUpdate(studentId, {
-      name,
-      roll_no,
-      email
-    }, { session, runValidators: true });
+    await Student.findByIdAndUpdate(studentId, { name, roll_no, email, yr_sem_id: yrSem._id }, { session });
 
-    // Update Enrollment Status (Assuming we want to update the current enrollment associated with this student_id and yr_sem_id)
-    // We update the active or most recent one for the student in this batch context
-    await StudentEnrollment.findOneAndUpdate(
-      { student_id: studentId, yr_sem_id: student.yr_sem_id },
-      { status },
-      { session, runValidators: true, sort: { createdAt: -1 } }
-    );
+    // ENROLLMENT HISTORY LOGIC
+    // Check if the yr_sem_id changed
+    const oldBatchId = student.yr_sem_id?._id || student.yr_sem_id;
+    if (!oldBatchId || oldBatchId.toString() !== yrSem._id.toString()) {
+      // 1. Inactivate existing active enrollments
+      await StudentEnrollment.updateMany(
+        { student_id: studentId, status: "active" },
+        { status: "inactive", end_date: new Date() },
+        { session }
+      );
+      // 2. Create New Enrollment
+      await StudentEnrollment.create([{
+        student_id: studentId,
+        yr_sem_id: yrSem._id,
+        academic_yr,
+        status: status || "active",
+        start_date: new Date()
+      }], { session });
+    } else {
+      // Just update existing active enrollment status/cycle if it's the same batch
+      await StudentEnrollment.findOneAndUpdate(
+        { student_id: studentId, yr_sem_id: student.yr_sem_id, status: "active" },
+        { status, academic_yr },
+        { session }
+      );
+    }
 
     await session.commitTransaction();
-    res.status(200).json({ message: "Student updated successfully" });
+    res.status(200).json({ message: "Student record updated with history preserved." });
 
   } catch (error) {
     await session.abortTransaction();
-    console.error("Edit student error:", error);
-    const isDuplicate = error.code === 11000;
-    const errorMsg = isDuplicate ? "Student with this roll number or email already exists." : error.message;
-    res.status(400).json({ message: errorMsg || "Server error while editing student" });
+    res.status(400).json({ message: error.message });
   } finally {
     session.endSession();
   }
@@ -1596,72 +1739,98 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
 });
 
 
-// 16. Promote Students
+// 16. Promote Students (INDEPENDENT DYNAMIC PROGRESSION)
 app.post("/api/admin/promote-students", async (req, res) => {
-  const { studentIds, targetYrSem } = req.body;
+  const { studentIds } = req.body;
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    if (!studentIds || !studentIds.length || !targetYrSem) {
-      throw new Error("Missing required fields");
+    if (!studentIds || !Array.isArray(studentIds)) {
+      throw new Error("No students selected for promotion.");
     }
 
-    const { yr, sem, stream, academic_yr, isGraduating } = targetYrSem;
+    // Ensure we only process each student once even if duplicates are passed
+    const uniqueIds = [...new Set(studentIds)];
+    const report = { promoted: 0, failed: [] };
 
-    let targetYrSemDoc = null;
-    if (!isGraduating) {
-      targetYrSemDoc = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
-      if (!targetYrSemDoc) {
-        throw new Error(`Target batch (${yr}-${sem}, ${stream}, ${academic_yr}) not found. Please ensure the target batch exists before promoting students.`);
+    for (const studentId of uniqueIds) {
+      const student = await Student.findById(studentId).populate("yr_sem_id").session(session);
+      if (!student || !student.yr_sem_id) continue;
+
+      const current = student.yr_sem_id;
+      let nextYr = current.yr;
+      let nextSem = 1;
+      let isGraduating = false;
+
+      // Rule: S1 -> S2 (same year), S2 -> S1 (next year)
+      if (current.sem === 1) {
+        nextSem = 2;
+      } else {
+        nextYr = current.yr + 1;
+        nextSem = 1;
+        if (nextYr > 4) isGraduating = true;
       }
-    }
-
-    for (const studentId of studentIds) {
-      const student = await Student.findById(studentId).session(session);
-      if (!student) continue;
-
-      // Deactivate current active enrollment
-      await StudentEnrollment.updateMany(
-        { student_id: studentId, status: "active" },
-        { status: "inactive", end_date: new Date() },
-        { session }
-      );
 
       if (isGraduating) {
-        // Mark as graduated
+        await StudentEnrollment.updateMany(
+          { student_id: studentId, status: "active" },
+          { status: "inactive", end_date: new Date() },
+          { session }
+        );
         await StudentEnrollment.create([{
           student_id: studentId,
-          yr_sem_id: student.yr_sem_id, // Keep the last yr_sem_id they were in
-          academic_yr,
+          yr_sem_id: current._id,
+          academic_yr: current.academic_yr,
           status: "graduated",
           start_date: new Date()
         }], { session });
-
-        // Note: we don't change student.yr_sem_id so we know their last batch
+        report.promoted++;
       } else {
-        // Create new active enrollment
+        // Find next Batch
+        const nextBatch = await YrSem.findOne({
+          yr: nextYr,
+          sem: nextSem,
+          stream: current.stream,
+          academic_yr: current.academic_yr
+        }).session(session);
+
+        if (!nextBatch) {
+          report.failed.push(`${student.name} (Batch ${nextYr}-${nextSem} for ${current.stream} not found)`);
+          continue;
+        }
+
+        // Deactivate Old
+        await StudentEnrollment.updateMany(
+          { student_id: studentId, status: "active" },
+          { status: "inactive", end_date: new Date() },
+          { session }
+        );
+        // Create New
         await StudentEnrollment.create([{
           student_id: studentId,
-          yr_sem_id: targetYrSemDoc._id,
-          academic_yr,
+          yr_sem_id: nextBatch._id,
+          academic_yr: current.academic_yr,
           status: "active",
           start_date: new Date()
         }], { session });
 
-        // Update student's current yr_sem_id
-        student.yr_sem_id = targetYrSemDoc._id;
+        // Update Student Link
+        student.yr_sem_id = nextBatch._id;
         await student.save({ session });
+        report.promoted++;
       }
     }
 
     await session.commitTransaction();
-    res.status(200).json({ message: isGraduating ? "Students marked as graduated" : "Students promoted successfully" });
+    res.json({
+      message: `Promotion complete: ${report.promoted} promoted.`,
+      failures: report.failed
+    });
 
   } catch (error) {
     await session.abortTransaction();
-    console.error("Promotion error:", error);
-    res.status(500).json({ message: error.message || "Server error during promotion" });
+    res.status(500).json({ message: error.message });
   } finally {
     session.endSession();
   }
