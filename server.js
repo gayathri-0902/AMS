@@ -881,8 +881,8 @@ app.get("/api/student/enrolled-subjects/:studentId", async (req, res) => {
     const enrollment = await resolveEnrollmentForStudent(studentId);
 
     if (!enrollment) {
-      console.warn(`[enrolled-subjects] No enrollment for student: ${studentId}`);
-      return res.status(404).json({ error: "Enrollment not found" });
+      console.warn(`[enrolled-subjects] No enrollment for student: ${studentId} — returning []`);
+      return res.json([]);
     }
 
     const yrSemData = enrollment.yr_sem_id;
