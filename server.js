@@ -47,7 +47,16 @@ if (process.env.NODE_ENV !== 'production') {
 // --- Middleware ---
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: (origin, callback) => {
+      if (process.env.NODE_ENV === "production") {
+        const allow = process.env.FRONTEND_ORIGIN;
+        if (allow) return callback(null, !origin || origin === allow);
+      }
+      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+        return callback(null, true);
+      }
+      callback(null, false);
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -150,10 +159,7 @@ app.post("/api/login", async (req, res) => {
       if (student) {
         responseData.studentId = student._id;
         responseData.name = student.name;
-        const enrollment = await StudentEnrollment.findOne({
-          student_id: student._id,
-          status: "active",
-        });
+        const enrollment = await resolveEnrollmentForStudent(student._id);
         if (enrollment) {
           responseData.sectionId = enrollment.yr_sem_id;
         }
@@ -250,12 +256,9 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     const student = await Student.findById(studentId);
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const enrollment = await StudentEnrollment.findOne({
-      student_id: studentId,
-      status: "active",
-    }).populate("yr_sem_id");
+    const enrollment = await resolveEnrollmentForStudent(studentId);
 
-    if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
+    if (!enrollment) return res.status(404).json({ error: "Enrollment not found" });
 
     const yrSem = enrollment.yr_sem_id;
     const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
@@ -591,6 +594,166 @@ app.get("/api/faculty/subjects/:facultyId", async (req, res) => {
   }
 });
 
+/** Subjects from time_table rows whose linked yr_sem matches stream/yr/sem (covers duplicate or mismatched enrollment yr_sem ObjectIds). */
+async function subjectsFromTimetableByStreamYrSem(stream, yr, sem) {
+  const rows = await TimeTable.aggregate([
+    { $lookup: { from: "yr_sems", localField: "yr_sem_id", foreignField: "_id", as: "ysArr" } },
+    { $unwind: "$ysArr" },
+    { $match: { "ysArr.stream": stream, "ysArr.yr": yr, "ysArr.sem": sem } },
+    { $lookup: { from: "subject_offerings", localField: "subject_offering_id", foreignField: "_id", as: "soArr" } },
+    { $unwind: "$soArr" },
+    { $lookup: { from: "course_masters", localField: "soArr.course_master_id", foreignField: "_id", as: "cmArr" } },
+    { $unwind: { path: "$cmArr", preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: "faculties", localField: "faculty_id", foreignField: "_id", as: "faArr" } },
+    { $unwind: { path: "$faArr", preserveNullAndEmptyArrays: true } },
+  ]);
+  const seen = new Set();
+  const list = [];
+  for (const e of rows) {
+    const so = e.soArr;
+    const cm = e.cmArr;
+    const ys = e.ysArr;
+    if (!so || !cm) continue;
+    const key = String(so._id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push({
+      subject_offering_id: so._id,
+      class_name: cm.course_name || "Unknown Subject",
+      class_code: cm.course_code || "N/A",
+      faculty_name: e.faArr?.name || "Unknown",
+      stream: ys?.stream || "N/A",
+      yr: ys?.yr ?? "",
+      sem: ys?.sem ?? "",
+      section_label: ys ? `${ys.stream} ${ys.yr}-${ys.sem}` : "N/A",
+    });
+  }
+  return list;
+}
+
+/** Subjects from class sessions the student has attendance on (bypasses yr_sem / timetable mismatches). */
+async function subjectsFromStudentAttendance(studentId) {
+  const records = await Attendance.find({ student_id: studentId })
+    .populate({
+      path: "class_session_id",
+      populate: [
+        { path: "subject_offering_id", populate: { path: "course_master_id" } },
+        { path: "faculty_id", select: "name" },
+      ],
+    })
+    .limit(8000)
+    .lean();
+
+  const seen = new Set();
+  const list = [];
+  for (const r of records) {
+    const sess = r.class_session_id;
+    if (!sess || !sess.subject_offering_id) continue;
+    const so = sess.subject_offering_id;
+    const cm = so.course_master_id;
+    if (!cm) continue;
+    const key = String(so._id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push({
+      subject_offering_id: so._id,
+      class_name: cm.course_name || "Unknown Subject",
+      class_code: cm.course_code || "N/A",
+      faculty_name: sess.faculty_id?.name || "Unknown",
+      stream: "N/A",
+      yr: "",
+      sem: "",
+      section_label: "N/A",
+    });
+  }
+  return list;
+}
+
+/**
+ * Every distinct subject_offering on the timetable for these yr_sem ids.
+ * Avoids relying on deep populate (only one slot often hydrated → one tile bug).
+ */
+async function subjectsFromTimetableYrSemIds(yrSemMongoIds) {
+  if (!yrSemMongoIds?.length) return [];
+  const idList = yrSemMongoIds.filter(Boolean);
+  const offeringIds = await TimeTable.distinct("subject_offering_id", {
+    yr_sem_id: { $in: idList },
+  });
+  if (!offeringIds.length) return [];
+
+  const [offerings, ttRows, assignments] = await Promise.all([
+    SubjectOffering.find({ _id: { $in: offeringIds } }).populate("course_master_id"),
+    TimeTable.find({
+      yr_sem_id: { $in: idList },
+      subject_offering_id: { $in: offeringIds },
+    })
+      .populate("faculty_id")
+      .lean(),
+    FacultyAssignment.find({ subject_offering_id: { $in: offeringIds } })
+      .populate("faculty_id")
+      .lean(),
+  ]);
+
+  const facultyFromTt = new Map();
+  for (const row of ttRows) {
+    const k = String(row.subject_offering_id);
+    if (!facultyFromTt.has(k) && row.faculty_id?.name) {
+      facultyFromTt.set(k, row.faculty_id.name);
+    }
+  }
+  const facultyFromAsg = new Map();
+  for (const a of assignments) {
+    const k = String(a.subject_offering_id);
+    if (!facultyFromAsg.has(k) && a.faculty_id?.name) {
+      facultyFromAsg.set(k, a.faculty_id.name);
+    }
+  }
+
+  const list = [];
+  for (const so of offerings) {
+    const cm = so.course_master_id;
+    if (!cm) continue;
+    const k = String(so._id);
+    list.push({
+      subject_offering_id: so._id,
+      class_name: cm.course_name || "Unknown Subject",
+      class_code: cm.course_code || "N/A",
+      faculty_name: facultyFromTt.get(k) || facultyFromAsg.get(k) || "Unknown",
+    });
+  }
+  return list;
+}
+
+/**
+ * Pick enrollment whose section matches the real timetable: prefer active if its yr_sem
+ * has time_table rows; otherwise any enrollment (e.g. inactive) whose yr_sem appears on the timetable.
+ */
+async function resolveEnrollmentForStudent(studentId) {
+  const list = await StudentEnrollment.find({ student_id: studentId })
+    .populate("yr_sem_id")
+    .sort({ end_date: -1 });
+
+  if (!list.length) return null;
+
+  const ttYrSemIds = new Set(
+    (await TimeTable.distinct("yr_sem_id")).map((id) => String(id))
+  );
+
+  const yrSemInTimetable = (e) => {
+    const y = e.yr_sem_id;
+    if (!y || !y._id) return false;
+    return ttYrSemIds.has(String(y._id));
+  };
+
+  const active = list.find((e) => e.status === "active");
+  if (active && yrSemInTimetable(active)) return active;
+
+  const withTt = list.find(yrSemInTimetable);
+  if (withTt) return withTt;
+
+  return active || list[0];
+}
+
 // 11.6. Student: Get All Assigned Subjects (for weekend UI)
 app.get("/api/student/subjects/:studentId", async (req, res) => {
   try {
@@ -599,43 +762,237 @@ app.get("/api/student/subjects/:studentId", async (req, res) => {
     const student = await Student.findById(studentId);
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const enrollment = await StudentEnrollment.findOne({
-      student_id: studentId,
-      status: "active",
-    }).populate("yr_sem_id");
+    const enrollment = await resolveEnrollmentForStudent(studentId);
 
-    if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
+    if (!enrollment) return res.status(404).json({ error: "Enrollment not found" });
 
-    const subjects = await SubjectOffering.find({
-      yr_sem_id: enrollment.yr_sem_id._id,
-    })
-      .populate({ path: "course_master_id" })
-      .populate({ path: "yr_sem_id" });
+    const yrSemData = enrollment.yr_sem_id; // { _id, stream, yr, sem }
 
-    const subjectsWithFaculty = await Promise.all(
-      subjects.map(async (subject) => {
-        const assignment = await FacultyAssignment.findOne({
-          subject_offering_id: subject._id
-        }).populate("faculty_id");
+    // ── Helper: build response from SubjectOffering array ────────────
+    const buildResult = async (offeringList) => {
+      return Promise.all(
+        offeringList.map(async (subject) => {
+          const assignment = await FacultyAssignment.findOne({
+            subject_offering_id: subject._id,
+          }).populate("faculty_id");
+          const course = subject.course_master_id || {};
+          const yrSem  = subject.yr_sem_id || yrSemData;
+          return {
+            subject_offering_id: subject._id,
+            class_name: course.course_name || "Unknown Subject",
+            class_code: course.course_code || "N/A",
+            faculty_name: assignment?.faculty_id?.name || "Unknown",
+            stream: yrSem?.stream || "N/A",
+            yr: yrSem?.yr || "",
+            sem: yrSem?.sem || "",
+            section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A",
+          };
+        })
+      );
+    };
 
-        const course = subject.course_master_id;
-        const yrSem = subject.yr_sem_id;
-        return {
-          subject_offering_id: subject._id,
-          class_name: course.course_name,
-          class_code: course.course_code,
-          faculty_name: assignment?.faculty_id?.name || "Unknown",
-          stream: yrSem?.stream || "N/A",
-          yr: yrSem?.yr || "",
-          sem: yrSem?.sem || "",
-          section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A"
-        };
-      })
-    );
+    // ── STRATEGY 1: Direct yr_sem_id match (normal path) ────────────
+    let subjects = await SubjectOffering.find({ yr_sem_id: yrSemData._id })
+      .populate("course_master_id")
+      .populate("yr_sem_id");
 
-    res.json(subjectsWithFaculty);
+    if (subjects.length > 0) {
+      return res.json(await buildResult(subjects));
+    }
+
+    // ── STRATEGY 2: Match by same stream + yr + sem across all yr_sems ──
+    // (handles duplicate yr_sem IDs — student enrolled under a different
+    //  yr_sem document than where subject_offerings were created)
+    const matchingYrSems = await YrSem.find({
+      stream: yrSemData.stream,
+      yr:     yrSemData.yr,
+      sem:    yrSemData.sem,
+    });
+    const matchingIds = matchingYrSems.map((y) => y._id);
+
+    subjects = await SubjectOffering.find({ yr_sem_id: { $in: matchingIds } })
+      .populate("course_master_id")
+      .populate("yr_sem_id");
+
+    if (subjects.length > 0) {
+      console.log(`[subjects] Strategy 2 hit for student ${studentId}: found ${subjects.length} subjects via stream/yr/sem match`);
+      return res.json(await buildResult(subjects));
+    }
+
+    // ── STRATEGY 3: time_table → yr_sems match by stream/yr/sem (not enrollment ObjectId) ──
+    const ttResult = await subjectsFromTimetableByStreamYrSem(yrSemData.stream, yrSemData.yr, yrSemData.sem);
+    if (ttResult.length > 0) {
+      console.log(`[subjects] Strategy 3 hit for student ${studentId}: derived ${ttResult.length} subjects from timetable (stream/yr/sem join)`);
+      // #region agent log
+      fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:student-subjects-s3", message: "strategy3 subjects count", data: { studentId: String(studentId), count: ttResult.length }, timestamp: Date.now(), hypothesisId: "H2" }) }).catch(() => {});
+      // #endregion
+      return res.json(ttResult);
+    }
+
+    // ── STRATEGY 4: student profile yr_sem_id vs enrollment ──────────
+    const stud = await Student.findById(studentId).populate("yr_sem_id");
+    const sy = stud?.yr_sem_id;
+    if (sy && sy._id && String(sy._id) !== String(yrSemData._id)) {
+      subjects = await SubjectOffering.find({ yr_sem_id: sy._id })
+        .populate("course_master_id")
+        .populate("yr_sem_id");
+      if (subjects.length > 0) {
+        console.log(`[subjects] Strategy 4 hit (SubjectOffering via student.yr_sem_id): ${subjects.length}`);
+        return res.json(await buildResult(subjects));
+      }
+      const tt4 = await subjectsFromTimetableByStreamYrSem(sy.stream, sy.yr, sy.sem);
+      if (tt4.length > 0) {
+        console.log(`[subjects] Strategy 4 hit (timetable triple via student.yr_sem): ${tt4.length}`);
+        return res.json(tt4);
+      }
+    }
+
+    // ── STRATEGY 5: attendance → class_session → subject_offering ────
+    const attSubs = await subjectsFromStudentAttendance(studentId);
+    if (attSubs.length > 0) {
+      console.log(`[subjects] Strategy 5 hit (attendance): ${attSubs.length} subjects`);
+      // #region agent log
+      fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:student-subjects-s5", message: "strategy5 attendance count", data: { hypothesisId: "M5", studentId: String(studentId), count: attSubs.length }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
+      return res.json(attSubs);
+    }
+
+    // ── Nothing found ────────────────────────────────────────────────
+    console.warn(`[subjects] No subjects found for student ${studentId} | yr_sem: ${yrSemData._id} (${yrSemData.stream} yr${yrSemData.yr} sem${yrSemData.sem})`);
+    res.json([]);
   } catch (error) {
     console.error("Error fetching student subjects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 11.7. Student: Get Enrolled Subjects via TimeTable (multi-strategy, guaranteed fallback)
+app.get("/api/student/enrolled-subjects/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    console.log(`\n[enrolled-subjects] ── REQUEST for studentId: ${studentId}`);
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      console.warn(`[enrolled-subjects] Student not found: ${studentId}`);
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const enrollment = await resolveEnrollmentForStudent(studentId);
+
+    if (!enrollment) {
+      console.warn(`[enrolled-subjects] No enrollment for student: ${studentId}`);
+      return res.status(404).json({ error: "Enrollment not found" });
+    }
+
+    const yrSemData = enrollment.yr_sem_id;
+    // #region agent log
+    fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-resolve", message: "enrollment picked", data: { hypothesisId: "ENR", status: enrollment.status, yrSemId: yrSemData?._id ? String(yrSemData._id) : null }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
+    console.log(`[enrolled-subjects] Enrollment yr_sem_id raw: ${enrollment.yr_sem_id?._id || enrollment.yr_sem_id}`);
+    console.log(`[enrolled-subjects] Populated yrSemData: ${JSON.stringify({ _id: yrSemData?._id, stream: yrSemData?.stream, yr: yrSemData?.yr, sem: yrSemData?.sem })}`);
+
+    if (!yrSemData) {
+      console.warn(`[enrolled-subjects] yr_sem_id did not populate — the yr_sem document may be missing from DB`);
+      return res.json([]);
+    }
+
+    // ── STRATEGY 1: distinct subject_offering_id for this yr_sem (full list; no nested-populate gap) ──
+    const distinctIdsS1 = await TimeTable.distinct("subject_offering_id", {
+      yr_sem_id: yrSemData._id,
+    });
+    console.log(`[enrolled-subjects] Strategy 1: distinct offering ids for yr_sem ${yrSemData._id}: ${distinctIdsS1.length}`);
+    let subjects = await subjectsFromTimetableYrSemIds([yrSemData._id]);
+    // #region agent log
+    fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s1", message: "distinct vs built", data: { hypothesisId: "DIST", distinctCount: distinctIdsS1.length, builtCount: subjects.length }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
+    if (subjects.length > 0) {
+      console.log(`[enrolled-subjects] Strategy 1 SUCCESS: returning ${subjects.length} subjects`);
+      return res.json(subjects);
+    }
+
+    // ── STRATEGY 2: all yr_sems with same stream + yr + sem ─────────
+    console.log(`[enrolled-subjects] Strategy 2: searching yr_sems where stream=${yrSemData.stream} yr=${yrSemData.yr} sem=${yrSemData.sem}`);
+    const matchingYrSems = await YrSem.find({
+      stream: yrSemData.stream,
+      yr:     yrSemData.yr,
+      sem:    yrSemData.sem,
+    });
+    const matchingIds = matchingYrSems.map((y) => y._id);
+    console.log(`[enrolled-subjects] Strategy 2: found ${matchingYrSems.length} matching yr_sem docs → IDs: ${matchingIds}`);
+
+    subjects = await subjectsFromTimetableYrSemIds(matchingIds);
+    console.log(`[enrolled-subjects] Strategy 2 built subjects: ${subjects.length}`);
+    if (subjects.length > 0) {
+      console.log(`[enrolled-subjects] Strategy 2 SUCCESS: returning ${subjects.length} subjects`);
+      return res.json(subjects);
+    }
+
+    // ── STRATEGY 3: time_table rows joined to yr_sems, match stream/yr/sem (duplicate yr_sem docs) ──
+    console.log(`[enrolled-subjects] Strategy 3: aggregation by timetable yr_sem stream=${yrSemData.stream} yr=${yrSemData.yr} sem=${yrSemData.sem}`);
+    const tripleList = await subjectsFromTimetableByStreamYrSem(yrSemData.stream, yrSemData.yr, yrSemData.sem);
+    console.log(`[enrolled-subjects] Strategy 3 derived count: ${tripleList.length}`);
+    // #region agent log
+    fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s3", message: "strategy3 enrolled count", data: { studentId: String(studentId), count: tripleList.length }, timestamp: Date.now(), hypothesisId: "H2" }) }).catch(() => {});
+    // #endregion
+    subjects = tripleList.map((s) => ({
+      subject_offering_id: s.subject_offering_id,
+      class_name: s.class_name,
+      class_code: s.class_code,
+      faculty_name: s.faculty_name,
+    }));
+    if (subjects.length > 0) {
+      console.log(`[enrolled-subjects] Strategy 3 SUCCESS: returning ${subjects.length} subjects`);
+      return res.json(subjects);
+    }
+
+    // ── STRATEGY 4: student profile yr_sem_id (often matches timetable; enrollment yr_sem may differ) ──
+    const stud = await Student.findById(studentId).populate("yr_sem_id");
+    const studYs = stud?.yr_sem_id;
+    // #region agent log
+    fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s4", message: "yr_sem compare", data: { hypothesisId: "M1", enrollmentYrSemId: yrSemData?._id ? String(yrSemData._id) : null, studentYrSemId: studYs?._id ? String(studYs._id) : null, idsDiffer: !!(studYs && yrSemData && String(studYs._id) !== String(yrSemData._id)) }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
+    if (studYs && studYs._id) {
+      subjects = await subjectsFromTimetableYrSemIds([studYs._id]);
+      if (subjects.length > 0) {
+        // #region agent log
+        fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s4", message: "strategy4 distinct ok", data: { hypothesisId: "M1", count: subjects.length }, timestamp: Date.now() }) }).catch(() => {});
+        // #endregion
+        console.log(`[enrolled-subjects] Strategy 4 SUCCESS (student.yr_sem_id): ${subjects.length} subjects`);
+        return res.json(subjects);
+      }
+      const fromStudTriple = await subjectsFromTimetableByStreamYrSem(studYs.stream, studYs.yr, studYs.sem);
+      subjects = fromStudTriple.map((s) => ({
+        subject_offering_id: s.subject_offering_id,
+        class_name: s.class_name,
+        class_code: s.class_code,
+        faculty_name: s.faculty_name,
+      }));
+      if (subjects.length > 0) {
+        // #region agent log
+        fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s4", message: "strategy4 triple ok", data: { hypothesisId: "M1", count: subjects.length }, timestamp: Date.now() }) }).catch(() => {});
+        // #endregion
+        console.log(`[enrolled-subjects] Strategy 4 SUCCESS (student yr_sem triple): ${subjects.length} subjects`);
+        return res.json(subjects);
+      }
+    }
+
+    // ── STRATEGY 5: attendance sessions (timetable yr_sem may not match enrollment) ──
+    const attList = await subjectsFromStudentAttendance(studentId);
+    if (attList.length > 0) {
+      // #region agent log
+      fetch("http://127.0.0.1:7408/ingest/8e1a97aa-021c-4ca9-a5a5-c0fdb11624c5", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9f2f67" }, body: JSON.stringify({ sessionId: "9f2f67", location: "server.js:enrolled-subjects-s5", message: "strategy5 attendance count", data: { hypothesisId: "M5", studentId: String(studentId), count: attList.length }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
+      console.log(`[enrolled-subjects] Strategy 5 SUCCESS (attendance): ${attList.length} subjects`);
+      return res.json(attList);
+    }
+
+    console.warn(`[enrolled-subjects] ALL STRATEGIES FAILED for student ${studentId}`);
+    console.warn(`[enrolled-subjects] enrollment.yr_sem_id (raw): ${enrollment.yr_sem_id?._id}`);
+    console.warn(`[enrolled-subjects] Check: does TimeTable have ANY entries? Run db.time_tables.countDocuments() in MongoDB`);
+    res.json([]);
+  } catch (error) {
+    console.error("[enrolled-subjects] EXCEPTION:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

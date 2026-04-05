@@ -61,9 +61,11 @@ export const AuthProvider = ({ children }) => {
 
   // --- LOGIN HANDLER UPDATED FOR NEW UI ROLES ---
   const login = async (role, identifier, password) => {
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:3002";
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/login`,
+        `${apiBase}/api/login`,
         {
           role, // This will be 'admin', 'faculty', 'student', or 'parent' from the new UI
           identifier,
