@@ -581,8 +581,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
       const matchCriteria = {};
       if (yr) matchCriteria.yr = Number(yr);
       if (sem) matchCriteria.sem = Number(sem);
-      if (stream) matchCriteria.stream = stream;
-      if (academic_yr) matchCriteria.academic_yr = academic_yr;
+      if (stream) matchCriteria.stream = { $regex: new RegExp(`^${stream}$`, "i") };
+      if (academic_yr) matchCriteria.academic_yr = { $regex: new RegExp(`^${academic_yr}$`, "i") };
 
       const matchingYrSems = await YrSem.find(matchCriteria).select("_id").lean();
 
@@ -847,7 +847,12 @@ app.post("/api/admin/add-student", async (req, res) => {
     }
 
     // 1. Verify if Batch Metadata exists
-    const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
+    const yrSem = await YrSem.findOne({ 
+      yr: Number(yr), 
+      sem: Number(sem), 
+      stream: { $regex: new RegExp(`^${stream}$`, "i") }, 
+      academic_yr: { $regex: new RegExp(`^${academic_yr}$`, "i") } 
+    }).session(session);
     if (!yrSem) {
       throw new Error("Target Batch not found. Please ensure Year/Sem/Stream/Cycle are created in Batch Setup first.");
     }
@@ -961,8 +966,8 @@ app.post("/api/admin/add-course", async (req, res) => {
     const yrSem = await YrSem.findOne({
       yr: Number(yr),
       sem: Number(sem),
-      stream,
-      academic_yr
+      stream: { $regex: new RegExp(`^${stream}$`, "i") },
+      academic_yr: { $regex: new RegExp(`^${academic_yr}$`, "i") }
     }).session(session);
 
     if (!yrSem) {
