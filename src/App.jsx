@@ -84,6 +84,25 @@ const StudentViewWrapper = () => {
 function App() {
   const { auth } = useAuth();
 
+  // Handle Dark Mode detection based on browser theme
+  React.useEffect(() => {
+    const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateTheme = (e) => {
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    // Initial check
+    updateTheme(themeQuery);
+    
+    // Listen for changes
+    themeQuery.addEventListener('change', updateTheme);
+    return () => themeQuery.removeEventListener('change', updateTheme);
+  }, []);
+
   // Safety check for Context initialization
   if (auth === undefined) {
     return (
@@ -96,7 +115,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-antiqua">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-antiqua transition-colors duration-300">
       <Routes>
         <Route
           path="/"

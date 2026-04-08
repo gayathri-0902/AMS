@@ -79,7 +79,7 @@ function Admin_CoursesTab({
                             {filteredCourses.length > 0 ? filteredCourses.map((c, i) => (
                                 <tr key={i} className="group hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-all">
                                     <td className="px-6 py-5">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 tracking-widest group-hover:bg-white transition-colors">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 tracking-widest group-hover:bg-white dark:group-hover:bg-slate-800 transition-colors">
                                             {c.course_code}
                                         </span>
                                     </td>

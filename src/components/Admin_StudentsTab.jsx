@@ -142,7 +142,7 @@ function Admin_StudentsTab({
                                                 {s.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{s.name}</div>
+                                                <div className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight">{s.name}</div>
                                                 <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">ID: {s.roll_no}</div>
                                             </div>
                                         </div>

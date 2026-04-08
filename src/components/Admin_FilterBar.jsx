@@ -97,7 +97,7 @@ function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, lo
                     {isFiltered && (
                         <button 
                             onClick={clearFilters}
-                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all"
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-all"
                         >
                             <MdClose size={16} />
                             Reset
