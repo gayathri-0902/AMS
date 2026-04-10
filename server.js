@@ -25,6 +25,12 @@ const Feedback = require("./models/Feedback");
 const Assignment = require("./models/Assignment");
 const Submission = require("./models/Submission");
 
+const multer = require("multer");
+const csv = require("csv-parser");
+const xlsx = require("xlsx");
+const fs = require("fs");
+const upload = multer({ dest: "uploads/" });
+
 // --- Routes ---
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
@@ -611,18 +617,22 @@ app.get("/api/admin/batch-data", async (req, res) => {
       isFiltered = false;
     }
 
-    // 1. Fetch Students (reverting to find/populate for immediate compatibility)
-    const totalStudentsRaw = await StudentEnrollment.countDocuments(studentQuery);
-    const enrollments = await StudentEnrollment.find(studentQuery)
+    // 1. Fetch Students using Aggregation to allow sorting by Roll No (populated field)
+    const enrollmentsTotal = await StudentEnrollment.countDocuments(studentQuery);
+    
+    // Convert studentQuery to use ObjectIds for $match if needed, but here simple fields work
+    // We'll use a simple find().populate() for now but sort in-memory OR use find() on students first.
+    // Actually, for 100 students, in-memory sort is perfectly fine and most reliable.
+    
+    const rawEnrollments = await StudentEnrollment.find(studentQuery)
       .populate({ path: "student_id", select: "name roll_no email" })
       .populate({ path: "yr_sem_id", select: "yr sem stream academic_yr" })
-      .sort({ "student_id.name": 1 })
       .skip(skip)
       .limit(Number(limit))
       .lean();
 
-    // Map and count valid students (Self-Correction for Orphan Records)
-    const students = enrollments
+    // Map valid students
+    let students = rawEnrollments
       .filter(e => e.student_id)
       .map(e => ({
         _id: e.student_id._id,
@@ -637,10 +647,12 @@ app.get("/api/admin/batch-data", async (req, res) => {
         academic_yr: e.yr_sem_id?.academic_yr
       }));
 
-    // If any orphans were filtered out, the total count should match the visible list
-    const totalStudents = students.length < enrollments.length
-      ? totalStudentsRaw - (enrollments.length - students.length)
-      : totalStudentsRaw;
+    // Sort by Roll Number (Alphanumeric)
+    students.sort((a, b) => (a.roll_no || "").localeCompare(b.roll_no || "", undefined, { numeric: true, sensitivity: 'base' }));
+
+    const totalStudents = students.length < rawEnrollments.length
+      ? enrollmentsTotal - (rawEnrollments.length - students.length)
+      : enrollmentsTotal;
 
     // 2. Fetch Courses
     const offerings = await SubjectOffering.find(offeringQuery)
@@ -892,6 +904,130 @@ app.post("/api/admin/add-student", async (req, res) => {
     res.status(400).json({ message: error.message });
   } finally {
     session.endSession();
+  }
+});
+
+// 12.01 Bulk Add Students (WITH PER-STUDENT TRANSACTIONS)
+app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  const successList = [];
+  const failureList = [];
+  let results = [];
+  let sheetWarning = null;
+
+  try {
+    const filePath = req.file.path;
+    const fileExt = req.file.originalname.split(".").pop().toLowerCase();
+
+    if (fileExt === "xlsx" || fileExt === "xls") {
+      // --- EXCEL PROCESSING ---
+      const workbook = xlsx.readFile(filePath);
+      const sheetNames = workbook.SheetNames;
+      
+      if (sheetNames.length > 1) {
+        sheetWarning = `Multiple sheets detected. Only the first sheet ("${sheetNames[0]}") was processed.`;
+      }
+
+      const worksheet = workbook.Sheets[sheetNames[0]];
+      results = xlsx.utils.sheet_to_json(worksheet);
+      fs.unlinkSync(filePath); // Clean up
+      await processRows(results);
+    } else {
+      // --- CSV PROCESSING (Fallback/Stream) ---
+      fs.createReadStream(filePath)
+        .pipe(csv())
+        .on("data", (data) => results.push(data))
+        .on("end", async () => {
+          fs.unlinkSync(filePath); // Clean up
+          await processRows(results);
+        });
+      return; // CSV is handled in the 'end' event
+    }
+  } catch (err) {
+    return res.status(500).json({ message: "File processing error: " + err.message });
+  }
+
+  async function processRows(data) {
+    for (const row of data) {
+      const { name, roll_no, email, password, yr, sem, stream, academic_yr } = row;
+      
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        if (!name || !roll_no || !email || !password || !yr || !sem || !stream || !academic_yr) {
+          throw new Error("Missing required fields");
+        }
+
+        // 1. Verify if Batch Metadata exists
+        const yrSem = await YrSem.findOne({ yr: Number(yr), sem: Number(sem), stream, academic_yr }).session(session);
+        if (!yrSem) {
+          throw new Error(`Batch not found: Yr ${yr}, Sem ${sem}, ${stream} (${academic_yr})`);
+        }
+
+        // 2. Conflict Check: Roll Number (Universal User ID)
+        const existingUser = await User.findOne({ user_name: roll_no }).session(session);
+        if (existingUser) throw new Error(`Roll number ${roll_no} already exists`);
+
+        // 3. Conflict Check: Email (Student Model)
+        const existingEmail = await Student.findOne({ email }).session(session);
+        if (existingEmail) throw new Error(`Email ${email} already exists`);
+
+        const hashedPassword = await bcrypt.hash(password.toString(), 10);
+
+        // 4. Create User
+        const [newUser] = await User.create([{
+          user_name: roll_no,
+          password: hashedPassword,
+          role: "student"
+        }], { session });
+
+        // 5. Create Student
+        const [newStudent] = await Student.create([{
+          user_id: newUser._id,
+          name,
+          roll_no,
+          email,
+          yr_sem_id: yrSem._id
+        }], { session });
+
+        // 6. Create Enrollment
+        await StudentEnrollment.create([{
+          student_id: newStudent._id,
+          yr_sem_id: yrSem._id,
+          academic_yr,
+          status: "active",
+          start_date: new Date()
+        }], { session });
+
+        await session.commitTransaction();
+        successList.push({ name, roll_no });
+      } catch (error) {
+        await session.abortTransaction();
+        failureList.push({ 
+          roll_no: roll_no || "Unknown", 
+          name: name || "Unknown", 
+          error: error.message 
+        });
+      } finally {
+        session.endSession();
+      }
+    }
+
+    res.status(200).json({
+      message: "Bulk processing complete",
+      summary: {
+        total: data.length,
+        successCount: successList.length,
+        failureCount: failureList.length
+      },
+      sheetWarning,
+      successList,
+      failureList
+    });
   }
 });
 
