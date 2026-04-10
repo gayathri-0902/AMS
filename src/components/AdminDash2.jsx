@@ -31,11 +31,13 @@ import Admin_ModalPromote from "./Admin_ModalPromote";
 import Admin_ModalAddFaculty from "./Admin_ModalAddFaculty";
 import Admin_ModalEditFaculty from "./Admin_ModalEditFaculty";
 import Admin_ModalAddSession from "./Admin_ModalAddSession";
+import Admin_ModalBulkUpload from "./Admin_ModalBulkUpload";
 
 // Modal key constants — avoids raw string typos across the tree.
 export const MODALS = {
     ADD_STUDENT: "addStudent",
     EDIT_STUDENT: "editStudent",
+    BULK_UPLOAD: "bulkUpload",
     ADD_COURSE: "addCourse",
     ASSIGN_FACULTY: "assignFaculty",
     EDIT_COURSE: "editCourse",
@@ -118,6 +120,7 @@ function AdminDash2() {
                                 formData={batch.formData}
                                 searchTerm={searchTerm}
                                 onAddStudent={() => setActiveModal(MODALS.ADD_STUDENT)}
+                                onBulkUpload={() => setActiveModal(MODALS.BULK_UPLOAD)}
                                 onEditStudent={students.handleEditStudentClick}
                                 selectedIds={students.selectedStudentIds}
                                 onToggleSelect={students.handleToggleStudentSelection}
@@ -277,6 +280,12 @@ function AdminDash2() {
                     error={timetable.addSessionError}
                     courses={batch.batchData?.courses || []}
                     faculties={faculties.faculties || []}
+                />
+
+                <Admin_ModalBulkUpload 
+                    isOpen={activeModal === MODALS.BULK_UPLOAD}
+                    onClose={() => setActiveModal(null)}
+                    onRefresh={batch.refetchBatchData}
                 />
 
 
