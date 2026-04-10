@@ -6,6 +6,7 @@ import {
     MdEdit,
     MdDelete,
     MdDoubleArrow,
+    MdCloudUpload
 } from "react-icons/md";
 import Admin_FilterBar from "./Admin_FilterBar";
 
@@ -18,6 +19,7 @@ function Admin_StudentsTab({
     formData, 
     searchTerm, 
     onAddStudent, 
+    onBulkUpload,
     onEditStudent, 
     selectedIds = [], 
     onToggleSelect, 
@@ -92,6 +94,13 @@ function Admin_StudentsTab({
                             Promote ({selectedIds.length}) (Batch +1)
                         </button>
                     )}
+                    <button
+                        onClick={onBulkUpload}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                    >
+                        <MdCloudUpload className="text-xl text-blue-500" />
+                        Bulk Upload
+                    </button>
                     <button
                         onClick={onAddStudent}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20"
