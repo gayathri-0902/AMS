@@ -139,6 +139,8 @@ export const AuthProvider = ({ children }) => {
           ? auth.facultyId
           : auth.role === "student"
           ? auth.studentId
+          : auth.role === "parent"
+          ? auth.parentId
           : null;
       return (
         <Navigate
@@ -160,6 +162,8 @@ export const AuthProvider = ({ children }) => {
           ? auth.facultyId
           : auth.role === "student"
           ? auth.studentId
+          : auth.role === "parent"
+          ? auth.parentId
           : null;
 
       const target = redirectToDashboard(auth.role, id);
