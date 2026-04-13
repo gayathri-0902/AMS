@@ -29,7 +29,7 @@ const Assignment = require("./models/Assignment");
 const Submission = require("./models/Submission");
 
 const csv = require("csv-parser");
-const xlsx = require("xlsx");
+const ExcelJS = require("exceljs");
 
 // --- Routes ---
 const assignmentRoutes = require("./routes/assignmentRoutes");
@@ -1098,15 +1098,34 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
 
     if (fileExt === "xlsx" || fileExt === "xls") {
       // --- EXCEL PROCESSING ---
-      const workbook = xlsx.readFile(filePath);
-      const sheetNames = workbook.SheetNames;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
       
-      if (sheetNames.length > 1) {
-        sheetWarning = `Multiple sheets detected. Only the first sheet ("${sheetNames[0]}") was processed.`;
+      const worksheets = workbook.worksheets;
+      if (worksheets.length > 1) {
+        sheetWarning = `Multiple sheets detected. Only the first sheet ("${worksheets[0].name}") was processed.`;
       }
 
-      const worksheet = workbook.Sheets[sheetNames[0]];
-      results = xlsx.utils.sheet_to_json(worksheet);
+      const worksheet = worksheets[0];
+      if (worksheet) {
+          const headers = [];
+          worksheet.getRow(1).eachCell((cell, colNumber) => {
+              headers[colNumber] = cell.value?.toString().trim();
+          });
+
+          worksheet.eachRow((row, rowNumber) => {
+              if (rowNumber === 1) return; // skip header
+              
+              const rowData = {};
+              row.eachCell((cell, colNumber) => {
+                  const header = headers[colNumber];
+                  if (header) {
+                      rowData[header] = cell.value;
+                  }
+              });
+              results.push(rowData);
+          });
+      }
       fs.unlinkSync(filePath); // Clean up
       await processRows(results);
     } else {

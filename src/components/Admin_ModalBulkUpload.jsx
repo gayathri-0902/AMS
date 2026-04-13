@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MdClose, MdCloudUpload, MdCheckCircle, MdError, MdFileDownload, MdInfoOutline } from "react-icons/md";
 import axios from "axios";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 /**
  * COMPONENT: Admin_ModalBulkUpload
@@ -36,15 +36,39 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
         
         if (isExcel) {
             // Excel Preview Logic
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
-                    const data = new Uint8Array(event.target.result);
-                    const workbook = XLSX.read(data, { type: "array" });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    const data = event.target.result;
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(data);
+                    
+                    const worksheet = workbook.worksheets[0];
+                    if (!worksheet) {
+                        setError("Failed to parse Excel file preview: No worksheets found.");
+                        return;
+                    }
+
+                    const jsonData = [];
+                    const headers = [];
+                    worksheet.getRow(1).eachCell((cell, colNumber) => {
+                        headers[colNumber] = cell.value?.toString().trim();
+                    });
+
+                    worksheet.eachRow((row, rowNumber) => {
+                        if (rowNumber === 1) return; // Skip headers
+                        const rowData = {};
+                        row.eachCell((cell, colNumber) => {
+                            const header = headers[colNumber];
+                            if (header) {
+                                rowData[header] = cell.value;
+                            }
+                        });
+                        jsonData.push(rowData);
+                    });
+                    
                     setPreviewData(jsonData);
                 } catch (err) {
+                    console.error("Excel parse error:", err);
                     setError("Failed to parse Excel file preview.");
                 }
             };
