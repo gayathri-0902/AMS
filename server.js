@@ -28,11 +28,8 @@ const Feedback = require("./models/Feedback");
 const Assignment = require("./models/Assignment");
 const Submission = require("./models/Submission");
 
-const multer = require("multer");
 const csv = require("csv-parser");
 const xlsx = require("xlsx");
-const fs = require("fs");
-const upload = multer({ dest: "uploads/" });
 
 // --- Routes ---
 const assignmentRoutes = require("./routes/assignmentRoutes");

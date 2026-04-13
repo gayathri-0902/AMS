@@ -252,6 +252,7 @@ const StudentDashboard = ({ overrideId }) => {
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${getStatusStyle(course.attendance_status)}`}>
                       {course.attendance_status || "Not Marked"}
                     </span>
+                  </div>
 
                   <h3 className="text-2xl font-bold text-gray-800 mb-1">{course.class_name}</h3>
                   <span className="bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
