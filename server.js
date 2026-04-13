@@ -3,6 +3,9 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const { exec } = require('child_process'); // For automated port management
 
 // --- Models ---
@@ -50,7 +53,40 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ===== CHANGE 1: Serve uploaded files statically =====
+app.use(express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ===== END CHANGE 1 =====
+
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('application/') || file.mimetype.includes('word') || file.mimetype.includes('pdf') || file.mimetype.includes('text')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, TXT allowed'), false);
+    }
+  }
+});
 
 // --- Database Connection ---
 if (!MONGO_URI) {
@@ -139,17 +175,20 @@ app.post("/api/login", async (req, res) => {
 });
 
 // 2. Faculty Dashboard: Get classes for today
+// ===== MODIFIED: Added debugDay query parameter support =====
 app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
   try {
     const { facultyId } = req.params;
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    const debugDay = req.query.debugDay;
+    const currentDay = debugDay || new Date().toLocaleString("en-US", { weekday: "short" });
+    
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
-      day_of_week: currentDay,
+      day_of_week: currentDay
     })
       .populate({
         path: "subject_offering_id",
-        populate: { path: "course_master_id" },
+        populate: { path: "course_master_id" }
       })
       .populate("yr_sem_id")
       .sort({ session_no: 1 });
@@ -177,6 +216,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// ===== END MODIFICATION =====
 
 // 3. Fetch students for marking attendance
 app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
@@ -209,6 +249,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
 });
 
 // 4. Student Dashboard: Timetable and Attendance Status
+// ===== MODIFIED: Added debugDay query parameter support & currentDay in response =====
 app.get("/api/student-dashboard/:studentId", async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -223,7 +264,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
 
     const yrSem = enrollment.yr_sem_id;
-    const currentDay = new Date().toLocaleString("en-US", { weekday: "short" });
+    const debugDay = req.query.debugDay;
+    const currentDay = debugDay || new Date().toLocaleString("en-US", { weekday: "short" });
 
     const timetableEntries = await TimeTable.find({
       yr_sem_id: yrSem._id,
@@ -275,6 +317,7 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       };
     });
 
+    // ===== CHANGE 2: Added currentDay to response =====
     res.json({
       studentDetails: {
         student_id_no: student.roll_no,
@@ -283,13 +326,15 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
         current_year: yrSem.yr,
         current_sem: yrSem.sem
       },
-      timetableData
+      timetableData,
+      currentDay
     });
+    // ===== END CHANGE 2 =====
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
-
+// ===== END MODIFICATION =====
 
 // 5. Parent Dashboard Route (STABILIZED)
 app.get("/api/parent/dashboard/:parentId", async (req, res) => {
@@ -354,6 +399,7 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
     res.status(500).json({ message: "Server encountered an error calculating student data." });
   }
 });
+
 // 6. Overall Attendance (Student Perspective)
 app.get("/api/attendance/:studentId", async (req, res) => {
   const { studentId } = req.params;
@@ -516,10 +562,120 @@ app.post("/api/admin/schedule", async (req, res) => {
 });
 
 
-// 8. Notes Routes
-app.post("/api/notes", async (req, res) => {
-  const { subject_offering_id, faculty_id, title, description, file_url } = req.body;
+
+app.post("/api/admin/parent/map", async (req, res) => {
+  const { parent_email, student_roll_no, relationship } = req.body;
   try {
+    const parentUser = await User.findOne({ user_name: parent_email });
+    const parent = await Parent.findOne({ user_id: parentUser?._id });
+    const student = await Student.findOne({ roll_no: student_roll_no });
+    if (!parent || !student) return res.status(404).json({ message: "Parent or Student not found" });
+    const mapping = new ParentStudentMap({ parent_id: parent._id, student_id: student._id, relationship });
+    await mapping.save();
+    res.status(201).json({ message: "Parent linked successfully" });
+  } catch (error) { res.status(500).json({ message: "Server error" }); }
+});
+
+// 11.5. Faculty: Get All Assigned Subjects (for notes/assignments on any day)
+app.get("/api/faculty/subjects/:facultyId", async (req, res) => {
+  try {
+    const { facultyId } = req.params;
+
+    const assignments = await FacultyAssignment.find({ faculty_id: facultyId })
+      .populate({
+        path: "subject_offering_id",
+        populate: [
+          { path: "course_master_id" },
+          { path: "yr_sem_id" }
+        ]
+      });
+
+    const subjects = assignments
+      .filter(a => a.subject_offering_id && a.subject_offering_id.course_master_id)
+      .map(a => {
+        const so = a.subject_offering_id;
+        const course = so.course_master_id;
+        const yrSem = so.yr_sem_id;
+        return {
+          subject_offering_id: so._id,
+          course_name: course.course_name,
+          course_code: course.course_code,
+          credits: course.credits,
+          stream: yrSem?.stream || "N/A",
+          yr: yrSem?.yr || "",
+          sem: yrSem?.sem || "",
+          section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A"
+        };
+      });
+
+    res.json(subjects);
+  } catch (error) {
+    console.error("Error fetching faculty subjects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 11.6. Student: Get All Assigned Subjects (for weekend UI)
+app.get("/api/student/subjects/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: studentId,
+      status: "active",
+    }).populate("yr_sem_id");
+
+    if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
+
+    const subjects = await SubjectOffering.find({
+      yr_sem_id: enrollment.yr_sem_id._id,
+    })
+      .populate({
+        path: "course_master_id"
+      })
+      .populate({
+        path: "yr_sem_id"
+      });
+
+    const subjectsWithFaculty = await Promise.all(
+      subjects.map(async (subject) => {
+        const assignment = await FacultyAssignment.findOne({
+          subject_offering_id: subject._id
+        }).populate("faculty_id");
+
+        const course = subject.course_master_id;
+        const yrSem = subject.yr_sem_id;
+        return {
+          subject_offering_id: subject._id,
+          class_name: course.course_name,
+          class_code: course.course_code,
+          faculty_name: assignment?.faculty_id?.name || "Unknown",
+          stream: yrSem?.stream || "N/A",
+          yr: yrSem?.yr || "",
+          sem: yrSem?.sem || "",
+          section_label: yrSem ? `${yrSem.stream} ${yrSem.yr}-${yrSem.sem}` : "N/A"
+        };
+      })
+    );
+
+    res.json(subjectsWithFaculty);
+  } catch (error) {
+    console.error("Error fetching student subjects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 12. Notes Routes
+app.post("/api/notes", upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    const { subject_offering_id, faculty_id, title, description } = req.body;
+    const file_url = `/uploads/${req.file.filename}`;
     const note = new ClassNotes({
       subject_offering_id,
       faculty_id,
@@ -530,8 +686,11 @@ app.post("/api/notes", async (req, res) => {
       is_visible: true
     });
     await note.save();
-    res.status(201).json({ message: "Note added successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+    res.status(201).json({ message: "Note added successfully", note });
+  } catch (error) { 
+    console.error(error);
+    res.status(500).json({ message: "Server error" }); 
+  }
 });
 
 app.get("/api/notes/:subjectOfferingId", async (req, res) => {
@@ -544,8 +703,26 @@ app.get("/api/notes/:subjectOfferingId", async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 13. Assignment Routes (Deprecated in favor of /api/assignment router)
-// Old routes /api/faculty/assignments and /api/assignments/:id are now handled by assignmentRoutes.js
+// 13. Assignment Routes
+app.post("/api/faculty/assignments", upload.single('file'), async (req, res) => {
+  try {
+    const { subject_offering_id, title, instructions, due_date } = req.body;
+    const file_url = req.file ? `/uploads/${req.file.filename}` : '';
+    const assignment = new Assignment({
+      subject_offering_id,
+      title,
+      instructions,
+      file_url,
+      due_date: new Date(due_date),
+      is_active: true
+    });
+    await assignment.save();
+    res.status(201).json({ message: "Assignment posted successfully", assignment });
+  } catch (error) { 
+    console.error(error);
+    res.status(500).json({ message: "Server error" }); 
+  }
+});
 
 // 10. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
@@ -706,12 +883,12 @@ app.get("/api/admin/batch-data", async (req, res) => {
           if (batchStr !== "N/A") fData.batches.add(batchStr);
         }
 
-        // Map offering -> faculty for the Courses Tab
-        if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
-          offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
-            name: a.faculty_id.name,
-            email: a.faculty_id.email
-          });
+          // Map offering -> faculty for the Courses Tab
+          if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
+            offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
+              name: a.faculty_id.name,
+              email: a.faculty_id.email
+            });
         }
       }
     });
@@ -1159,7 +1336,6 @@ app.put("/api/admin/edit-course/:offeringId", async (req, res) => {
   const { offeringId } = req.params;
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
     const { course_code, course_name, credits, assigned_faculty_email } = req.body;
 

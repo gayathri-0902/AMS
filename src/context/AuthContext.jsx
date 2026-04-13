@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({
     isAuthenticated: false,
     role: null,
+    name: null,
     facultyId: null,
     studentId: null,
     parentId: null, // Added Parent ID
@@ -33,15 +34,17 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedRole = sessionStorage.getItem("role");
-    const storedFacultyId = sessionStorage.getItem("facultyId");
-    const storedStudentId = sessionStorage.getItem("studentId");
-    const storedParentId = sessionStorage.getItem("parentId"); // Added Parent storage check
+    const storedRole = localStorage.getItem("role");
+    const storedName = localStorage.getItem("name");
+    const storedFacultyId = localStorage.getItem("facultyId");
+    const storedStudentId = localStorage.getItem("studentId");
+    const storedParentId = localStorage.getItem("parentId"); // Added Parent storage check
 
     if (storedRole && !auth.isAuthenticated) {
       setAuth({
         isAuthenticated: true,
         role: storedRole,
+        name: storedName,
         facultyId: storedFacultyId,
         studentId: storedStudentId,
         parentId: storedParentId,
@@ -68,12 +71,13 @@ export const AuthProvider = ({ children }) => {
         }
       );
 
-      // Extracting IDs from backend response
-      const { facultyId, studentId, parentId, sectionId } = response.data;
+      // Extracting IDs and name from backend response
+      const { facultyId, studentId, parentId, sectionId, name } = response.data;
 
       setAuth({
         isAuthenticated: true,
         role,
+        name: name || null,
         facultyId: facultyId || null,
         studentId: studentId || null,
         parentId: parentId || null,
@@ -81,11 +85,12 @@ export const AuthProvider = ({ children }) => {
       });
 
       // Save user data in local storage
-      sessionStorage.setItem("role", role);
-      sessionStorage.setItem("facultyId", facultyId || "");
-      sessionStorage.setItem("studentId", studentId || "");
-      sessionStorage.setItem("parentId", parentId || "");
-      sessionStorage.setItem("sectionId", sectionId || "");
+      localStorage.setItem("role", role);
+      localStorage.setItem("name", name || "");
+      localStorage.setItem("facultyId", facultyId || "");
+      localStorage.setItem("studentId", studentId || "");
+      localStorage.setItem("parentId", parentId || "");
+      localStorage.setItem("sectionId", sectionId || "");
 
       // Use the helper to determine which ID to pass for redirection
       const targetId = facultyId || studentId || parentId;
@@ -104,15 +109,17 @@ export const AuthProvider = ({ children }) => {
 
   // --- LOGOUT HANDLER (Cleaned up all IDs) ---
   const logout = () => {
-    sessionStorage.removeItem("role");
-    sessionStorage.removeItem("facultyId");
-    sessionStorage.removeItem("studentId");
-    sessionStorage.removeItem("parentId");
-    sessionStorage.removeItem("sectionId");
+    localStorage.removeItem("role");
+    localStorage.removeItem("name");
+    localStorage.removeItem("facultyId");
+    localStorage.removeItem("studentId");
+    localStorage.removeItem("parentId");
+    localStorage.removeItem("sectionId");
     
     setAuth({
       isAuthenticated: false,
       role: null,
+      name: null,
       facultyId: null,
       studentId: null,
       parentId: null,
