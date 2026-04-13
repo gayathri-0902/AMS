@@ -64,12 +64,12 @@ function Admin_ScheduleTab({
 
     const getSessionColor = (dayIdx, sessIdx) => {
         const colors = [
-            "bg-blue-50 border-blue-500",
-            "bg-emerald-50 border-emerald-500",
-            "bg-orange-50 border-orange-500",
-            "bg-rose-50 border-rose-500",
-            "bg-indigo-50 border-indigo-500",
-            "bg-slate-50 border-slate-400"
+            "bg-blue-50 dark:bg-blue-900/20 border-blue-500",
+            "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500",
+            "bg-orange-50 dark:bg-orange-900/20 border-orange-500",
+            "bg-rose-50 dark:bg-rose-900/20 border-rose-500",
+            "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500",
+            "bg-slate-50 dark:bg-slate-800/40 border-slate-400"
         ];
         return colors[(dayIdx + sessIdx) % colors.length];
     };

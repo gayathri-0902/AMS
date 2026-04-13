@@ -13,8 +13,6 @@
   html, body {
     /* Standard stack for Schibsted Grotesk */
     font-family: 'Schibsted Grotesk', sans-serif !important;
-    background-color: #f8fafc;
-    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-sha-smoothing: grayscale;
   }

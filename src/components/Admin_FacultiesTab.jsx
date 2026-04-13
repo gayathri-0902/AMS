@@ -73,7 +73,7 @@ function Admin_FacultiesTab({
                                                 {f.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{f.name}</p>
+                                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight">{f.name}</p>
                                             </div>
                                         </div>
                                     </td>

@@ -40,7 +40,7 @@ export function useBatchData() {
                         ...formData, 
                         ...params, 
                         page: isLoadMore ? page + 1 : 1, 
-                        limit: 50 
+                        limit: 100 
                     } 
                 }
             );
