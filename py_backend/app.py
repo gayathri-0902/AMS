@@ -100,12 +100,14 @@ def handle_query():
     # --- Run the RAG pipeline ---
     try:
         engine = _get_engine(year, branch)
-        response = engine.query(query)
 
         def generate():
             try:
-                # Send initial "processing started" event
+                # Send initial "processing started" event immediately so frontend connects
                 yield f"data: {json.dumps({'status': 'started', 'message': 'Processing your query...'})}\n\n"
+                
+                # Fetch RAG streaming response (blocks during retrieval)
+                response = engine.query(query)
                 
                 # 1) Stream the text token by token
                 for token in response.response_gen:
