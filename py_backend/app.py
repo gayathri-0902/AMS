@@ -13,6 +13,7 @@ The query engine is cached in memory and only re-initialised when the
 year/branch combination changes.
 """
 
+import sys
 import os
 import json
 from flask import Flask, request, jsonify, Response
@@ -403,43 +404,6 @@ def recognize_group_faces_api():
             "status": "error",
             "message": str(e)
         }), 500
-
-    """
-    Recognize faces in a group photo for attendance.
-    Expects: form-data with 'image' file
-    Returns: { "recognized": [...], "face_count": int, "unknown_faces": int, "output_image": str }
-    """
-    try:
-        if 'image' not in request.files:
-            return jsonify({"error": "No image provided"}), 400
-        
-        image_file = request.files['image']
-        if image_file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-        
-        # Save temporary file
-        import tempfile
-        temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, image_file.filename)
-        image_file.save(temp_path)
-        
-        try:
-            # Recognize faces in group
-            result = recognize_group_faces(temp_path)
-            os.remove(temp_path)
-            
-            return jsonify(result), 200
-        except Exception as e:
-            os.remove(temp_path) if os.path.exists(temp_path) else None
-            raise e
-            
-    except Exception as e:
-        print(f"[app] Group recognition error: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
 
 @app.route("/api/attendance/reset", methods=["POST"])
 def reset_attendance():
