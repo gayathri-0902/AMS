@@ -14,11 +14,19 @@ year/branch combination changes.
 """
 
 import os
+import sys
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 from query_engine import setup_query_engine
 from config import cfg
+
+# Add facedetection imports
+sys.path.append(os.path.join(os.path.dirname(__file__), 'facedetection', 'core'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'facedetection', 'test'))
+from enroll import enroll_all
+from recognize import recognize
+from group_attendance import recognize_group_faces, compute_final_attendance, reset_attendance_session, get_attendance_status
 
 # ---------------------------------------------------------------------------
 # Branch mapping  (DB names → RAG folder identifiers)
@@ -139,9 +147,208 @@ def health():
 
 
 # ---------------------------------------------------------------------------
+# Face Detection Routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/enroll", methods=["POST"])
+def enroll_faces():
+    """
+    Enroll all student faces from the data/images2 directory into ChromaDB.
+    Expects: No body required (uses the fixed DATASET_DIR from enroll.py)
+    Returns: { "status": "success", "message": "Students enrolled" }
+    """
+    try:
+        print("[app] Starting face enrollment...")
+        enroll_all()
+        print("[app] Face enrollment completed successfully")
+        return jsonify({
+            "status": "success",
+            "message": "All students enrolled successfully"
+        }), 200
+    except Exception as e:
+        print(f"[app] Enrollment error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/recognize", methods=["POST"])
+def recognize_single_face():
+    """
+    Recognize a single face in an uploaded image.
+    Expects: form-data with 'image' file
+    Returns: { "name": str, "confidence": float }
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image provided"}), 400
+        
+        image_file = request.files['image']
+        if image_file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Save temporary file
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, image_file.filename)
+        image_file.save(temp_path)
+        
+        try:
+            # Recognize the face
+            name, confidence = recognize(temp_path)
+            os.remove(temp_path)
+            
+            return jsonify({
+                "name": name,
+                "confidence": round(float(confidence), 4)
+            }), 200
+        except Exception as e:
+            os.remove(temp_path) if os.path.exists(temp_path) else None
+            raise e
+            
+    except Exception as e:
+        print(f"[app] Recognition error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/recognize-group", methods=["POST"])
+def recognize_group_faces_api():
+    """
+    Recognize faces in a group photo for attendance.
+    Expects: form-data with 'image' file
+    Returns: { "recognized": [...], "face_count": int, "unknown_faces": int, "output_image": str }
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image provided"}), 400
+        
+        image_file = request.files['image']
+        if image_file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Save temporary file
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, image_file.filename)
+        image_file.save(temp_path)
+        
+        try:
+            # Recognize faces in group
+            result = recognize_group_faces(temp_path)
+            os.remove(temp_path)
+            
+            return jsonify(result), 200
+        except Exception as e:
+            os.remove(temp_path) if os.path.exists(temp_path) else None
+            raise e
+            
+    except Exception as e:
+        print(f"[app] Group recognition error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+    """
+    Recognize faces in a group photo for attendance.
+    Expects: form-data with 'image' file
+    Returns: { "recognized": [...], "face_count": int, "unknown_faces": int, "output_image": str }
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image provided"}), 400
+        
+        image_file = request.files['image']
+        if image_file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Save temporary file
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, image_file.filename)
+        image_file.save(temp_path)
+        
+        try:
+            # Recognize faces in group
+            result = recognize_group_faces(temp_path)
+            os.remove(temp_path)
+            
+            return jsonify(result), 200
+        except Exception as e:
+            os.remove(temp_path) if os.path.exists(temp_path) else None
+            raise e
+            
+    except Exception as e:
+        print(f"[app] Group recognition error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/attendance/reset", methods=["POST"])
+def reset_attendance():
+    """
+    Reset attendance counters for a new class session.
+    Call this at the start of each class.
+    """
+    try:
+        reset_attendance_session()
+        return jsonify({
+            "status": "success",
+            "message": "Attendance session reset - ready for new class"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/attendance/status", methods=["GET"])
+def get_attendance_status_api():
+    """
+    Get current attendance status during a session.
+    Returns current counts without finalizing attendance.
+    """
+    try:
+        status = get_attendance_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route("/api/attendance/finalize", methods=["POST"])
+def finalize_attendance():
+    """
+    Compute final attendance based on all processed photos.
+    Expects: { "min_frames_required": int } (optional, defaults to 70% of total frames)
+    Returns: { "present": [...], "absent": [...], "total_frames": int, "min_required": int }
+    """
+    try:
+        data = request.get_json() or {}
+        min_frames = data.get("min_frames_required")
+        
+        result = compute_final_attendance(min_frames)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("FLASK_PORT", 5001))
+    port = int(os.environ.get("FLASK_PORT", 8000))  # Changed to port 8000
     print(f"[app] Starting Academic AI server on port {port} ...")
     app.run(host="0.0.0.0", port=port, debug=True)
