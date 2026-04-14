@@ -205,3 +205,58 @@ CRITIC FEEDBACK (What to fix):
 {critic_notes}
     """)
 ])
+
+# ---------------------------------------------------------------------------
+# Coding Few-Shot Example
+# ---------------------------------------------------------------------------
+CODING_FEW_SHOT = """
+EXAMPLE OUTPUT:
+{{
+  "topic": "Search Algorithms",
+  "questions": [
+    {{
+      "question_text": "Implement a binary search function.",
+      "starter_code": "def binary_search(arr, target):\\n    # TODO: Implement this function\\n    pass",
+      "model_code": "def binary_search(arr, target):\\n    l, r = 0, len(arr) - 1\\n    while l <= r:\\n        mid = (l + r) // 2\\n        if arr[mid] == target: return mid\\n        elif arr[mid] < target: l = mid + 1\\n        else: r = mid - 1\\n    return -1",
+      "algorithm": "Binary Search",
+      "explanation": "Binary search finds the target in O(log n) time. [Source 1: algo.pdf]",
+      "citations": ["[Source 1: algo.pdf]"]
+    }}
+  ]
+}}
+"""
+
+# ---------------------------------------------------------------------------
+# Coding Draft Prompt
+# ---------------------------------------------------------------------------
+CODING_DRAFT_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", f"""
+### ROLE
+You are an expert professor generating programming/coding assignments based on the RAG Context.
+
+### CONSTRAINTS
+- Generate exactly the number of questions requested.
+- Each question MUST have `starter_code` (contains function signature but NO solution) and `model_code` (contains the FULL working code solution).
+- CITATIONS: You MUST copy the exact source label from the context (e.g., [Source 1: algo.py]).
+- Respond ONLY with a valid JSON object. No markdown.
+
+### EXAMPLE
+{CODING_FEW_SHOT}
+    """),
+    ("human", "CONTEXT:\n{context}\n\nVALID SOURCES TO CITE:\n{valid_sources}\n\nINSTRUCTIONS:\n{instructions}")
+])
+
+# ---------------------------------------------------------------------------
+# Coding Revision Prompt
+# ---------------------------------------------------------------------------
+REVISE_CODING_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", f"""
+### ROLE
+You are an expert professor REVISING an existing Coding assignment based on critic feedback.
+
+### TASK
+- Fix ONLY the questions that failed. Maintain the exact same JSON structure.
+- Respond ONLY with the full revised assignment as valid JSON.
+    """),
+    ("human", "FACULTY INSTRUCTIONS:\n{instructions}\n\nRAG CONTEXT:\n{context}\n\nORIGINAL DRAFT:\n{draft}\n\nCRITIC FEEDBACK:\n{critic_notes}")
+])

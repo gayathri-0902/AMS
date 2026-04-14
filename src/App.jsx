@@ -4,12 +4,16 @@ import { useAuth } from "./context/AuthContext";
 
 // Components 
 import LoginPage from "./components/LoginPage";
-import AdminTimetable from "./components/AdminTimetable";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
-import AdminDashboard from "./components/AdminDashboard";
-import ParentDashboard from "./components/ParentDashboard"; 
+//import AdminDashboard from "./components/AdminDashboard";
+import AdminDash2 from "./components/AdminDash2";
+import ParentDashboard from "./components/ParentDashboard";
 import SubjectDetails from "./components/SubjectDetails";
+import AssignmentHub from "./components/AssignmentHub";
+import HandIn from "./components/HandIn";
+import AssignmentGrader from "./components/AssignmentGrader";
+
 
 /**
  * HELPER: Determines the correct URL for a user based on their role and stored IDs.
@@ -80,6 +84,25 @@ const StudentViewWrapper = () => {
 function App() {
   const { auth } = useAuth();
 
+  // Handle Dark Mode detection based on browser theme
+  React.useEffect(() => {
+    const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateTheme = (e) => {
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    // Initial check
+    updateTheme(themeQuery);
+    
+    // Listen for changes
+    themeQuery.addEventListener('change', updateTheme);
+    return () => themeQuery.removeEventListener('change', updateTheme);
+  }, []);
+
   // Safety check for Context initialization
   if (auth === undefined) {
     return (
@@ -92,21 +115,21 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-antiqua">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-antiqua transition-colors duration-300">
       <Routes>
-        <Route 
-          path="/" 
-          element={<Navigate to={getDashboardPath(auth)} replace />} 
+        <Route
+          path="/"
+          element={<Navigate to={getDashboardPath(auth)} replace />}
         />
 
         {/* Public Route */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <LoginPage />
             </PublicRoute>
-          } 
+          }
         />
 
         {/* Admin Access */}
@@ -114,20 +137,11 @@ function App() {
           path="/admin-dashboard"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
+              <AdminDash2 />
             </ProtectedRoute>
           }
         />
 
-        {/* Admin Timetable */}
-        <Route
-          path="/admin/timetable"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminTimetable />
-            </ProtectedRoute>
-          }
-        />
 
         {/* Faculty Access */}
         <Route
@@ -136,36 +150,63 @@ function App() {
             <ProtectedRoute allowedRoles={["faculty"]}>
               <FacultyDashboard />
             </ProtectedRoute>
-          } 
+          }
+        />
+
+        <Route
+          path="/assignment-hub"
+          element={
+            <ProtectedRoute allowedRoles={["faculty"]}>
+              <AssignmentHub />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/assignment-grader/:assignmentId"
+          element={
+            <ProtectedRoute allowedRoles={["faculty"]}>
+              <AssignmentGrader />
+            </ProtectedRoute>
+          }
         />
 
         {/* Student & Parent Access: Shared view for student details */}
-        <Route 
-          path="/student-dashboard/:studentId" 
+        <Route
+          path="/student-dashboard/:studentId"
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <StudentViewWrapper />
             </ProtectedRoute>
-          } 
+          }
         />
 
-        <Route 
-          path="/student/subject-details/:id" 
+        <Route
+          path="/student/subject-details/:id"
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <SubjectDetails />
             </ProtectedRoute>
-          } 
+          }
+        />
+
+        <Route
+          path="/hand-in/:assignmentId"
+          element={
+            <ProtectedRoute allowedRoles={["student", "parent"]}>
+              <HandIn />
+            </ProtectedRoute>
+          }
         />
 
         {/* Parent Access */}
-        <Route 
-          path="/parent-dashboard/:parentId" 
+        <Route
+          path="/parent-dashboard/:parentId"
           element={
             <ProtectedRoute allowedRoles={["parent"]}>
               <ParentDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Catch-all */}

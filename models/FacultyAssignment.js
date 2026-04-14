@@ -12,7 +12,13 @@ const FacultyAssignmentSchema = new mongoose.Schema(
       ref: "SubjectOffering",
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
     start_date: { type: Date, default: Date.now },
+    end_date: { type: Date },
   },
   { collection: "faculty_assignments" }
 );

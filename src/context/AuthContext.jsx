@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({
     isAuthenticated: false,
     role: null,
+    name: null,
     facultyId: null,
     studentId: null,
     parentId: null, // Added Parent ID
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
+    const storedName = localStorage.getItem("name");
     const storedFacultyId = localStorage.getItem("facultyId");
     const storedStudentId = localStorage.getItem("studentId");
     const storedParentId = localStorage.getItem("parentId"); // Added Parent storage check
@@ -42,6 +44,7 @@ export const AuthProvider = ({ children }) => {
       setAuth({
         isAuthenticated: true,
         role: storedRole,
+        name: storedName,
         facultyId: storedFacultyId,
         studentId: storedStudentId,
         parentId: storedParentId,
@@ -68,12 +71,13 @@ export const AuthProvider = ({ children }) => {
         }
       );
 
-      // Extracting IDs from backend response
-      const { facultyId, studentId, parentId, sectionId } = response.data;
+      // Extracting IDs and name from backend response
+      const { facultyId, studentId, parentId, sectionId, name } = response.data;
 
       setAuth({
         isAuthenticated: true,
         role,
+        name: name || null,
         facultyId: facultyId || null,
         studentId: studentId || null,
         parentId: parentId || null,
@@ -82,6 +86,7 @@ export const AuthProvider = ({ children }) => {
 
       // Save user data in local storage
       localStorage.setItem("role", role);
+      localStorage.setItem("name", name || "");
       localStorage.setItem("facultyId", facultyId || "");
       localStorage.setItem("studentId", studentId || "");
       localStorage.setItem("parentId", parentId || "");
@@ -105,6 +110,7 @@ export const AuthProvider = ({ children }) => {
   // --- LOGOUT HANDLER (Cleaned up all IDs) ---
   const logout = () => {
     localStorage.removeItem("role");
+    localStorage.removeItem("name");
     localStorage.removeItem("facultyId");
     localStorage.removeItem("studentId");
     localStorage.removeItem("parentId");
@@ -113,6 +119,7 @@ export const AuthProvider = ({ children }) => {
     setAuth({
       isAuthenticated: false,
       role: null,
+      name: null,
       facultyId: null,
       studentId: null,
       parentId: null,
@@ -132,6 +139,8 @@ export const AuthProvider = ({ children }) => {
           ? auth.facultyId
           : auth.role === "student"
           ? auth.studentId
+          : auth.role === "parent"
+          ? auth.parentId
           : null;
       return (
         <Navigate
@@ -153,6 +162,8 @@ export const AuthProvider = ({ children }) => {
           ? auth.facultyId
           : auth.role === "student"
           ? auth.studentId
+          : auth.role === "parent"
+          ? auth.parentId
           : null;
 
       const target = redirectToDashboard(auth.role, id);
