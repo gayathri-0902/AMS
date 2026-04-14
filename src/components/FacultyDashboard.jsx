@@ -205,7 +205,6 @@ function FacultyDashboard() {
     try {
       await axiosInstance.post(`/api/notes`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${auth.token}`
         }
       });
@@ -241,7 +240,6 @@ function FacultyDashboard() {
     try {
       await axiosInstance.post(`/api/faculty/assignments`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${auth.token}`
         }
       });
@@ -471,8 +469,8 @@ function FacultyDashboard() {
                   <p className="text-sm font-bold text-purple-400 uppercase tracking-widest text-center">{selectedNoteFile ? selectedNoteFile.name : "Choose PDF/DOC/TXT to Upload"}</p>
                 </div>
                 <form onSubmit={handleAddNote}>
-                  <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({ ...newNote, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
-                  <textarea placeholder="Description (optional)" value={newNote.description} onChange={(e) => setNewNote({ ...newNote, description: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 h-24 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" />
+                  <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({ ...newNote, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
+                  <textarea placeholder="Description (optional)" value={newNote.description} onChange={(e) => setNewNote({ ...newNote, description: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 h-24 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" />
                   <button type="submit" disabled={!selectedNoteFile} className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest">Publish Resource</button>
                 </form>
 
@@ -515,8 +513,8 @@ function FacultyDashboard() {
                     <p className="text-sm font-bold text-blue-400 uppercase tracking-widest text-center">{selectedAssignFile ? selectedAssignFile.name : "Optional: Attach File"}</p>
                   </div>
                   <form onSubmit={handleAddAssignment}>
-                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
-                    <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({...newAssignment, instructions: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                    <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({...newAssignment, instructions: e.target.value})} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
                     <div className="flex flex-col mb-6">
                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
                        <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-blue-400 transition-all" required />
