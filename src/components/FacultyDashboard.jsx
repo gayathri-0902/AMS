@@ -203,8 +203,9 @@ function FacultyDashboard() {
     formData.append('description', newNote.description || '');
 
     try {
-      await axiosInstance.post(`/api/notes`, formData, {
+      await axios.post(`${API_BASE}/api/notes`, formData, {
         headers: {
+          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${auth.token}`
         }
       });
@@ -238,8 +239,9 @@ function FacultyDashboard() {
     formData.append('due_date', newAssignment.due_date);
 
     try {
-      await axiosInstance.post(`/api/faculty/assignments`, formData, {
+      await axios.post(`${API_BASE}/api/faculty/assignments`, formData, {
         headers: {
+          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${auth.token}`
         }
       });
