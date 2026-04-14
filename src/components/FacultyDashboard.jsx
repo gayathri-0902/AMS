@@ -495,14 +495,14 @@ function FacultyDashboard() {
                 )}
               </div>
               {/* Assignment */}
-              {selectedClass && (
+              {(selectedClass || selectedSubjectOffering) && (
                 <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-bold flex items-center text-gray-800">
                       <HiOutlineClipboardList className="mr-3 text-blue-600 w-8 h-8" /> Assign New Task
                     </h3>
                     <Link
-                      to={`/assignment-hub?subjectId=${selectedClass.class_id}`}
+                      to={`/assignment-hub?subjectId=${selectedClass?.class_id || selectedSubjectOffering?.subject_offering_id}`}
                       className="flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all shadow-sm"
                     >
                       <HiOutlineSparkles size={16} />
@@ -557,7 +557,7 @@ function FacultyDashboard() {
                     </div>
                   </div>
                 </div>
-              )}h3
+              )}
             </div>
 
           </div>
