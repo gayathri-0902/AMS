@@ -32,6 +32,7 @@ import Admin_ModalAddFaculty from "./Admin_ModalAddFaculty";
 import Admin_ModalEditFaculty from "./Admin_ModalEditFaculty";
 import Admin_ModalAddSession from "./Admin_ModalAddSession";
 import Admin_ModalBulkUpload from "./Admin_ModalBulkUpload";
+import Admin_ModalConfirm from "./Admin_ModalConfirm";
 
 // Modal key constants — avoids raw string typos across the tree.
 export const MODALS = {
@@ -45,6 +46,7 @@ export const MODALS = {
     ADD_FACULTY: "addFaculty",
     EDIT_FACULTY: "editFaculty",
     ADD_SESSION: "addSession",
+    CONFIRM_ARCHIVE: "confirmArchive",
 };
 
 function AdminDash2() {
@@ -130,11 +132,15 @@ function AdminDash2() {
                                 hasMore={batch.hasMore}
                                 loadMore={batch.loadMore}
                                 loadingMore={batch.loadingMore}
-                                // Props for FilterBar
+                                // Props for FilterBar (now handled at top level, but kept if needed)
                                 handleChange={batch.handleChange}
                                 handleFetch={batch.handleFetch}
                                 clearFilters={batch.clearFilters}
                                 loading={batch.loading}
+                                isArchived={batch.formData.isArchived === "true"}
+                                onArchiveStudent={students.handleArchiveClick}
+                                onRestoreStudent={students.handleRestoreStudent}
+                                toggleArchivedView={batch.toggleArchivedView}
                             />
                         )}
 
@@ -151,6 +157,8 @@ function AdminDash2() {
                                 handleFetch={batch.handleFetch}
                                 clearFilters={batch.clearFilters}
                                 loading={batch.loading}
+                                toggleArchivedView={batch.toggleArchivedView}
+                                isArchived={batch.formData.isArchived === "true"}
                             />
                         )}
 
@@ -166,6 +174,8 @@ function AdminDash2() {
                                 handleFetch={batch.handleFetch}
                                 clearFilters={batch.clearFilters}
                                 loading={batch.loading}
+                                toggleArchivedView={batch.toggleArchivedView}
+                                isArchived={batch.formData.isArchived === "true"}
                             />
                         )}
 
@@ -179,6 +189,8 @@ function AdminDash2() {
                                 handleFetch={batch.handleFetch}
                                 clearFilters={batch.clearFilters}
                                 loading={batch.loading}
+                                toggleArchivedView={batch.toggleArchivedView}
+                                isArchived={batch.formData.isArchived === "true"}
                             />
                         )}
 
@@ -285,10 +297,18 @@ function AdminDash2() {
                 <Admin_ModalBulkUpload 
                     isOpen={activeModal === MODALS.BULK_UPLOAD}
                     onClose={() => setActiveModal(null)}
-                    onRefresh={batch.refetchBatchData}
+                    onImport={batch.refetchBatchData} 
                 />
 
-
+                <Admin_ModalConfirm
+                    isOpen={activeModal === MODALS.CONFIRM_ARCHIVE}
+                    onClose={() => setActiveModal(null)}
+                    onConfirm={students.handleConfirmArchive}
+                    title={`Archive ${students.pendingArchiveStudent?.name}?`}
+                    message={`This move "${students.pendingArchiveStudent?.name}" to the Archive and revoke their login access. You can restore them at any time from the Archive view.`}
+                    loading={students.archivingLoading}
+                    type="archive"
+                />
             </div>
         </div>
     );
