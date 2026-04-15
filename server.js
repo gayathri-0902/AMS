@@ -79,7 +79,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (req, file, cb) => {
@@ -128,6 +128,10 @@ app.post("/api/login", async (req, res) => {
     const isMatch = await bcrypt.compare(body.password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (user.is_archived) {
+      return res.status(403).json({ message: "Account has been archived. Please contact your administrator." });
     }
 
     if (body.role && user.role !== body.role) {
@@ -184,7 +188,7 @@ app.get("/api/faculty-dashboard/:facultyId", async (req, res) => {
     const { facultyId } = req.params;
     const debugDay = req.query.debugDay;
     const currentDay = debugDay || new Date().toLocaleString("en-US", { weekday: "short" });
-    
+
     const timetableEntries = await TimeTable.find({
       faculty_id: facultyId,
       day_of_week: currentDay
@@ -228,6 +232,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
     const enrollments = await StudentEnrollment.find({
       yr_sem_id: sectionId,
       status: "active",
+      is_archived: { $ne: true }   // to disable archived students from faculty dashboard
     }).populate("student_id").sort({ "student_id.roll_no": 1 });
 
     if (!enrollments || enrollments.length === 0) {
@@ -368,7 +373,8 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
       // 3. Safe Enrollment Check (Optional Chaining prevents 500 errors)
       const enrollment = await StudentEnrollment.findOne({
         student_id: student._id,
-        status: "active"
+        status: "active",
+        is_archived: { $ne: true }   // to disable archived students from parent dashboard
       }).populate("yr_sem_id");
 
       // 4. Safe Attendance Calculation
@@ -690,9 +696,9 @@ app.post("/api/notes", upload.single('file'), async (req, res) => {
     });
     await note.save();
     res.status(201).json({ message: "Note added successfully", note });
-  } catch (error) { 
+  } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error" }); 
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -721,9 +727,9 @@ app.post("/api/faculty/assignments", upload.single('file'), async (req, res) => 
     });
     await assignment.save();
     res.status(201).json({ message: "Assignment posted successfully", assignment });
-  } catch (error) { 
+  } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error" }); 
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -749,11 +755,16 @@ app.post("/api/feedback", async (req, res) => {
 // 11. get data for admin dashboard (SUPPORT MULTIPLE BATCHES & PAGINATION)
 app.get("/api/admin/batch-data", async (req, res) => {
   try {
-    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active" } = req.query;
+    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active", isArchived = "false" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let studentQuery = {};
+    const archivedFilter = isArchived === "true";
+    const archivedQuery = archivedFilter ? true : { $ne: true };
+
+    // Base student query must always consider archival status
+    let studentQuery = { is_archived: archivedQuery };
     let offeringQuery = { is_active: true };
+    let timetableQuery = {};
     let isFiltered = false;
 
     // If any filter is provided, find all matching metadata IDs
@@ -779,25 +790,25 @@ app.get("/api/admin/batch-data", async (req, res) => {
       }
 
       const yrSemIds = matchingYrSems.map(y => y._id);
-      studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
+      studentQuery = { yr_sem_id: { $in: yrSemIds }, status, is_archived: archivedQuery };
       offeringQuery = { yr_sem_id: { $in: yrSemIds } };
       timetableQuery = { yr_sem_id: { $in: yrSemIds } }; // Timetable doesn't have is_active
       isFiltered = true;
     } else {
-      // If no ID filters are provided, we show all students matching the requested status (Default: Active)
-      studentQuery = { status };
+      // Keep is_archived even when no yr/sem filters are applied
+      studentQuery = { ...studentQuery, status };
       offeringQuery = {};
-      timetableQuery = {}; // Fetch all for global view
+      timetableQuery = {};
       isFiltered = false;
     }
 
     // 1. Fetch Students using Aggregation to allow sorting by Roll No (populated field)
     const enrollmentsTotal = await StudentEnrollment.countDocuments(studentQuery);
-    
+
     // Convert studentQuery to use ObjectIds for $match if needed, but here simple fields work
     // We'll use a simple find().populate() for now but sort in-memory OR use find() on students first.
     // Actually, for 100 students, in-memory sort is perfectly fine and most reliable.
-    
+
     const rawEnrollments = await StudentEnrollment.find(studentQuery)
       .populate({ path: "student_id", select: "name roll_no email" })
       .populate({ path: "yr_sem_id", select: "yr sem stream academic_yr" })
@@ -846,8 +857,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
       academic_yr: offering.yr_sem_id?.academic_yr
     }));
 
-    // 3. Fetch ALL Faculties & Assignments (Enriched)
-    const allFaculty = await Faculty.find({}).lean();
+    // 3. Fetch Faculties matching archival status
+    const allFaculty = await Faculty.find({ is_archived: archivedQuery }).lean();
     const assignments = await FacultyAssignment.find({
       subject_offering_id: { $in: offerings.map(o => o._id) },
       status: "active"
@@ -892,12 +903,12 @@ app.get("/api/admin/batch-data", async (req, res) => {
           if (batchStr !== "N/A") fData.batches.add(batchStr);
         }
 
-          // Map offering -> faculty for the Courses Tab
-          if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
-            offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
-              name: a.faculty_id.name,
-              email: a.faculty_id.email
-            });
+        // Map offering -> faculty for the Courses Tab
+        if (!offeringToFacultyMap.has(a.subject_offering_id._id.toString())) {
+          offeringToFacultyMap.set(a.subject_offering_id._id.toString(), {
+            name: a.faculty_id.name,
+            email: a.faculty_id.email
+          });
         }
       }
     });
@@ -1033,11 +1044,11 @@ app.post("/api/admin/add-student", async (req, res) => {
     }
 
     // 1. Verify if Batch Metadata exists
-    const yrSem = await YrSem.findOne({ 
-      yr: Number(yr), 
-      sem: Number(sem), 
-      stream: { $regex: new RegExp(`^${stream}$`, "i") }, 
-      academic_yr: { $regex: new RegExp(`^${academic_yr}$`, "i") } 
+    const yrSem = await YrSem.findOne({
+      yr: Number(yr),
+      sem: Number(sem),
+      stream: { $regex: new RegExp(`^${stream}$`, "i") },
+      academic_yr: { $regex: new RegExp(`^${academic_yr}$`, "i") }
     }).session(session);
     if (!yrSem) {
       throw new Error("Target Batch not found. Please ensure Year/Sem/Stream/Cycle are created in Batch Setup first.");
@@ -1100,7 +1111,7 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
       // --- EXCEL PROCESSING ---
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
-      
+
       const worksheets = workbook.worksheets;
       if (worksheets.length > 1) {
         sheetWarning = `Multiple sheets detected. Only the first sheet ("${worksheets[0].name}") was processed.`;
@@ -1108,23 +1119,23 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
 
       const worksheet = worksheets[0];
       if (worksheet) {
-          const headers = [];
-          worksheet.getRow(1).eachCell((cell, colNumber) => {
-              headers[colNumber] = cell.value?.toString().trim();
-          });
+        const headers = [];
+        worksheet.getRow(1).eachCell((cell, colNumber) => {
+          headers[colNumber] = cell.value?.toString().trim();
+        });
 
-          worksheet.eachRow((row, rowNumber) => {
-              if (rowNumber === 1) return; // skip header
-              
-              const rowData = {};
-              row.eachCell((cell, colNumber) => {
-                  const header = headers[colNumber];
-                  if (header) {
-                      rowData[header] = cell.value;
-                  }
-              });
-              results.push(rowData);
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // skip header
+
+          const rowData = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber];
+            if (header) {
+              rowData[header] = cell.value;
+            }
           });
+          results.push(rowData);
+        });
       }
       fs.unlinkSync(filePath); // Clean up
       await processRows(results);
@@ -1146,7 +1157,7 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
   async function processRows(data) {
     for (const row of data) {
       const { name, roll_no, email, password, yr, sem, stream, academic_yr } = row;
-      
+
       const session = await mongoose.startSession();
       session.startTransaction();
 
@@ -1200,10 +1211,10 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
         successList.push({ name, roll_no });
       } catch (error) {
         await session.abortTransaction();
-        failureList.push({ 
-          roll_no: roll_no || "Unknown", 
-          name: name || "Unknown", 
-          error: error.message 
+        failureList.push({
+          roll_no: roll_no || "Unknown",
+          name: name || "Unknown",
+          error: error.message
         });
       } finally {
         session.endSession();
@@ -1425,7 +1436,71 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   }
 });
 
-// 14.1 Edit Faculty
+// 14.1 Archive Student
+app.put("/api/admin/archive/student/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const student = await Student.findById(req.params.id).session(session);
+    if (!student) throw new Error("Student not found");
+
+    await Student.findByIdAndUpdate(req.params.id, {
+      is_archived: true,
+      archived_at: new Date()
+    }).session(session);
+
+    await User.findByIdAndUpdate(student.user_id, {
+      is_archived: true
+    }).session(session);
+
+    await StudentEnrollment.updateMany(
+      { student_id: req.params.id },
+      { is_archived: true }
+    ).session(session);
+
+    await session.commitTransaction();
+    res.json({ message: "Student archived successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500).json({ message: error.message });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14.2 Restore Student
+app.put("/api/admin/restore/student/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const student = await Student.findById(req.params.id).session(session);
+    if (!student) throw new Error("Student not found");
+
+    await Student.findByIdAndUpdate(req.params.id, {
+      is_archived: false,
+      archived_at: null
+    }).session(session);
+
+    await User.findByIdAndUpdate(student.user_id, {
+      is_archived: false
+    }).session(session);
+
+    await StudentEnrollment.updateMany(
+      { student_id: req.params.id },
+      { is_archived: false }
+    ).session(session);
+
+    await session.commitTransaction();
+    res.json({ message: "Student restored successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500).json({ message: error.message });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14.3 Edit Faculty
 app.put("/api/admin/edit-faculty/:facultyId", async (req, res) => {
   const { facultyId } = req.params;
   const session = await mongoose.startSession();
