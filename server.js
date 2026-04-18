@@ -736,20 +736,223 @@ app.post("/api/faculty/assignments", upload.single('file'), async (req, res) => 
 // 10. Feedback Routes
 app.get("/api/feedback/eligibility/:studentId", async (req, res) => {
   try {
-    const enrollment = await StudentEnrollment.findOne({ student_id: req.params.studentId });
-    if (!enrollment || !enrollment.end_date) return res.json({ feedbackAllowed: false });
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const endDateStr = new Date(enrollment.end_date).toISOString().slice(0, 10);
-    res.json({ feedbackAllowed: todayStr === endDateStr });
-  } catch (err) { res.status(500).json({ message: "Server error" }); }
+    // 1. Find active enrollment
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: req.params.studentId,
+      status: "active"
+    }).populate("yr_sem_id");
+
+    if (!enrollment || !enrollment.yr_sem_id) {
+      return res.json({ feedbackAllowed: false });
+    }
+
+    const { yr_sem_id } = enrollment;
+    const activePhase = yr_sem_id.active_feedback_phase;
+
+    // 2. Check if any feedback session is active for this batch
+    if (!activePhase || activePhase === "None") {
+      return res.json({ feedbackAllowed: false });
+    }
+
+    // 3. Get all subjects for this batch
+    const subjects = await SubjectOffering.find({ yr_sem_id: yr_sem_id._id })
+      .populate("course_master_id");
+
+    // 4. Check which feedbacks have already been submitted for THIS phase
+    const submittedFeedbacks = await Feedback.find({
+      student_id: req.params.studentId,
+      feedback_type: activePhase
+    });
+
+    const submittedSubjectIds = submittedFeedbacks.map(f => f.subject_offering_id.toString());
+
+    // Calculate which subjects are still pending
+    const pendingSubjects = subjects
+      .filter(s => !submittedSubjectIds.includes(s._id.toString()))
+      .map(s => ({
+        subject_offering_id: s._id,
+        course_name: s.course_master_id?.course_name || "Unknown",
+        course_code: s.course_master_id?.course_code || "N/A"
+      }));
+
+    res.json({
+      feedbackAllowed: pendingSubjects.length > 0,
+      activePhase,
+      pendingSubjects
+    });
+  } catch (err) {
+    console.error("Feedback Eligibility Error:", err);
+    res.status(500).json({ message: "Server error checking feedback eligibility" });
+  }
 });
 
 app.post("/api/feedback", async (req, res) => {
   try {
+    // Basic validation
+    const { student_id, subject_offering_id, feedback_type } = req.body;
+    if (!student_id || !subject_offering_id || !feedback_type) {
+      return res.status(400).json({ message: "Missing required feedback fields" });
+    }
+
     const feedback = new Feedback(req.body);
     await feedback.save();
     res.status(201).json({ message: "Feedback submitted successfully" });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+  } catch (error) {
+    console.error("Feedback Post Error:", error);
+    // Handle uniqueness constraint specifically
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "You have already submitted feedback for this subject in this phase." });
+    }
+    res.status(500).json({ message: "Error saving feedback" });
+  }
+});
+
+// Admin: Toggle Feedback Phase for multiple batches
+app.post("/api/admin/feedback/toggle", async (req, res) => {
+  const { yr_sem_ids, target_phase } = req.body;
+  try {
+    if (!yr_sem_ids || !Array.isArray(yr_sem_ids)) {
+      return res.status(400).json({ message: "Invalid or missing batch IDs" });
+    }
+    if (!["None", "Mid-1", "Mid-2", "End-Sem"].includes(target_phase)) {
+      return res.status(400).json({ message: "Invalid feedback phase session type" });
+    }
+
+    await YrSem.updateMany(
+      { _id: { $in: yr_sem_ids } },
+      { active_feedback_phase: target_phase }
+    );
+    res.json({ message: `Feedback phase updated to ${target_phase} for selected batches.` });
+  } catch (err) {
+    console.error("Feedback Toggle Error:", err);
+    res.status(500).json({ message: "Server error while toggling feedback phase" });
+  }
+});
+
+// Admin: Export Feedback Data to Excel (Two-Sheet Report)
+app.get("/api/admin/feedback/export", async (req, res) => {
+  const { phase, yr_sem_ids } = req.query;
+  try {
+    if (!phase) return res.status(400).json({ message: "Phase is required for export" });
+
+    const query = { feedback_type: phase };
+    if (yr_sem_ids) {
+      const ids = yr_sem_ids.split(",");
+      const offerings = await SubjectOffering.find({ yr_sem_id: { $in: ids } }).select("_id");
+      query.subject_offering_id = { $in: offerings.map(o => o._id) };
+    }
+
+    const feedbacks = await Feedback.find(query)
+      .populate({
+        path: "subject_offering_id",
+        populate: [
+          { path: "course_master_id" },
+          { path: "yr_sem_id" }
+        ]
+      });
+
+    const workbook = new ExcelJS.Workbook();
+    const scorecardSheet = workbook.addWorksheet("Scorecard");
+    const commentsSheet = workbook.addWorksheet("Comments");
+
+    // 1. Setup Scorecard Sheet
+    scorecardSheet.columns = [
+      { header: "Faculty Name", key: "faculty", width: 25 },
+      { header: "Subject Name", key: "subject", width: 30 },
+      { header: "Batch", key: "batch", width: 25 },
+      { header: "Phase", key: "phase", width: 12 },
+      { header: "Total Responses", key: "responses", width: 15 },
+      { header: "Q1 Avg", key: "q1", width: 10 },
+      { header: "Q2 Avg", key: "q2", width: 10 },
+      { header: "Q3 Avg", key: "q3", width: 10 },
+      { header: "Q4 Avg", key: "q4", width: 10 },
+      { header: "Overall Avg", key: "overall", width: 15 }
+    ];
+
+    // Aggregation Logic
+    const summary = {};
+    for (const f of feedbacks) {
+      const soId = f.subject_offering_id._id.toString();
+      if (!summary[soId]) {
+        const assignment = await FacultyAssignment.findOne({ subject_offering_id: soId, status: "active" }).populate("faculty_id");
+        summary[soId] = {
+          faculty: assignment?.faculty_id?.name || "Not Assigned",
+          subject: f.subject_offering_id.course_master_id?.course_name || "Unknown",
+          batch: f.subject_offering_id.yr_sem_id ? `${f.subject_offering_id.yr_sem_id.stream} Y${f.subject_offering_id.yr_sem_id.yr}-S${f.subject_offering_id.yr_sem_id.sem}` : "N/A",
+          phase: f.feedback_type,
+          count: 0,
+          q1Sum: 0, q2Sum: 0, q3Sum: 0, q4Sum: 0, overallSum: 0,
+          comments: []
+        };
+      }
+      const s = summary[soId];
+      s.count++;
+      s.q1Sum += f.regularity;
+      s.q2Sum += f.interaction;
+      s.q3Sum += f.explanation;
+      s.q4Sum += f.resources;
+      const rowAvg = (f.regularity + f.interaction + f.explanation + f.resources + f.counselling + f.remedial + f.syllabus_alignment + f.pace) / 8;
+      s.overallSum += rowAvg;
+      if (f.comments) s.comments.push({ text: f.comments, rating: rowAvg.toFixed(1) });
+    }
+
+    Object.values(summary).forEach(s => {
+      scorecardSheet.addRow({
+        faculty: s.faculty,
+        subject: s.subject,
+        batch: s.batch,
+        phase: s.phase,
+        responses: s.count,
+        q1: (s.q1Sum / s.count).toFixed(2),
+        q2: (s.q2Sum / s.count).toFixed(2),
+        q3: (s.q3Sum / s.count).toFixed(2),
+        q4: (s.q4Sum / s.count).toFixed(2),
+        overall: (s.overallSum / s.count).toFixed(2)
+      });
+    });
+
+    // 2. Setup Comments Sheet
+    commentsSheet.columns = [
+      { header: "Faculty Name", key: "faculty", width: 25 },
+      { header: "Subject", key: "subject", width: 30 },
+      { header: "Rating Score", key: "rating", width: 12 },
+      { header: "Student Comment", key: "comment", width: 100 }
+    ];
+
+    Object.values(summary).forEach(s => {
+      s.comments.forEach(c => {
+        commentsSheet.addRow({
+          faculty: s.faculty,
+          subject: s.subject,
+          rating: c.rating,
+          comment: c.text
+        });
+      });
+    });
+
+    // Styling
+    scorecardSheet.getRow(1).font = { bold: true };
+    commentsSheet.getRow(1).font = { bold: true };
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=Feedback_${phase}_${new Date().toLocaleDateString()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    console.error("Export Error:", err);
+    res.status(500).json({ message: "Failed to generate report" });
+  }
+});
+
+// NEW: Fetch all batches for administration
+app.get("/api/admin/batches", async (req, res) => {
+  try {
+    const batches = await YrSem.find().sort({ stream: 1, yr: 1, sem: 1 });
+    res.json(batches);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // 11. get data for admin dashboard (SUPPORT MULTIPLE BATCHES & PAGINATION)
