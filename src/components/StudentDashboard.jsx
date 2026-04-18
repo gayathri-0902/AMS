@@ -27,6 +27,7 @@ const StudentDashboard = ({ overrideId }) => {
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [assignments, setAssignments] = useState([]);
+  const [feedbackStatus, setFeedbackStatus] = useState({ allowed: false, phase: "", pending: [] });
 
   // NEW: Weekend UI State
   const [showResourcePicker, setShowResourcePicker] = useState(false);
@@ -140,6 +141,18 @@ const StudentDashboard = ({ overrideId }) => {
           setAllSubjects([]);
         }
 
+        // NEW: Fetch feedback eligibility
+        try {
+          const fbRes = await axios.get(`${API_BASE}/api/feedback/eligibility/${targetId}`);
+          setFeedbackStatus({
+            allowed: fbRes.data.feedbackAllowed,
+            phase: fbRes.data.activePhase,
+            pending: fbRes.data.pendingSubjects || []
+          });
+        } catch (error) {
+          console.error("Error fetching feedback status:", error);
+        }
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -157,7 +170,7 @@ const StudentDashboard = ({ overrideId }) => {
       try {
         const allAssignments = [];
         const seenSubjectIds = new Set();
-        
+
         for (const course of timetable) {
           if (!seenSubjectIds.has(course.subject_offering_id)) {
             seenSubjectIds.add(course.subject_offering_id);
@@ -165,7 +178,7 @@ const StudentDashboard = ({ overrideId }) => {
             allAssignments.push(...res.data);
           }
         }
-        
+
         // Final safety deduplication by assignment _id to ensure no React key collisions
         const uniqueAssignments = Array.from(new Map(allAssignments.map(a => [a._id, a])).values());
 
@@ -231,6 +244,38 @@ const StudentDashboard = ({ overrideId }) => {
             Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name}</span>
           </p>
         </div>
+
+        {/* --- MINIMALISTIC FEEDBACK NOTIFICATION --- */}
+        {feedbackStatus.allowed && feedbackStatus.pending.length > 0 && (
+          <div className="mb-10 p-6 bg-white rounded-[2rem] border-l-8 border-blue-600 shadow-sm animate-in slide-in-from-top-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                <HiOutlineBookOpen className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-800 tracking-tight leading-none mb-1">
+                  Pending Course Feedback
+                </h3>
+                <p className="text-gray-400 text-sm font-medium italic">
+                  Please complete the <span className="text-blue-600 font-bold">{feedbackStatus.phase}</span> evaluations for your active courses.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {feedbackStatus.pending.map(s => (
+                <button
+                  key={s.subject_offering_id}
+                  onClick={() => navigate(`/student/feedback/${s.subject_offering_id}`)}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 flex items-center gap-2 group"
+                >
+                  {s.course_name}
+                  <HiOutlineArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* --- WEEKDAY: ASSIGNMENT TIMELINE + COURSE CARDS --- */}
         {timetable.length > 0 ? (
@@ -360,19 +405,17 @@ const StudentDashboard = ({ overrideId }) => {
                       <div
                         key={subject.subject_offering_id}
                         onClick={() => handleSelectSubject(subject)}
-                        className={`bg-white rounded-[32px] p-6 shadow-sm border-2 cursor-pointer transition-all duration-300 ${
-                          selectedSubject?.subject_offering_id === subject.subject_offering_id
+                        className={`bg-white rounded-[32px] p-6 shadow-sm border-2 cursor-pointer transition-all duration-300 ${selectedSubject?.subject_offering_id === subject.subject_offering_id
                             ? "border-blue-500 shadow-lg"
                             : "border-transparent hover:border-blue-200"
-                        }`}
+                          }`}
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              selectedSubject?.subject_offering_id === subject.subject_offering_id
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedSubject?.subject_offering_id === subject.subject_offering_id
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-blue-50 text-blue-500'
-                            }`}
+                              }`}
                           >
                             <HiOutlineBookOpen className="w-6 h-6" />
                           </div>
@@ -394,7 +437,7 @@ const StudentDashboard = ({ overrideId }) => {
                   {selectedSubject && (
                     <div className="animate-in slide-in-from-bottom-4 duration-500">
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[40px] p-10 border-2 border-blue-200 shadow-lg">
-                        
+
                         {/* Header */}
                         <div className="mb-8">
                           <h2 className="text-3xl font-bold text-gray-800 mb-2">
@@ -447,7 +490,7 @@ const StudentDashboard = ({ overrideId }) => {
                                       {note.title}
                                     </h4>
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">
-                                       {new Date(note.upload_date).toLocaleDateString('en-US', {
+                                      {new Date(note.upload_date).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'short',
                                         day: 'numeric'

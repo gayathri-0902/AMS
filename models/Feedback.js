@@ -22,6 +22,11 @@ const FeedbackSchema = new mongoose.Schema(
     remedial: { type: Number, min: 1, max: 5, required: true },
     syllabus_alignment: { type: Number, min: 1, max: 5, required: true },
     pace: { type: Number, min: 1, max: 5, required: true },
+    feedback_type: { 
+      type: String, 
+      enum: ["Mid-1", "Mid-2", "End-Sem"], 
+      required: true 
+    },
 
     comments: { type: String },
   },
@@ -29,7 +34,7 @@ const FeedbackSchema = new mongoose.Schema(
 );
 
 FeedbackSchema.index(
-  { student_id: 1, subject_offering_id: 1 },
+  { student_id: 1, subject_offering_id: 1, feedback_type: 1 },
   { unique: true }
 );
 
