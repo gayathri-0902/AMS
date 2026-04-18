@@ -20,6 +20,7 @@ import Admin_StudentsTab from "./Admin_StudentsTab";
 import Admin_CoursesTab from "./Admin_CoursesTab";
 import Admin_FacultiesTab from "./Admin_FacultiesTab";
 import Admin_ScheduleTab from "./Admin_ScheduleTab";
+import Admin_FeedbackTab from "./Admin_FeedbackTab";
 
 // ── Modals ─────────────────────────────────────────────────────────────────────
 import Admin_ModalAddStudent from "./Admin_ModalAddStudent";
@@ -192,6 +193,10 @@ function AdminDash2() {
                                 toggleArchivedView={batch.toggleArchivedView}
                                 isArchived={batch.formData.isArchived === "true"}
                             />
+                        )}
+
+                        {!batch.loading && batch.activeTab === "Feedback" && (
+                            <Admin_FeedbackTab />
                         )}
 
                     </div>

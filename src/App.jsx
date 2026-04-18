@@ -13,6 +13,7 @@ import SubjectDetails from "./components/SubjectDetails";
 import AssignmentHub from "./components/AssignmentHub";
 import HandIn from "./components/HandIn";
 import AssignmentGrader from "./components/AssignmentGrader";
+import FeedbackPage from "./components/FeedbackPage";
 
 
 /**
@@ -195,6 +196,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["student", "parent"]}>
               <HandIn />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/student/feedback/:subjectOfferingId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <FeedbackPage />
             </ProtectedRoute>
           }
         />

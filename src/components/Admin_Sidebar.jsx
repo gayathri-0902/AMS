@@ -4,6 +4,7 @@ import {
     MdPerson,
     MdMenuBook,
     MdCalendarToday,
+    MdFeedback,
     MdChevronLeft,
     MdChevronRight
 } from "react-icons/md";
@@ -21,6 +22,7 @@ function Admin_Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed })
         { label: "Faculties", icon: MdPerson },
         { label: "Courses", icon: MdMenuBook },
         { label: "Schedule", icon: MdCalendarToday },
+        { label: "Feedback", icon: MdFeedback },
     ];
 
     return (
