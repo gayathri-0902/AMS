@@ -130,10 +130,6 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    if (user.is_archived) {
-      return res.status(403).json({ message: "Account has been archived. Please contact your administrator." });
-    }
-
     if (body.role && user.role !== body.role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
@@ -232,7 +228,6 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
     const enrollments = await StudentEnrollment.find({
       yr_sem_id: sectionId,
       status: "active",
-      is_archived: { $ne: true }   // to disable archived students from faculty dashboard
     }).populate("student_id").sort({ "student_id.roll_no": 1 });
 
     if (!enrollments || enrollments.length === 0) {
@@ -344,6 +339,54 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
 });
 // ===== END MODIFICATION =====
 
+// 4.5 Student Dashboard: Full Weekly Timetable
+app.get("/api/student/weekly-timetable/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: studentId,
+      status: "active",
+    }).populate("yr_sem_id");
+
+    if (!enrollment) return res.status(404).json({ error: "Active enrollment not found" });
+
+    const yrSem = enrollment.yr_sem_id;
+
+    const timetableEntries = await TimeTable.find({
+      yr_sem_id: yrSem._id,
+    })
+      .populate({
+        path: "subject_offering_id",
+        populate: { path: "course_master_id" },
+      })
+      .populate("faculty_id")
+      .sort({ session_no: 1 });
+
+    const timetableData = timetableEntries.map((entry) => {
+      const subject = entry.subject_offering_id || {};
+      const course = subject.course_master_id || {};
+
+      return {
+        class_name: course.course_name || "Unknown Subject",
+        class_code: course.course_code || "N/A",
+        subject_offering_id: subject._id,
+        faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
+        session_no: entry.session_no,
+        day: entry.day_of_week,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+      };
+    });
+
+    res.json(timetableData);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // 5. Parent Dashboard Route (STABILIZED)
 app.get("/api/parent/dashboard/:parentId", async (req, res) => {
   try {
@@ -373,8 +416,7 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
       // 3. Safe Enrollment Check (Optional Chaining prevents 500 errors)
       const enrollment = await StudentEnrollment.findOne({
         student_id: student._id,
-        status: "active",
-        is_archived: { $ne: true }   // to disable archived students from parent dashboard
+        status: "active"
       }).populate("yr_sem_id");
 
       // 4. Safe Attendance Calculation
@@ -958,16 +1000,11 @@ app.get("/api/admin/batches", async (req, res) => {
 // 11. get data for admin dashboard (SUPPORT MULTIPLE BATCHES & PAGINATION)
 app.get("/api/admin/batch-data", async (req, res) => {
   try {
-    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active", isArchived = "false" } = req.query;
+    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    const archivedFilter = isArchived === "true";
-    const archivedQuery = archivedFilter ? true : { $ne: true };
-
-    // Base student query must always consider archival status
-    let studentQuery = { is_archived: archivedQuery };
+    let studentQuery = {};
     let offeringQuery = { is_active: true };
-    let timetableQuery = {};
     let isFiltered = false;
 
     // If any filter is provided, find all matching metadata IDs
@@ -993,15 +1030,15 @@ app.get("/api/admin/batch-data", async (req, res) => {
       }
 
       const yrSemIds = matchingYrSems.map(y => y._id);
-      studentQuery = { yr_sem_id: { $in: yrSemIds }, status, is_archived: archivedQuery };
+      studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
       offeringQuery = { yr_sem_id: { $in: yrSemIds } };
       timetableQuery = { yr_sem_id: { $in: yrSemIds } }; // Timetable doesn't have is_active
       isFiltered = true;
     } else {
-      // Keep is_archived even when no yr/sem filters are applied
-      studentQuery = { ...studentQuery, status };
+      // If no ID filters are provided, we show all students matching the requested status (Default: Active)
+      studentQuery = { status };
       offeringQuery = {};
-      timetableQuery = {};
+      timetableQuery = {}; // Fetch all for global view
       isFiltered = false;
     }
 
@@ -1060,8 +1097,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
       academic_yr: offering.yr_sem_id?.academic_yr
     }));
 
-    // 3. Fetch Faculties matching archival status
-    const allFaculty = await Faculty.find({ is_archived: archivedQuery }).lean();
+    // 3. Fetch ALL Faculties & Assignments (Enriched)
+    const allFaculty = await Faculty.find({}).lean();
     const assignments = await FacultyAssignment.find({
       subject_offering_id: { $in: offerings.map(o => o._id) },
       status: "active"
@@ -1639,71 +1676,7 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   }
 });
 
-// 14.1 Archive Student
-app.put("/api/admin/archive/student/:id", async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const student = await Student.findById(req.params.id).session(session);
-    if (!student) throw new Error("Student not found");
-
-    await Student.findByIdAndUpdate(req.params.id, {
-      is_archived: true,
-      archived_at: new Date()
-    }).session(session);
-
-    await User.findByIdAndUpdate(student.user_id, {
-      is_archived: true
-    }).session(session);
-
-    await StudentEnrollment.updateMany(
-      { student_id: req.params.id },
-      { is_archived: true }
-    ).session(session);
-
-    await session.commitTransaction();
-    res.json({ message: "Student archived successfully" });
-  } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({ message: error.message });
-  } finally {
-    session.endSession();
-  }
-});
-
-// 14.2 Restore Student
-app.put("/api/admin/restore/student/:id", async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const student = await Student.findById(req.params.id).session(session);
-    if (!student) throw new Error("Student not found");
-
-    await Student.findByIdAndUpdate(req.params.id, {
-      is_archived: false,
-      archived_at: null
-    }).session(session);
-
-    await User.findByIdAndUpdate(student.user_id, {
-      is_archived: false
-    }).session(session);
-
-    await StudentEnrollment.updateMany(
-      { student_id: req.params.id },
-      { is_archived: false }
-    ).session(session);
-
-    await session.commitTransaction();
-    res.json({ message: "Student restored successfully" });
-  } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({ message: error.message });
-  } finally {
-    session.endSession();
-  }
-});
-
-// 14.3 Edit Faculty
+// 14.1 Edit Faculty
 app.put("/api/admin/edit-faculty/:facultyId", async (req, res) => {
   const { facultyId } = req.params;
   const session = await mongoose.startSession();

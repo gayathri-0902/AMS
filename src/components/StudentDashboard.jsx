@@ -36,6 +36,11 @@ const StudentDashboard = ({ overrideId }) => {
   const [subjectNotes, setSubjectNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
 
+  // NEW: Weekly Timetable State
+  const [showWeeklySchedule, setShowWeeklySchedule] = useState(false);
+  const [weeklyTimetable, setWeeklyTimetable] = useState([]);
+  const [weeklyScheduleLoading, setWeeklyScheduleLoading] = useState(false);
+
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const formatTime = (timeString) => {
@@ -86,6 +91,21 @@ const StudentDashboard = ({ overrideId }) => {
   const handleCloseSubject = () => {
     setSelectedSubject(null);
     setSubjectNotes([]);
+  };
+
+  const fetchWeeklySchedule = async () => {
+    setShowWeeklySchedule(true);
+    if (weeklyTimetable.length > 0) return;
+    setWeeklyScheduleLoading(true);
+    try {
+      const targetId = overrideId || urlStudentId || auth?.studentId;
+      const res = await axios.get(`${API_BASE}/api/student/weekly-timetable/${targetId}`);
+      setWeeklyTimetable(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWeeklyScheduleLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -199,13 +219,22 @@ const StudentDashboard = ({ overrideId }) => {
             </div>
           </div>
 
-          <button
-            onClick={logout}
-            className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
-          >
-            <span>LOGOUT</span>
-            <HiOutlineLogout className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={fetchWeeklySchedule}
+              className="flex items-center space-x-2 bg-blue-600 border-2 border-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-blue-700 hover:border-blue-700 transition-all shadow-md active:scale-95"
+            >
+              <HiOutlineCalendar className="w-5 h-5" />
+              <span>TIMETABLE</span>
+            </button>
+            <button
+              onClick={logout}
+              className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
+            >
+              <span>LOGOUT</span>
+              <HiOutlineLogout className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Dashboard Title */}
@@ -519,6 +548,116 @@ const StudentDashboard = ({ overrideId }) => {
           year={studentInfo?.current_year}
           branch={studentInfo?.branch_name}
         />
+
+        {/* Weekly Timetable Modal */}
+        {showWeeklySchedule && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="p-6 md:p-8 flex justify-between items-center bg-slate-50 border-b">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                    <HiOutlineCalendar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800">Weekly Schedule</h2>
+                    <p className="text-sm text-slate-500 font-medium">All classes for the current semester</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWeeklySchedule(false)}
+                  className="p-2 bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-800 rounded-full transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+
+              <div className="p-6 md:p-8 overflow-y-auto bg-slate-50 relative flex-1">
+                {weeklyScheduleLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+                    <p className="text-slate-500 font-bold">Loading timetable...</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <div className="min-w-full">
+                        {/* Header Row */}
+                        <div className="flex bg-slate-50 border-b">
+                          <div className="min-w-[100px] p-2 border-r bg-slate-50"></div>
+                          {[1, 2, 3, 4, 5, 6].map((sessionNo) => {
+                            const items = [];
+                            items.push(
+                              <div key={sessionNo} className="flex-1 min-w-[140px] p-2 text-center border-r">
+                                <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Session {sessionNo}</div>
+                              </div>
+                            );
+                            if (sessionNo === 3) {
+                              items.push(
+                                <div key={`gap-h-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r bg-slate-100/30">
+                                  <span className="text-[7px] font-black uppercase text-slate-400">Break</span>
+                                </div>
+                              );
+                            }
+                            return items;
+                          })}
+                        </div>
+
+                        {/* Body */}
+                        <div className="bg-white">
+                          {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, dayIdx) => (
+                            <div key={day} className="flex border-b last:border-b-0 hover:bg-slate-50/50 transition-colors">
+                              <div className="min-w-[100px] p-4 border-r flex flex-col justify-center bg-white z-10">
+                                <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">{day}</span>
+                              </div>
+                              {[1, 2, 3, 4, 5, 6].map((sessionNo) => {
+                                const entry = weeklyTimetable.find(e => e.day === day && e.session_no === sessionNo);
+                                const items = [];
+
+                                items.push(
+                                  <div key={`${day}-${sessionNo}`} className="flex-1 min-w-[140px] p-1.5 border-r flex">
+                                    {entry ? (
+                                      <div className={`w-full border-l-[3px] p-3 rounded-lg shadow-sm border bg-blue-50 border-blue-500`}>
+                                        <h4 className="text-xs font-bold text-slate-800 truncate mb-1" title={entry.class_name}>
+                                          {entry.class_name}
+                                        </h4>
+                                        <p className="text-[9px] font-semibold text-slate-500 mb-2">{entry.class_code}</p>
+                                        <div className="mt-auto pt-2 border-t border-black/5 flex flex-col gap-0.5">
+                                          <p className="text-[10px] font-semibold text-slate-600 truncate">
+                                            {entry.faculty_name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="w-full rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 flex flex-col items-center justify-center opacity-80 p-2 text-center text-emerald-700 hover:bg-emerald-100 transition-colors">
+                                          <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                                            <HiOutlineSparkles className="w-3 h-3" />
+                                            Leisure / Projects
+                                          </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+
+                                if (sessionNo === 3) {
+                                  items.push(
+                                    <div key={`gap-b-${day}-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r bg-slate-50/20">
+                                      <div className="w-0.5 h-10 bg-slate-200 rounded-full opacity-30"></div>
+                                    </div>
+                                  );
+                                }
+                                return items;
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
