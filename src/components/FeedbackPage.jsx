@@ -8,6 +8,9 @@ function FeedbackPage() {
   const { auth } = useAuth();
   const navigate = useNavigate();
 
+  const [activePhase, setActivePhase] = useState("");
+  const [loading, setLoading] = useState(true);
+
   const [form, setForm] = useState({
     regularity: null,
     interaction: null,
@@ -20,23 +23,45 @@ function FeedbackPage() {
     comments: "",
   });
 
+  useState(() => {
+    const fetchPhase = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/feedback/eligibility/${auth.studentId}`);
+        if (res.data.activePhase) {
+          setActivePhase(res.data.activePhase);
+        } else {
+          alert("No active feedback session found for your batch.");
+          navigate(-1);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (auth?.studentId) fetchPhase();
+  }, [auth?.studentId]);
+
   const handleChange = (name, value) => {
     setForm({ ...form, [name]: value });
   };
 
   const submitFeedback = async () => {
+    if (!activePhase) return alert("Feedback session expired or not found.");
+
     try {
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/feedback`,
         {
           student_id: auth.studentId,
           subject_offering_id: subjectOfferingId,
+          feedback_type: activePhase,
           ...form,
         }
       );
 
-      alert("Feedback submitted successfully");
-      navigate("/student/dashboard");
+      alert(`${activePhase} Feedback submitted successfully`);
+      navigate(`/student-dashboard/${auth.studentId}`);
     } catch (err) {
       alert(err.response?.data?.message || "Error submitting feedback");
     }
@@ -63,11 +88,16 @@ function FeedbackPage() {
     </div>
   );
 
+  if (loading) return <div className="p-10 text-center font-bold">Loading session...</div>;
+
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white shadow rounded">
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        Faculty Feedback Form
+    <div className="max-w-3xl mx-auto p-8 bg-white shadow rounded my-10 animate-in fade-in duration-500">
+      <h1 className="text-3xl font-black text-slate-800 mb-2 text-center uppercase tracking-tight">
+        {activePhase} Feedback
       </h1>
+      <p className="text-slate-500 text-center mb-10 font-medium italic">
+        Please provide your honest feedback for this course.
+      </p>
 
       <Rating label="1. Faculty regularity in taking classes" name="regularity" />
       <Rating label="2. Interaction with students" name="interaction" />
