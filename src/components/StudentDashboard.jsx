@@ -216,42 +216,34 @@ const StudentDashboard = ({ overrideId }) => {
           </p>
         </div>
 
-        {/* --- FEEDBACK NOTIFICATION --- */}
+        {/* --- MINIMALISTIC FEEDBACK NOTIFICATION --- */}
         {feedbackStatus.allowed && feedbackStatus.pending.length > 0 && (
-          <div className="mb-10 p-8 bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-500 rounded-[2.5rem] text-white shadow-2xl shadow-blue-500/30 animate-in slide-in-from-top-4 duration-700 relative overflow-hidden group">
-            {/* Decorative Icon */}
-            <div className="absolute -top-10 -right-10 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-700">
-              <HiOutlineSparkles size={240} />
-            </div>
-
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-              <div className="max-w-xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    Phase Active: {feedbackStatus.phase}
-                  </span>
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                </div>
-                <h3 className="text-3xl font-black tracking-tight mb-2 leading-tight">
-                  Valuable Insights Needed!
+          <div className="mb-10 p-6 bg-white rounded-[2rem] border-l-8 border-blue-600 shadow-sm animate-in slide-in-from-top-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                <HiOutlineBookOpen className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-800 tracking-tight leading-none mb-1">
+                  Pending Course Feedback
                 </h3>
-                <p className="text-blue-50 font-medium text-lg opacity-90 leading-relaxed">
-                  The {feedbackStatus.phase} feedback portal is now open. You have <span className="bg-white/20 px-2 py-0.5 rounded-lg font-bold text-white underline decoration-emerald-400 decoration-4 underline-offset-4">{feedbackStatus.pending.length} pending</span> course evaluations.
+                <p className="text-gray-400 text-sm font-medium italic">
+                  Please complete the <span className="text-blue-600 font-bold">{feedbackStatus.phase}</span> evaluations for your active courses.
                 </p>
               </div>
+            </div>
 
-              <div className="flex flex-wrap gap-3">
-                {feedbackStatus.pending.map(s => (
-                  <button
-                    key={s.subject_offering_id}
-                    onClick={() => navigate(`/student/feedback/${s.subject_offering_id}`)}
-                    className="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 border border-transparent rounded-2xl text-sm font-black transition-all active:scale-95 shadow-lg flex items-center gap-2 group/btn"
-                  >
-                    {s.course_name}
-                    <HiOutlineArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap gap-2">
+              {feedbackStatus.pending.map(s => (
+                <button
+                  key={s.subject_offering_id}
+                  onClick={() => navigate(`/student/feedback/${s.subject_offering_id}`)}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 flex items-center gap-2 group"
+                >
+                  {s.course_name}
+                  <HiOutlineArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ))}
             </div>
           </div>
         )}
