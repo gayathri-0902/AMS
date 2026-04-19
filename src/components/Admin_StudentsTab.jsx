@@ -6,7 +6,8 @@ import {
     MdEdit,
     MdDelete,
     MdDoubleArrow,
-    MdCloudUpload
+    MdCloudUpload,
+    MdSettingsBackupRestore
 } from "react-icons/md";
 import Admin_FilterBar from "./Admin_FilterBar";
 
@@ -31,7 +32,11 @@ function Admin_StudentsTab({
     loading,
     loadingMore,
     hasMore,
-    loadMore
+    loadMore,
+    isArchived,
+    onArchiveStudent,
+    onRestoreStudent,
+    toggleArchivedView
 }) {
     // Local filter based on searchTerm
     const filteredStudents = (batchData?.students || []).filter(s => 
@@ -51,6 +56,8 @@ function Admin_StudentsTab({
                 handleFetch={handleFetch}
                 clearFilters={clearFilters}
                 loading={loading}
+                toggleArchivedView={toggleArchivedView}
+                isArchived={isArchived}
             />
 
             {/* Page Header */}
@@ -173,12 +180,20 @@ function Admin_StudentsTab({
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => onEditStudent(s)} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Edit Student">
-                                                <MdEdit className="text-[20px]" />
-                                            </button>
-                                            <button className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Remove Record">
-                                                <MdDelete className="text-[20px]" />
-                                            </button>
+                                            {!isArchived ? (
+                                                <>
+                                                    <button onClick={() => onEditStudent(s)} className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Edit Student">
+                                                        <MdEdit className="text-[20px]" />
+                                                    </button>
+                                                    <button onClick={() => onArchiveStudent(s)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Archive Student">
+                                                        <MdDelete className="text-[20px]" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button onClick={() => onRestoreStudent(s)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-all" title="Restore Student">
+                                                    <MdSettingsBackupRestore className="text-[20px]" />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

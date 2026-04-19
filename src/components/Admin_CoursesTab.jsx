@@ -18,7 +18,9 @@ function Admin_CoursesTab({
     handleChange,
     handleFetch,
     clearFilters,
-    loading
+    loading,
+    toggleArchivedView,
+    isArchived
 }) {
     // Local filter based on searchTerm
     const filteredCourses = (batchData?.courses || []).filter(c =>
@@ -32,13 +34,14 @@ function Admin_CoursesTab({
 
     return (
         <div className="w-full flex-1 max-w-7xl mx-auto py-4 animate-in fade-in duration-500">
-
             <Admin_FilterBar
                 formData={formData}
                 handleChange={handleChange}
                 handleFetch={handleFetch}
                 clearFilters={clearFilters}
                 loading={loading}
+                toggleArchivedView={toggleArchivedView}
+                isArchived={isArchived}
             />
 
             {/* Page Header Section */}

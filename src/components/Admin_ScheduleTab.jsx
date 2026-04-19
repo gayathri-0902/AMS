@@ -13,7 +13,9 @@ function Admin_ScheduleTab({
     handleChange,
     handleFetch,
     clearFilters,
-    loading
+    loading,
+    toggleArchivedView,
+    isArchived
 }) {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
     const dayLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -76,13 +78,14 @@ function Admin_ScheduleTab({
 
     return (
         <div className="w-full flex-1 max-w-7xl mx-auto py-4">
-
             <Admin_FilterBar
                 formData={formData}
                 handleChange={handleChange}
                 handleFetch={handleFetch}
                 clearFilters={clearFilters}
                 loading={loading}
+                toggleArchivedView={toggleArchivedView}
+                isArchived={isArchived}
             />
 
             {(!isFiltered) ? (

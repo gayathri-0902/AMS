@@ -13,6 +13,7 @@ The query engine is cached in memory and only re-initialised when the
 year/branch combination changes.
 """
 
+import sys
 import os
 import sys
 import json
@@ -363,9 +364,7 @@ def recognize_single_face():
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("FLASK_PORT", 8000))  # Changed to port 8000
+    port = int(os.environ.get("FLASK_PORT", 5001))  # Changed back to port 5001
     print(f"[app] Starting Academic AI server on port {port} ...")
     app.run(host="0.0.0.0", port=port, debug=True)

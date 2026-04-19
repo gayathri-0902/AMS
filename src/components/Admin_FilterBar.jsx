@@ -3,15 +3,16 @@ import {
     MdFilterAlt, 
     MdClose, 
     MdSearch, 
-    MdHistory 
+    MdHistory,
+    MdArchive
 } from "react-icons/md";
 
 /**
  * A compact, horizontal filter bar for the Admin Dashboard.
  * Designed to be embedded at the top of each management tab.
  */
-function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, loading }) {
-    const isFiltered = Object.values(formData).some(val => val !== "");
+function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, loading, toggleArchivedView, isArchived }) {
+    const isFiltered = Object.values(formData).some(val => val !== "" && val !== "false");
 
     return (
         <div className="w-full mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -80,7 +81,7 @@ function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, lo
                 {/* Action Buttons */}
                 <div className="flex gap-2 w-full lg:w-auto ml-auto px-2">
                     <button 
-                        onClick={handleFetch}
+                        onClick={() => handleFetch()}
                         disabled={loading}
                         className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
                     >
@@ -103,6 +104,20 @@ function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, lo
                             Reset
                         </button>
                     )}
+
+                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden lg:block"></div>
+
+                    <button
+                        onClick={toggleArchivedView}
+                        className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                            ${isArchived 
+                                ? "bg-amber-100 dark:bg-amber-900/20 text-amber-600 border border-amber-200 dark:border-amber-800"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-transparent hover:border-slate-300 dark:hover:border-slate-700"}`}
+                        title={isArchived ? "Switch to Active View" : "View Archived Records"}
+                    >
+                        <MdArchive size={16} />
+                        {isArchived ? "Archive Active" : "View Archive"}
+                    </button>
                 </div>
             </div>
         </div>

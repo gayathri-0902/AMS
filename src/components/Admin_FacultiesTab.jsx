@@ -11,7 +11,9 @@ function Admin_FacultiesTab({
     handleChange,
     handleFetch,
     clearFilters,
-    loading
+    loading,
+    toggleArchivedView,
+    isArchived
 }) {
     // Local filter based on searchTerm
     const filteredFaculties = (batchData?.faculties || []).filter(f =>
@@ -31,6 +33,8 @@ function Admin_FacultiesTab({
                 handleFetch={handleFetch}
                 clearFilters={clearFilters}
                 loading={loading}
+                toggleArchivedView={toggleArchivedView}
+                isArchived={isArchived}
             />
 
             {/* Header */}

@@ -12,6 +12,7 @@ export function useBatchData() {
         stream: "",
         academic_yr: "",
         status: "active", // Default to active
+        isArchived: "false", // New flag for archive view
     });
     const [page, setPage] = useState(1);
     const [batchData, setBatchData] = useState(null);
@@ -25,6 +26,15 @@ export function useBatchData() {
 
     const setStatus = (status) => {
         setFormData((prev) => ({ ...prev, status }));
+    };
+
+    const toggleArchivedView = () => {
+        setFormData((prev) => {
+            const newValue = prev.isArchived === "true" ? "false" : "true";
+            // Immediate fetch with new value
+            handleFetch({ isArchived: newValue });
+            return { ...prev, isArchived: newValue };
+        });
     };
 
     /** Fetches data based on current formData. If formData is empty, fetches all institution-wide. */
@@ -91,7 +101,7 @@ export function useBatchData() {
 
     /** Resets all filters */
     const clearFilters = async () => {
-        const resetData = { yr: "", sem: "", stream: "", academic_yr: "", status: "active" };
+        const resetData = { yr: "", sem: "", stream: "", academic_yr: "", status: "active", isArchived: "false" };
         setFormData(resetData);
         await fetchBatchData(resetData);
     };
@@ -109,6 +119,7 @@ export function useBatchData() {
         loadMore,
         refetchBatchData,
         clearFilters,
+        toggleArchivedView,
         isFiltered: batchData?.isFiltered || false,
         hasMore: batchData?.hasMore || false,
     };

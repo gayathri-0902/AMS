@@ -188,6 +188,46 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         }
     };
 
+    // ── Archiving ─────────────────────────────────────────────────────────────
+    const [archivingLoading, setArchivingLoading] = useState(false);
+    const [pendingArchiveStudent, setPendingArchiveStudent] = useState(null);
+
+    const handleArchiveClick = (student) => {
+        setPendingArchiveStudent(student);
+        setActiveModal("confirmArchive");
+    };
+
+    const handleConfirmArchive = async () => {
+        if (!pendingArchiveStudent) return;
+        setArchivingLoading(true);
+        try {
+            await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/archive/student/${pendingArchiveStudent._id}`
+            );
+            setActiveModal(null);
+            setPendingArchiveStudent(null);
+            await refetchBatchData();
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to archive student");
+        } finally {
+            setArchivingLoading(false);
+        }
+    };
+
+    const handleRestoreStudent = async (student) => {
+        setArchivingLoading(true);
+        try {
+            await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/api/admin/restore/student/${student._id}`
+            );
+            await refetchBatchData();
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to restore student");
+        } finally {
+            setArchivingLoading(false);
+        }
+    };
+
     return {
         // Add
         addStudentForm,
@@ -209,5 +249,11 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         handleToggleStudentSelection,
         handleSelectAll,
         handlePromoteSubmit,
+        // Archive
+        archivingLoading,
+        pendingArchiveStudent,
+        handleArchiveClick,
+        handleConfirmArchive,
+        handleRestoreStudent,
     };
 }

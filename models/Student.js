@@ -16,6 +16,8 @@ const StudentSchema = new mongoose.Schema(
     },
     roll_no: { type: String, unique: true },
     email: { type: String, unique: true },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date },
   },
   { collection: "students" }
 );

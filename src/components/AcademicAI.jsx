@@ -178,11 +178,11 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
             />
 
             {/* Slide-in Drawer */}
-            <div className="relative w-full md:w-[450px] lg:w-[500px] h-full bg-white shadow-2xl flex flex-col overflow-hidden animate-slideLeft transform transition-transform duration-300 ease-in-out">
+            <div className="relative w-full md:w-[450px] lg:w-[500px] h-full bg-white dark:bg-slate-800 shadow-2xl flex flex-col overflow-hidden animate-slideLeft transform transition-transform duration-300 ease-in-out">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between shrink-0 shadow-md z-10">
                     <div className="flex items-center space-x-3">
-                        <div className="bg-white/20 p-2.5 rounded-xl">
+                        <div className="bg-white dark:bg-slate-800/20 p-2.5 rounded-xl">
                             <HiOutlineSparkles className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -196,7 +196,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all"
+                        className="text-white/70 hover:text-white hover:bg-white dark:bg-slate-800/10 p-2 rounded-xl transition-all"
                     >
                         <HiOutlineX className="w-6 h-6" />
                     </button>
@@ -213,8 +213,8 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                                 className={`max-w-[88%] rounded-2xl px-5 py-4 text-[15px] leading-relaxed ${msg.role === "user"
                                     ? "bg-blue-600 text-white rounded-tr-sm shadow-md"
                                     : msg.isError
-                                        ? "bg-red-50 text-red-600 border border-red-100 rounded-tl-sm shadow-sm"
-                                        : "bg-white text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 rounded-tl-sm"
+                                        ? "bg-red-50 dark:bg-red-900/30 text-red-600 border border-red-100 rounded-tl-sm shadow-sm"
+                                        : "bg-white dark:bg-slate-800 text-gray-800 dark:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-slate-600 rounded-tl-sm"
                                     }`}
                             >
                                 <p className="whitespace-pre-wrap">{msg.text || (msg.isStreaming ? "..." : "")}</p>
@@ -226,17 +226,17 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
 
                                 {/* Sources (Render only when done streaming) */}
                                 {msg.sources && msg.sources.length > 0 && !msg.isStreaming && (
-                                    <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600">
+                                        <p className="text-[11px] font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
                                             Sources Mentioned
                                         </p>
                                         <div className="space-y-2">
                                             {msg.sources.map((src, j) => (
                                                 <div
                                                     key={j}
-                                                    className="flex items-center space-x-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100"
+                                                    className="flex items-center space-x-2 text-xs text-gray-500 dark:text-slate-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-700 p-2 rounded-lg border border-gray-100 dark:border-slate-600"
                                                 >
-                                                    <HiOutlineDocumentText className="w-4 h-4 text-blue-500 shrink-0" />
+                                                    <HiOutlineDocumentText className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                                                     <span className="truncate flex-1">
                                                         {src.document}
                                                         {src.page !== "?" && ` (p.${src.page})`}
@@ -253,7 +253,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10 shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
+                <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-600 shrink-0 z-10 shadow-[0_-4px_15px_rgba(0,0,0,0.02)]">
                     <div className="flex items-center space-x-3">
                         <input
                             ref={inputRef}
@@ -263,7 +263,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                             onKeyDown={handleKeyDown}
                             placeholder="Ask about your courses, syllabus, or notes..."
                             disabled={loading}
-                            className="flex-1 px-5 py-4 bg-[#f0f2f5] rounded-2xl text-[15px] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
+                            className="flex-1 px-5 py-4 bg-[#f0f2f5] dark:bg-slate-900 rounded-2xl text-[15px] text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
                         />
                         {loading ? (
                             <button
@@ -287,7 +287,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                         )}
                     </div>
                     <div className="mt-3 text-center">
-                        <span className="text-[11px] text-gray-400">AI can make mistakes. Verify important information.</span>
+                        <span className="text-[11px] text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500">AI can make mistakes. Verify important information.</span>
                     </div>
                 </div>
             </div>

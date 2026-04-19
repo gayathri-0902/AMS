@@ -9,6 +9,7 @@ const UserSchema = new mongoose.Schema(
       enum: ["admin", "faculty", "student", "parent"],
       required: true,
     },
+    is_archived: { type: Boolean, default: false },
   },
   { collection: "users" }
 );
