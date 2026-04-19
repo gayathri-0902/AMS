@@ -23,6 +23,7 @@ dist-ssr
 *.sw?
 .venv
 .env
+chroma_db
 py_backend/models
 py_backend/chromadb
 py_backend/facedetection/chroma_db
