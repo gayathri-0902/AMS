@@ -60,12 +60,12 @@ const StudentDashboard = ({ overrideId }) => {
   const getStatusStyle = (status) => {
     switch (status) {
       case "Present":
-        return "bg-green-100 text-green-600";
+        return "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400";
       case "Absent":
         return "bg-red-100 text-red-500";
       case "Not Marked":
       default:
-        return "bg-gray-100 text-gray-400";
+        return "bg-gray-100 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500";
     }
   };
 
@@ -165,16 +165,16 @@ const StudentDashboard = ({ overrideId }) => {
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      // Must have timetable and a valid student ID to proceed
-      if (timetable.length === 0 || !auth?.studentId) return;
+      // Must have subjects and a valid student ID to proceed
+      if (allSubjects.length === 0 || !auth?.studentId) return;
       try {
         const allAssignments = [];
         const seenSubjectIds = new Set();
 
-        for (const course of timetable) {
-          if (!seenSubjectIds.has(course.subject_offering_id)) {
-            seenSubjectIds.add(course.subject_offering_id);
-            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/assignment/subject/${course.subject_offering_id}`);
+        for (const subject of allSubjects) {
+          if (!seenSubjectIds.has(subject.subject_offering_id)) {
+            seenSubjectIds.add(subject.subject_offering_id);
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/assignment/subject/${subject.subject_offering_id}`);
             allAssignments.push(...res.data);
           }
         }
@@ -195,12 +195,12 @@ const StudentDashboard = ({ overrideId }) => {
       }
     };
     fetchAssignments();
-  }, [timetable, auth?.studentId]);
+  }, [allSubjects, auth?.studentId]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-antiqua">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] p-4 md:p-8 font-antiqua relative">
+    <div className="min-h-screen bg-[#f0f2f5] dark:bg-slate-900 p-4 md:p-8 font-antiqua relative">
       <div className="max-w-7xl mx-auto">
 
         {/* --- HEADER --- */}
@@ -210,10 +210,10 @@ const StudentDashboard = ({ overrideId }) => {
               <HiOutlineUser className="w-8 h-8" />
             </div>
             <div className="text-left">
-              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white leading-none tracking-tight">
                 {studentInfo?.student_id_no}
               </h2>
-              <p className="text-sm font-bold text-blue-600 uppercase mt-1 tracking-widest">
+              <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase mt-1 tracking-widest">
                 {studentInfo?.branch_name} • {getYearLabel(studentInfo?.current_year)} • SEM {studentInfo?.current_sem}
               </p>
             </div>
@@ -229,7 +229,7 @@ const StudentDashboard = ({ overrideId }) => {
             </button>
             <button
               onClick={logout}
-              className="flex items-center space-x-2 bg-white border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
+              className="flex items-center space-x-2 bg-white dark:bg-slate-800 border-2 border-red-500 text-red-500 px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all shadow-md active:scale-95"
             >
               <span>LOGOUT</span>
               <HiOutlineLogout className="w-5 h-5" />
@@ -239,25 +239,25 @@ const StudentDashboard = ({ overrideId }) => {
 
         {/* Dashboard Title */}
         <div className="mb-10 text-left px-2">
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Student Dashboard</h1>
-          <p className="text-xl text-gray-500 mt-1">
-            Welcome back, <span className="text-blue-600 font-bold">{studentInfo?.student_name}</span>
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Student Dashboard</h1>
+          <p className="text-xl text-gray-500 dark:text-slate-400 dark:text-slate-500 mt-1">
+            Welcome back, <span className="text-blue-600 dark:text-blue-400 font-bold">{studentInfo?.student_name}</span>
           </p>
         </div>
 
         {/* --- MINIMALISTIC FEEDBACK NOTIFICATION --- */}
         {feedbackStatus.allowed && feedbackStatus.pending.length > 0 && (
-          <div className="mb-10 p-6 bg-white rounded-[2rem] border-l-8 border-blue-600 shadow-sm animate-in slide-in-from-top-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="mb-10 p-6 bg-white dark:bg-slate-800 rounded-[2rem] border-l-8 border-blue-600 shadow-sm animate-in slide-in-from-top-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                 <HiOutlineBookOpen className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-gray-800 tracking-tight leading-none mb-1">
+                <h3 className="text-lg font-black text-gray-800 dark:text-white tracking-tight leading-none mb-1">
                   Pending Course Feedback
                 </h3>
-                <p className="text-gray-400 text-sm font-medium italic">
-                  Please complete the <span className="text-blue-600 font-bold">{feedbackStatus.phase}</span> evaluations for your active courses.
+                <p className="text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 text-sm font-medium italic">
+                  Please complete the <span className="text-blue-600 dark:text-blue-400 font-bold">{feedbackStatus.phase}</span> evaluations for your active courses.
                 </p>
               </div>
             </div>
@@ -267,7 +267,7 @@ const StudentDashboard = ({ overrideId }) => {
                 <button
                   key={s.subject_offering_id}
                   onClick={() => navigate(`/student/feedback/${s.subject_offering_id}`)}
-                  className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 flex items-center gap-2 group"
+                  className="px-4 py-2 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 flex items-center gap-2 group"
                 >
                   {s.course_name}
                   <HiOutlineArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -277,50 +277,50 @@ const StudentDashboard = ({ overrideId }) => {
           </div>
         )}
 
+        {/* --- PENDING ASSIGNMENTS (AVAILABLE EVERY DAY) --- */}
+        {assignments.length > 0 && (
+          <div className="mb-14 px-2">
+            <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Pending Assignments</h2>
+            <div className="flex overflow-x-auto pb-6 space-x-6 scrollbar-hide">
+              {assignments.map((assign, idx) => (
+                <div key={idx} className="min-w-[320px] bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-50 dark:border-slate-700 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                        {assign.assignment_type || "Task"}
+                      </span>
+                      <div className="flex items-center text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500">
+                        <HiOutlineClock size={14} className="mr-1" />
+                        {new Date(assign.submission_deadline || assign.due_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 leading-tight">{assign.title}</h3>
+                    <p className="text-sm text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium truncate">{assign.instructions}</p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/hand-in/${assign._id}`)}
+                    className="mt-6 w-full py-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-500 hover:text-white transition-all active:scale-95"
+                  >
+                    ATTEMPT TASK
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* --- WEEKDAY: ASSIGNMENT TIMELINE + COURSE CARDS --- */}
         {timetable.length > 0 ? (
           <div className="mb-20">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
+            <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
               Today's Schedule
             </h2>
 
-            {/* Pending Assignments (only on weekdays) */}
-            {assignments.length > 0 && (
-              <div className="mb-14 px-2">
-                <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Pending Assignments</h2>
-                <div className="flex overflow-x-auto pb-6 space-x-6 scrollbar-hide">
-                  {assignments.map((assign, idx) => (
-                    <div key={idx} className="min-w-[320px] bg-white rounded-[32px] p-6 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-50 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                            {assign.assignment_type}
-                          </span>
-                          <div className="flex items-center text-xs font-bold text-gray-400">
-                            <HiOutlineClock size={14} className="mr-1" />
-                            {new Date(assign.submission_deadline).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-800 mb-1 leading-tight">{assign.title}</h3>
-                        <p className="text-sm text-gray-400 font-medium truncate">{assign.instructions}</p>
-                      </div>
-                      <button
-                        onClick={() => navigate(`/hand-in/${assign._id}`)}
-                        className="mt-6 w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 hover:text-white transition-all active:scale-95"
-                      >
-                        ATTEMPT TASK
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {timetable.map((course, index) => (
-                <div key={index} className="bg-white rounded-[40px] p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left border border-gray-100 group">
+                <div key={index} className="bg-white dark:bg-slate-800 rounded-[40px] p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left border border-gray-100 dark:border-slate-600 group">
                   <div className="flex justify-between items-start mb-8">
-                    <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <div className="bg-blue-50 dark:bg-blue-900/40 w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                       <HiOutlineBookOpen className="w-8 h-8" />
                     </div>
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${getStatusStyle(course.attendance_status)}`}>
@@ -328,22 +328,22 @@ const StudentDashboard = ({ overrideId }) => {
                     </span>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-gray-800 mb-1">{course.class_name}</h3>
-                  <span className="bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
+                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">{course.class_name}</h3>
+                  <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
                     {course.class_code}
                   </span>
 
-                  <div className="mt-8 space-y-4 text-gray-600">
+                  <div className="mt-8 space-y-4 text-gray-600 dark:text-slate-300">
                     <div className="flex items-center space-x-3">
-                      <HiOutlineCalendar className="w-5 h-5 text-gray-400" />
+                      <HiOutlineCalendar className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500" />
                       <div>
-                        <p className="font-bold text-gray-800">{course.day}</p>
-                        <p className="text-xs text-gray-400">{formatTime(course.start_time)} - {formatTime(course.end_time)}</p>
+                        <p className="font-bold text-gray-800 dark:text-white">{course.day}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500">{formatTime(course.start_time)} - {formatTime(course.end_time)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <HiOutlineClipboardCheck className="w-5 h-5 text-gray-400" />
-                      <p className="text-sm">Faculty: <span className="font-bold text-gray-800">{course.faculty_name}</span></p>
+                      <HiOutlineClipboardCheck className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500" />
+                      <p className="text-sm">Faculty: <span className="font-bold text-gray-800 dark:text-white">{course.faculty_name}</span></p>
                     </div>
                   </div>
 
@@ -360,22 +360,22 @@ const StudentDashboard = ({ overrideId }) => {
         ) : (
           /* --- WEEKEND: NO CLASSES UI --- */
           <div className="mb-20">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
+            <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
               Today's Schedule
             </h2>
 
             <div className="flex flex-col space-y-8">
               {/* No Classes Message Card */}
-              <div className="bg-white rounded-[40px] p-12 md:p-16 shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-3xl bg-blue-50 flex items-center justify-center mb-8">
+              <div className="bg-white dark:bg-slate-800 rounded-[40px] p-12 md:p-16 shadow-sm border border-gray-100 dark:border-slate-600 flex flex-col items-center text-center">
+                <div className="w-24 h-24 rounded-3xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center mb-8">
                   <HiOutlineCalendar className="w-14 h-14 text-blue-400" />
                 </div>
-                <h3 className="text-3xl font-extrabold text-gray-800 mb-3">No Classes Today</h3>
-                <p className="text-lg text-gray-400 font-medium mb-6 max-w-md">
-                  <span className="text-blue-600 font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                <h3 className="text-3xl font-extrabold text-gray-800 dark:text-white mb-3">No Classes Today</h3>
+                <p className="text-lg text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium mb-6 max-w-md">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
-                  <span className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
+                  <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
                     <HiOutlineCalendar className="inline-block w-4 h-4 mr-1.5 -mt-0.5" />
                     {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </span>
@@ -397,7 +397,7 @@ const StudentDashboard = ({ overrideId }) => {
               {/* Subject Picker & Notes - Only show on weekends */}
               {showResourcePicker && (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
+                  <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
                     Your Courses
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -405,28 +405,28 @@ const StudentDashboard = ({ overrideId }) => {
                       <div
                         key={subject.subject_offering_id}
                         onClick={() => handleSelectSubject(subject)}
-                        className={`bg-white rounded-[32px] p-6 shadow-sm border-2 cursor-pointer transition-all duration-300 ${selectedSubject?.subject_offering_id === subject.subject_offering_id
+                        className={`bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-sm border-2 cursor-pointer transition-all duration-300 ${selectedSubject?.subject_offering_id === subject.subject_offering_id
                             ? "border-blue-500 shadow-lg"
-                            : "border-transparent hover:border-blue-200"
+                            : "border-transparent hover:border-blue-200 dark:hover:border-blue-600 dark:border-blue-700"
                           }`}
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div
                             className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedSubject?.subject_offering_id === subject.subject_offering_id
                                 ? 'bg-blue-500 text-white'
-                                : 'bg-blue-50 text-blue-500'
+                                : 'bg-blue-50 dark:bg-blue-900/40 text-blue-500 dark:text-blue-400'
                               }`}
                           >
                             <HiOutlineBookOpen className="w-6 h-6" />
                           </div>
-                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                          <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest">
                             {subject.class_code}
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-gray-800 leading-tight mb-2">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white leading-tight mb-2">
                           {subject.class_name}
                         </h3>
-                        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-tighter">
+                        <p className="text-[11px] text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">
                           Faculty: {subject.faculty_name}
                         </p>
                       </div>
@@ -436,26 +436,26 @@ const StudentDashboard = ({ overrideId }) => {
                   {/* ===== MODIFIED: Notes Display moved here - directly below subject picker ===== */}
                   {selectedSubject && (
                     <div className="animate-in slide-in-from-bottom-4 duration-500">
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[40px] p-10 border-2 border-blue-200 shadow-lg">
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 rounded-[40px] p-10 border-2 border-blue-200 dark:border-slate-700 shadow-lg">
 
                         {/* Header */}
                         <div className="mb-8">
-                          <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                          <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
                             {selectedSubject.class_name}
                           </h2>
                           <div className="flex items-center space-x-4 text-sm">
-                            <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold">
+                            <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full font-bold">
                               {selectedSubject.class_code}
                             </span>
-                            <span className="text-gray-600">
+                            <span className="text-gray-600 dark:text-slate-300">
                               <span className="font-bold">Faculty:</span> {selectedSubject.faculty_name}
                             </span>
                           </div>
                         </div>
 
                         {/* Notes Title */}
-                        <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                          <HiOutlineDocumentText className="mr-3 w-8 h-8 text-blue-600" />
+                        <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
+                          <HiOutlineDocumentText className="mr-3 w-8 h-8 text-blue-600 dark:text-blue-400" />
                           Course Materials ({subjectNotes.length})
                         </h3>
 
@@ -463,16 +463,16 @@ const StudentDashboard = ({ overrideId }) => {
                         {notesLoading && (
                           <div className="flex items-center justify-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <p className="ml-4 text-gray-600 font-medium">Loading materials...</p>
+                            <p className="ml-4 text-gray-600 dark:text-slate-300 font-medium">Loading materials...</p>
                           </div>
                         )}
 
                         {/* Empty State */}
                         {!notesLoading && subjectNotes.length === 0 && (
-                          <div className="bg-white rounded-[32px] p-12 text-center border-2 border-dashed border-blue-200">
-                            <HiOutlineDocumentText className="w-16 h-16 text-blue-200 mx-auto mb-4" />
-                            <p className="text-lg font-bold text-gray-400">No materials available yet</p>
-                            <p className="text-sm text-gray-400 mt-2">Check back later for course notes</p>
+                          <div className="bg-white dark:bg-slate-800 rounded-[32px] p-12 text-center border-2 border-dashed border-blue-200 dark:border-slate-600">
+                            <HiOutlineDocumentText className="w-16 h-16 text-blue-200 dark:text-slate-600 mx-auto mb-4" />
+                            <p className="text-lg font-bold text-gray-400 dark:text-slate-400">No materials available yet</p>
+                            <p className="text-sm text-gray-400 dark:text-slate-500 mt-2">Check back later for course notes</p>
                           </div>
                         )}
 
@@ -482,14 +482,14 @@ const StudentDashboard = ({ overrideId }) => {
                             {subjectNotes.map((note) => (
                               <div
                                 key={note._id}
-                                className="bg-white rounded-[28px] p-6 border-2 border-blue-100 hover:border-blue-400 shadow-sm hover:shadow-lg transition-all group"
+                                className="bg-white dark:bg-slate-800 rounded-[28px] p-6 border-2 border-blue-100 dark:border-blue-800 hover:border-blue-400 shadow-sm hover:shadow-lg transition-all group"
                               >
                                 <div className="flex items-start justify-between mb-4">
                                   <div className="flex-1">
-                                    <h4 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-2">
+                                    <h4 className="text-lg font-bold text-gray-800 dark:text-white group-hover:text-blue-600 dark:text-blue-400 transition-colors line-clamp-2">
                                       {note.title}
                                     </h4>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">
+                                    <p className="text-xs text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2">
                                       {new Date(note.upload_date).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'short',
@@ -497,13 +497,13 @@ const StudentDashboard = ({ overrideId }) => {
                                       })}
                                     </p>
                                   </div>
-                                  <div className="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0 ml-3">
+                                  <div className="bg-blue-50 dark:bg-blue-900/40 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0 ml-3">
                                     <HiOutlineDocumentText className="w-5 h-5" />
                                   </div>
                                 </div>
 
                                 {note.description && (
-                                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                                  <p className="text-sm text-gray-600 dark:text-slate-300 mb-4 line-clamp-2">
                                     {note.description}
                                   </p>
                                 )}
@@ -552,49 +552,49 @@ const StudentDashboard = ({ overrideId }) => {
         {/* Weekly Timetable Modal */}
         {showWeeklySchedule && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-              <div className="p-6 md:p-8 flex justify-between items-center bg-slate-50 border-b">
+            <div className="bg-white dark:bg-slate-950 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="p-6 md:p-8 flex justify-between items-center bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800">
                 <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
                     <HiOutlineCalendar className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Weekly Schedule</h2>
-                    <p className="text-sm text-slate-500 font-medium">All classes for the current semester</p>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Weekly Schedule</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">All classes for the current semester</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowWeeklySchedule(false)}
-                  className="p-2 bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-800 rounded-full transition-colors"
+                  className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 hover:text-slate-800 dark:hover:bg-slate-700 dark:hover:text-white rounded-full transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
 
-              <div className="p-6 md:p-8 overflow-y-auto bg-slate-50 relative flex-1">
+              <div className="p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-950 relative flex-1">
                 {weeklyScheduleLoading ? (
                   <div className="flex flex-col items-center justify-center py-20">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
-                    <p className="text-slate-500 font-bold">Loading timetable...</p>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold">Loading timetable...</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border dark:border-slate-800 overflow-hidden">
                     <div className="overflow-x-auto">
                       <div className="min-w-full">
                         {/* Header Row */}
-                        <div className="flex bg-slate-50 border-b">
-                          <div className="min-w-[100px] p-2 border-r bg-slate-50"></div>
+                        <div className="flex bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800">
+                          <div className="min-w-[100px] p-2 border-r dark:border-slate-800 bg-slate-50 dark:bg-slate-900"></div>
                           {[1, 2, 3, 4, 5, 6].map((sessionNo) => {
                             const items = [];
                             items.push(
-                              <div key={sessionNo} className="flex-1 min-w-[140px] p-2 text-center border-r">
-                                <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Session {sessionNo}</div>
+                              <div key={sessionNo} className="flex-1 min-w-[140px] p-2 text-center border-r dark:border-slate-800">
+                                <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Session {sessionNo}</div>
                               </div>
                             );
                             if (sessionNo === 3) {
                               items.push(
-                                <div key={`gap-h-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r bg-slate-100/30">
-                                  <span className="text-[7px] font-black uppercase text-slate-400">Break</span>
+                                <div key={`gap-h-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r dark:border-slate-800 bg-slate-100 dark:bg-slate-800/30">
+                                  <span className="text-[7px] font-black uppercase text-slate-400 dark:text-slate-500">Break</span>
                                 </div>
                               );
                             }
@@ -603,32 +603,32 @@ const StudentDashboard = ({ overrideId }) => {
                         </div>
 
                         {/* Body */}
-                        <div className="bg-white">
+                        <div className="bg-white dark:bg-slate-900">
                           {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, dayIdx) => (
-                            <div key={day} className="flex border-b last:border-b-0 hover:bg-slate-50/50 transition-colors">
-                              <div className="min-w-[100px] p-4 border-r flex flex-col justify-center bg-white z-10">
-                                <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">{day}</span>
+                            <div key={day} className="flex border-b dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                              <div className="min-w-[100px] p-4 border-r dark:border-slate-800 flex flex-col justify-center bg-white dark:bg-slate-900 z-10">
+                                <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-widest">{day}</span>
                               </div>
                               {[1, 2, 3, 4, 5, 6].map((sessionNo) => {
                                 const entry = weeklyTimetable.find(e => e.day === day && e.session_no === sessionNo);
                                 const items = [];
 
                                 items.push(
-                                  <div key={`${day}-${sessionNo}`} className="flex-1 min-w-[140px] p-1.5 border-r flex">
+                                  <div key={`${day}-${sessionNo}`} className="flex-1 min-w-[140px] p-1.5 border-r dark:border-slate-800 flex">
                                     {entry ? (
-                                      <div className={`w-full border-l-[3px] p-3 rounded-lg shadow-sm border bg-blue-50 border-blue-500`}>
-                                        <h4 className="text-xs font-bold text-slate-800 truncate mb-1" title={entry.class_name}>
+                                      <div className={`w-full border-l-[3px] p-3 rounded-lg shadow-sm border bg-blue-50 dark:bg-slate-800 border-blue-500 dark:border-slate-700 dark:border-l-blue-500`}>
+                                        <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate mb-1" title={entry.class_name}>
                                           {entry.class_name}
                                         </h4>
-                                        <p className="text-[9px] font-semibold text-slate-500 mb-2">{entry.class_code}</p>
-                                        <div className="mt-auto pt-2 border-t border-black/5 flex flex-col gap-0.5">
-                                          <p className="text-[10px] font-semibold text-slate-600 truncate">
+                                        <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 mb-2">{entry.class_code}</p>
+                                        <div className="mt-auto pt-2 border-t border-black/5 dark:border-white/5 flex flex-col gap-0.5">
+                                          <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 truncate">
                                             {entry.faculty_name}
                                           </p>
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="w-full rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 flex flex-col items-center justify-center opacity-80 p-2 text-center text-emerald-700 hover:bg-emerald-100 transition-colors">
+                                      <div className="w-full rounded-lg border border-dashed border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 flex flex-col items-center justify-center opacity-80 p-2 text-center text-emerald-700 dark:text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
                                           <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                                             <HiOutlineSparkles className="w-3 h-3" />
                                             Leisure / Projects
@@ -640,8 +640,8 @@ const StudentDashboard = ({ overrideId }) => {
 
                                 if (sessionNo === 3) {
                                   items.push(
-                                    <div key={`gap-b-${day}-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r bg-slate-50/20">
-                                      <div className="w-0.5 h-10 bg-slate-200 rounded-full opacity-30"></div>
+                                    <div key={`gap-b-${day}-${sessionNo}`} className="w-[40px] flex items-center justify-center border-r dark:border-slate-800 bg-slate-50 dark:bg-slate-800/20">
+                                      <div className="w-0.5 h-10 bg-slate-200 dark:bg-slate-800 rounded-full opacity-30"></div>
                                     </div>
                                   );
                                 }

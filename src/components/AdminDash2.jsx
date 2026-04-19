@@ -105,7 +105,7 @@ function AdminDash2() {
                     setIsCollapsed={setIsSidebarCollapsed}
                 />
 
-                <main className={`flex-1 overflow-y-auto bg-white dark:bg-slate-900 relative transition-all duration-300 ${isSidebarCollapsed ? "ml-0" : ""}`}>
+                <main className={`flex-1 overflow-y-auto bg-white dark:bg-slate-800 dark:bg-slate-900 relative transition-all duration-300 ${isSidebarCollapsed ? "ml-0" : ""}`}>
                     <Admin_Header 
                         activeTab={batch.activeTab} 
                         logout={logout} 

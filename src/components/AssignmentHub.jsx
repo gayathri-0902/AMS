@@ -181,18 +181,18 @@ const AssignmentHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] p-6 lg:p-12 font-antiqua relative">
+    <div className="min-h-screen bg-[#f0f2f5] dark:bg-slate-900 p-6 lg:p-12 font-antiqua relative">
       {/* Success Popup Overlay */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-300 max-w-sm w-full mx-4">
-            <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white ring-4 ring-green-50">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-300 max-w-sm w-full mx-4">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/40 text-green-500 rounded-full flex items-center justify-center mb-6 shadow-sm border-4 border-white ring-4 ring-green-50">
               <HiOutlineCheckCircle size={48} />
             </div>
-            <h3 className="text-2xl font-black text-gray-800 mb-2 text-center">Successfully Published!</h3>
-            <p className="text-gray-500 font-medium text-center mb-6">Navigating to dashboard...</p>
+            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2 text-center">Successfully Published!</h3>
+            <p className="text-gray-500 dark:text-slate-400 dark:text-slate-500 font-medium text-center mb-6">Navigating to dashboard...</p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2 overflow-hidden">
-               <div className="bg-green-500 h-1.5 rounded-full animate-[progress_1.5s_ease-in-out]" style={{ width: '100%' }}></div>
+               <div className="bg-green-50 dark:bg-green-900/200 h-1.5 rounded-full animate-[progress_1.5s_ease-in-out]" style={{ width: '100%' }}></div>
             </div>
           </div>
         </div>
@@ -204,15 +204,15 @@ const AssignmentHub = () => {
           <div className="flex items-center space-x-4">
             <Link
               to={`/faculty-dashboard/${auth.facultyId}?selectClass=${subjectId}`}
-              className="p-3 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all text-gray-600"
+              className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-all text-gray-600 dark:text-slate-300"
             >
               <HiOutlineChevronLeft size={24} />
             </Link>
             <div>
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                 Assignment Hub
               </h1>
-              <p className="text-gray-500 font-medium text-blue-600 uppercase tracking-widest text-xs">
+              <p className="text-gray-500 dark:text-slate-400 dark:text-slate-500 font-medium text-blue-600 dark:text-blue-400 uppercase tracking-widest text-xs">
                 AI-Powered Creation Studio
               </p>
             </div>
@@ -222,15 +222,15 @@ const AssignmentHub = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Panel: Configuration */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-[40px] p-8 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <HiOutlineClipboardList className="mr-2 text-blue-500" />{" "}
+            <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100 dark:border-slate-600">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
+                <HiOutlineClipboardList className="mr-2 text-blue-500 dark:text-blue-400" />{" "}
                 Configuration
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">
                     Academic Year
                   </label>
                   <select
@@ -238,7 +238,7 @@ const AssignmentHub = () => {
                     onChange={(e) =>
                       setConfig({ ...config, year: e.target.value })
                     }
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                   >
                     <option value="1">1st Year</option>
                     <option value="2">2nd Year</option>
@@ -248,7 +248,7 @@ const AssignmentHub = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">
                     Branch
                   </label>
                   <select
@@ -256,7 +256,7 @@ const AssignmentHub = () => {
                     onChange={(e) =>
                       setConfig({ ...config, branch: e.target.value })
                     }
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                   >
                     <option value="CSDS">Data Science</option>
                     <option value="CSE">Computer Science</option>
@@ -265,7 +265,7 @@ const AssignmentHub = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">
                     Submission Deadline
                   </label>
                   <input
@@ -274,14 +274,14 @@ const AssignmentHub = () => {
                     onChange={(e) =>
                       setConfig({ ...config, due_date: e.target.value })
                     }
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all text-gray-500"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all text-gray-500 dark:text-slate-400 dark:text-slate-500"
                   />
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-100 p-6 rounded-3xl flex items-start space-x-3 text-red-600 animate-in fade-in slide-in-from-top-2">
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 p-6 rounded-3xl flex items-start space-x-3 text-red-600 animate-in fade-in slide-in-from-top-2">
                 <HiOutlineExclamationCircle
                   size={24}
                   className="mt-0.5 shrink-0"
@@ -294,19 +294,19 @@ const AssignmentHub = () => {
           {/* Right Panel: Workspace */}
           <div className="lg:col-span-8 space-y-8">
             {!result ? (
-              <div className="bg-white rounded-[40px] p-8 lg:p-12 shadow-sm border-x border-b border-gray-100 min-h-[500px] flex flex-col justify-center">
+              <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 lg:p-12 shadow-sm border-x border-b border-gray-100 dark:border-slate-600 min-h-[500px] flex flex-col justify-center">
                 <div className="max-w-lg mx-auto w-full space-y-8">
                   <div className="text-center">
-                    <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                    <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/40 text-blue-500 dark:text-blue-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                       <HiOutlineSparkles
                         size={40}
                         className={loading ? "animate-spin" : ""}
                       />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800">
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
                       Brief the AI Agent
                     </h2>
-                    <p className="text-gray-500 mt-2 font-medium">
+                    <p className="text-gray-500 dark:text-slate-400 dark:text-slate-500 mt-2 font-medium">
                       Explain your requirements in natural language.
                     </p>
                   </div>
@@ -319,7 +319,7 @@ const AssignmentHub = () => {
                       onChange={(e) =>
                         setConfig({ ...config, title: e.target.value })
                       }
-                      className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 transition-all text-lg font-medium"
+                      className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-700 border border-transparent rounded-2xl outline-none focus:bg-white dark:bg-slate-800 focus:border-blue-200 dark:border-blue-700 focus:ring-4 focus:ring-blue-50 transition-all text-lg font-medium"
                     />
                     <textarea
                       rows="6"
@@ -328,22 +328,22 @@ const AssignmentHub = () => {
                       onChange={(e) =>
                         setConfig({ ...config, instructions: e.target.value })
                       }
-                      className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 transition-all text-lg font-medium resize-none"
+                      className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-700 border border-transparent rounded-2xl outline-none focus:bg-white dark:bg-slate-800 focus:border-blue-200 dark:border-blue-700 focus:ring-4 focus:ring-blue-50 transition-all text-lg font-medium resize-none"
                     ></textarea>
                   </div>
 
                   <button
                     disabled={loading || !config.instructions || !config.title}
                     onClick={handleGenerate}
-                    className={`w-full py-5 rounded-3xl text-xl font-bold flex items-center justify-center space-x-3 transition-all ${loading ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95"}`}
+                    className={`w-full py-5 rounded-3xl text-xl font-bold flex items-center justify-center space-x-3 transition-all ${loading ? "bg-gray-100 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95"}`}
                   >
                     {loading ? (
                       <>
-                        <div className="w-6 h-6 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                        <div className="w-6 h-6 border-4 border-gray-300 dark:border-slate-500 border-t-blue-500 rounded-full animate-spin"></div>
                         <div className="flex flex-col items-start">
                           <span>Analyzing Curriculum...</span>
                           {progress && (
-                            <span className="text-xs text-gray-500 mt-1">
+                            <span className="text-xs text-gray-500 dark:text-slate-400 dark:text-slate-500 mt-1">
                               {progress}
                             </span>
                           )}
@@ -359,13 +359,13 @@ const AssignmentHub = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-[40px] p-8 lg:p-12 shadow-sm border-x border-b border-gray-100 animate-in zoom-in duration-500">
-                <div className="flex items-center justify-between mb-10 pb-6 border-b border-gray-50">
+              <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 lg:p-12 shadow-sm border-x border-b border-gray-100 dark:border-slate-600 animate-in zoom-in duration-500">
+                <div className="flex items-center justify-between mb-10 pb-6 border-b border-gray-50 dark:border-slate-700">
                   <div>
-                    <span className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">
+                    <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">
                       Generation Complete
                     </span>
-                    <h2 className="text-3xl font-bold text-gray-800">
+                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white">
                       {result.topic || config.title}
                     </h2>
                   </div>
@@ -374,7 +374,7 @@ const AssignmentHub = () => {
                       setResult(null);
                       setMetadata(null);
                     }}
-                    className="text-blue-500 font-bold text-xs uppercase border-b-2 border-blue-500 hover:text-blue-600 tracking-widest"
+                    className="text-blue-500 dark:text-blue-400 font-bold text-xs uppercase border-b-2 border-blue-500 hover:text-blue-600 dark:text-blue-400 tracking-widest"
                   >
                     Create New
                   </button>
@@ -384,13 +384,13 @@ const AssignmentHub = () => {
                   {result.questions.map((q, idx) => (
                     <div
                       key={idx}
-                      className="p-8 bg-gray-50 rounded-[32px] border border-gray-100 hover:border-blue-200 transition-all group"
+                      className="p-8 bg-gray-50 dark:bg-slate-700 rounded-[32px] border border-gray-100 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-600 dark:border-blue-700 transition-all group"
                     >
                       <div className="flex items-start space-x-4 mb-4">
-                        <span className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center font-bold text-blue-500 shrink-0 border border-blue-100">
+                        <span className="w-10 h-10 bg-white dark:bg-slate-800 shadow-sm rounded-xl flex items-center justify-center font-bold text-blue-500 dark:text-blue-400 shrink-0 border border-blue-100 dark:border-blue-800">
                           {idx + 1}
                         </span>
-                        <p className="text-lg font-bold text-gray-800 leading-snug">
+                        <p className="text-lg font-bold text-gray-800 dark:text-white leading-snug">
                           {q.question_text}
                         </p>
                       </div>
@@ -400,7 +400,7 @@ const AssignmentHub = () => {
                           {q.options?.map((opt, oIdx) => (
                             <div
                               key={oIdx}
-                              className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 border-green-200 text-green-700" : "bg-white border-gray-100 text-gray-600"}`}
+                              className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 dark:bg-green-900/20 border-green-200 text-green-700 dark:text-green-400" : "bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-600 text-gray-600 dark:text-slate-300"}`}
                             >
                               {opt === q.correct_answer && "✓ "}
                               {opt}
