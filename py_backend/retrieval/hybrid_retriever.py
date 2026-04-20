@@ -16,6 +16,7 @@ import pickle
 from llama_index.core import VectorStoreIndex
 from llama_index.core.retrievers import BaseRetriever, QueryFusionRetriever, VectorIndexRetriever
 from llama_index.core.schema import TextNode
+from llama_index.core.vector_stores.types import MetadataFilters, MetadataFilter, FilterCondition
 from llama_index.retrievers.bm25 import BM25Retriever
 
 from interfaces import BaseRetrieverBuilder
@@ -50,6 +51,7 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
         num_queries: int = 1,
         cache_dir: str | None = None,
         cache_prefix: str | None = None,
+        subject_filters: list[str] | None = None,
     ) -> None:
         self._vector_top_k = vector_top_k
         self._bm25_top_k = bm25_top_k
@@ -57,6 +59,7 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
         self._num_queries = num_queries
         self._cache_dir = cache_dir
         self._cache_prefix = cache_prefix
+        self._subject_filters = subject_filters
 
     def _cache_path(self, collection_name: str) -> str | None:
         """Return the pickle cache file path for a given collection, or None if caching is disabled."""
@@ -139,15 +142,29 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
             A ``QueryFusionRetriever`` combining vector and BM25 search via
             Reciprocal Rank Fusion.
         """
+        filters = None
+        if self._subject_filters:
+            filters = MetadataFilters(
+                filters=[MetadataFilter(key="subject_code", value=sc) for sc in self._subject_filters],
+                condition=FilterCondition.OR
+            )
+
         # 1. Dense vector retriever
         vector_retriever = VectorIndexRetriever(
             index=index,
             similarity_top_k=self._vector_top_k,
+            filters=filters,
         )
+
+        all_bm25_nodes = self._get_bm25_nodes(index)
+        if self._subject_filters:
+            bm25_nodes = [n for n in all_bm25_nodes if n.metadata.get("subject_code") in self._subject_filters]
+        else:
+            bm25_nodes = all_bm25_nodes
 
         # 2. Sparse BM25 retriever
         bm25_retriever = BM25Retriever.from_defaults(
-            nodes=self._get_bm25_nodes(index),
+            nodes=bm25_nodes,
             similarity_top_k=self._bm25_top_k,
         )
 
@@ -172,6 +189,7 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
 def get_hybrid_rrf_retriever(
     index: VectorStoreIndex,
     cache_dir: str | None = None,
+    subject_filters: list[str] | None = None,
 ) -> BaseRetriever:
     """
     Convenience wrapper — build a hybrid RRF retriever via
@@ -185,4 +203,7 @@ def get_hybrid_rrf_retriever(
     Returns:
         A ``QueryFusionRetriever`` combining vector and BM25 search.
     """
-    return HybridRRFRetrieverBuilder(cache_dir=cache_dir).build(index)
+    return HybridRRFRetrieverBuilder(
+        cache_dir=cache_dir,
+        subject_filters=subject_filters
+    ).build(index)
