@@ -212,6 +212,8 @@ function AdminDash2() {
                     onSubmit={students.handleAddStudentSubmit}
                     loading={students.addLoading}
                     error={students.addError}
+                    availability={students.availability}
+                    checkUniqueness={students.checkUniqueness}
                 />
 
                 <Admin_ModalEditStudent
@@ -232,6 +234,8 @@ function AdminDash2() {
                     onSubmit={courses.handleAddCourseSubmit}
                     loading={courses.addCourseLoading}
                     error={courses.addCourseError}
+                    availability={courses.availability}
+                    checkUniqueness={courses.checkUniqueness}
                 />
 
                 <Admin_ModalAssignFaculty
@@ -275,6 +279,8 @@ function AdminDash2() {
                     onSubmit={faculties.handleAddFacultySubmit}
                     loading={faculties.addLoading}
                     error={faculties.addError}
+                    availability={faculties.availability}
+                    checkUniqueness={faculties.checkUniqueness}
                 />
 
                 <Admin_ModalEditFaculty

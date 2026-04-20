@@ -1,15 +1,40 @@
-import React from "react";
 import {
     MdClose,
     MdOutlinePerson,
     MdOutlineMail,
     MdOutlineAlternateEmail,
     MdOutlineLock,
-    MdOutlineVisibility
+    MdOutlineVisibility,
+    MdHourglassEmpty,
+    MdCheckCircle,
+    MdError
 } from "react-icons/md";
 
-function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, loading, error }) {
+function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
     if (!isOpen) return null;
+
+    const isEmailValid = /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(form.email || "");
+
+    // Debounced Uniqueness Check
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (form.user_name && form.user_name !== availability.user_name.checkedValue) {
+                checkUniqueness("user_name", form.user_name);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [form.user_name]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (form.email && isEmailValid && form.email !== availability.email.checkedValue) {
+                checkUniqueness("email", form.email);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [form.email, isEmailValid]);
+
+    const hasConflict = availability.user_name.exists || availability.email.exists;
 
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
@@ -65,7 +90,7 @@ function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, load
                         <div className="relative group">
                             <MdOutlineMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
                             <input
-                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all outline-none"
+                                className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none ring-1 ${form.email && (!isEmailValid || availability.email.exists) ? 'ring-red-500 shadow-lg shadow-red-500/10' : 'ring-slate-200 dark:ring-slate-700'} focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all outline-none`}
                                 id="email"
                                 name="email"
                                 type="email"
@@ -74,7 +99,23 @@ function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, load
                                 placeholder="j.pierce@institution.edu"
                                 required
                             />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                {availability.email.loading && <MdHourglassEmpty className="animate-spin text-slate-400" />}
+                                {form.email && isEmailValid && !availability.email.loading && availability.email.checkedValue === form.email && (
+                                    availability.email.exists ? <MdError className="text-red-500" /> : <MdCheckCircle className="text-green-500" />
+                                )}
+                            </div>
                         </div>
+                        {form.email && !isEmailValid && (
+                            <p className="text-[10px] text-red-500 font-bold mt-1 ml-4 animate-in fade-in slide-in-from-top-1 duration-200 uppercase tracking-wider">
+                                Invalid Email Format
+                            </p>
+                        )}
+                        {availability.email.exists && availability.email.checkedValue === form.email && (
+                            <p className="text-[10px] text-red-500 font-bold mt-1 ml-4 animate-in fade-in slide-in-from-top-1 duration-200 uppercase tracking-wider">
+                                Email Already Registered
+                            </p>
+                        )}
                     </div>
 
                     {/* Username */}
@@ -85,7 +126,7 @@ function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, load
                         <div className="relative group">
                             <MdOutlineAlternateEmail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl" />
                             <input
-                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all outline-none"
+                                className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none ring-1 ${availability.user_name.exists ? 'ring-red-500 shadow-lg shadow-red-500/10' : 'ring-slate-200 dark:ring-slate-700'} focus:ring-2 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all outline-none`}
                                 id="user_name"
                                 name="user_name"
                                 type="text"
@@ -94,7 +135,18 @@ function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, load
                                 placeholder="jpierce_admin"
                                 required
                             />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                {availability.user_name.loading && <MdHourglassEmpty className="animate-spin text-slate-400" />}
+                                {form.user_name && !availability.user_name.loading && availability.user_name.checkedValue === form.user_name && (
+                                    availability.user_name.exists ? <MdError className="text-red-500" /> : <MdCheckCircle className="text-green-500" />
+                                )}
+                            </div>
                         </div>
+                        {availability.user_name.exists && availability.user_name.checkedValue === form.user_name && (
+                            <p className="text-[10px] text-red-500 font-bold mt-1 ml-4 animate-in fade-in slide-in-from-top-1 duration-200 uppercase tracking-wider">
+                                Username Already in Use
+                            </p>
+                        )}
                     </div>
 
                     {/* Password */}
@@ -130,8 +182,8 @@ function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, load
                     <div className="flex flex-col gap-3 pt-4">
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white w-full py-4 rounded-2xl font-bold tracking-wide shadow-lg shadow-blue-600/20 hover:scale-[1.01] transition-transform active:scale-95 disabled:opacity-70 flex items-center justify-center"
+                            disabled={loading || !isEmailValid || hasConflict}
+                            className="bg-blue-600 hover:bg-blue-700 text-white w-full py-4 rounded-2xl font-bold tracking-wide shadow-lg shadow-blue-600/20 hover:scale-[1.01] transition-transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
                         >
                             {loading ? (
                                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

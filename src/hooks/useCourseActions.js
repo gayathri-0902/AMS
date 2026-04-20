@@ -20,8 +20,37 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
     const [addCourseLoading, setAddCourseLoading] = useState(false);
     const [addCourseError, setAddCourseError] = useState(null);
 
-    const handleAddCourseChange = (e) =>
-        setAddCourseForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    // Uniqueness Checks
+    const [availability, setAvailability] = useState({
+        course_code: { loading: false, exists: false, checkedValue: "" }
+    });
+
+    const checkUniqueness = async (field, value) => {
+        if (!value || value.length < 2) return;
+        setAvailability(prev => ({ ...prev, [field]: { ...prev[field], loading: true } }));
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/validate-identifier?field=${field}&value=${value}`);
+            setAvailability(prev => ({ 
+                ...prev, 
+                [field]: { loading: false, exists: res.data.exists, checkedValue: value } 
+            }));
+        } catch (err) {
+            console.error(`Error checking ${field} availability:`, err);
+            setAvailability(prev => ({ ...prev, [field]: { ...prev[field], loading: false } }));
+        }
+    };
+
+    const handleAddCourseChange = (e) => {
+        const { name, value } = e.target;
+        setAddCourseForm((prev) => ({ ...prev, [name]: value }));
+        
+        if (availability[name]) {
+            setAvailability(prev => ({ 
+                ...prev, 
+                [name]: { ...prev[name], exists: false, checkedValue: "" } 
+            }));
+        }
+    };
 
     /**
      * @param {Event}   e
@@ -30,6 +59,11 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
     const handleAddCourseSubmit = async (e, shouldOpenAssignFaculty = false) => {
         e.preventDefault();
         
+        if (availability.course_code.exists) {
+            setAddCourseError("Course code already exists. Please use a unique code.");
+            return;
+        }
+
         setAddCourseLoading(true);
         setAddCourseError(null);
         try {
@@ -211,5 +245,8 @@ export function useCourseActions({ batchData, refetchBatchData, setActiveModal }
         handleEditCourseChange,
         handleEditCourseSubmit,
         handleRemoveFaculty,
+        // Uniqueness
+        availability,
+        checkUniqueness,
     };
 }

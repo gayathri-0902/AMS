@@ -1,8 +1,20 @@
-import React from "react";
-import { MdClose, MdTag, MdBook, MdStar, MdExpandMore, MdPersonAdd } from "react-icons/md";
+import React, { useEffect } from "react";
+import { MdClose, MdTag, MdBook, MdStar, MdExpandMore, MdPersonAdd, MdHourglassEmpty, MdCheckCircle, MdError } from "react-icons/md";
 
-function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loading, error }) {
+function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
     if (!isOpen) return null;
+
+    // Debounced Uniqueness Check
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (form.course_code && form.course_code !== availability.course_code.checkedValue) {
+                checkUniqueness("course_code", form.course_code);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [form.course_code]);
+
+    const hasConflict = availability.course_code.exists;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
@@ -29,8 +41,25 @@ function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loadi
                                 <label className="block text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Course Code</label>
                                 <div className="relative">
                                     <MdTag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]" />
-                                    <input name="course_code" value={form.course_code} onChange={onChange} required className="w-full h-11 pl-10 pr-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all outline-none text-slate-900 dark:text-slate-100 text-sm font-bold placeholder:text-slate-400" placeholder="e.g. CS101" type="text" />
+                                    <input 
+                                        name="course_code" 
+                                        value={form.course_code} 
+                                        onChange={onChange} 
+                                        required 
+                                        className={`w-full h-11 pl-10 pr-10 bg-slate-50 dark:bg-slate-800/50 border ${availability.course_code.exists ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200 dark:border-slate-700'} rounded-lg focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all outline-none text-slate-900 dark:text-slate-100 text-sm font-bold placeholder:text-slate-400`} 
+                                        placeholder="e.g. CS101" 
+                                        type="text" 
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                        {availability.course_code.loading && <MdHourglassEmpty className="animate-spin text-slate-400 text-sm" />}
+                                        {form.course_code && !availability.course_code.loading && availability.course_code.checkedValue === form.course_code && (
+                                            availability.course_code.exists ? <MdError className="text-red-500" /> : <MdCheckCircle className="text-green-500" />
+                                        )}
+                                    </div>
                                 </div>
+                                {availability.course_code.exists && (
+                                    <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-wider">Code Already Taken</p>
+                                )}
                             </div>
 
                             {/* Credits */}
@@ -107,7 +136,7 @@ function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loadi
 
                     {/* Modal Footer */}
                     <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex flex-col gap-3">
-                        <button type="button" onClick={(e) => onSubmit(e, true)} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-600/20">
+                        <button type="button" onClick={(e) => onSubmit(e, true)} disabled={loading || hasConflict} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : (
                                 <>
                                     <MdPersonAdd className="text-[20px]" />
@@ -115,7 +144,7 @@ function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loadi
                                 </>
                             )}
                         </button>
-                        <button type="submit" disabled={loading} className="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold py-3 rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
+                        <button type="submit" disabled={loading || hasConflict} className="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold py-3 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             Not Now / Skip
                         </button>
                     </div>

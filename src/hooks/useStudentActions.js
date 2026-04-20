@@ -28,19 +28,64 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
     const [addLoading, setAddLoading] = useState(false);
     const [addError, setAddError] = useState(null);
 
+    // Uniqueness Checks
+    const [availability, setAvailability] = useState({
+        roll_no: { loading: false, exists: false, checkedValue: "" },
+        email: { loading: false, exists: false, checkedValue: "" }
+    });
+
+    // Handle Uniqueness Side-Effect
+    const checkUniqueness = async (field, value) => {
+        if (!value || value.length < 3) return;
+        setAvailability(prev => ({ ...prev, [field]: { ...prev[field], loading: true } }));
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/admin/validate-identifier?field=${field}&value=${value}`);
+            setAvailability(prev => ({ 
+                ...prev, 
+                [field]: { loading: false, exists: res.data.exists, checkedValue: value } 
+            }));
+        } catch (err) {
+            console.error(`Error checking ${field} availability:`, err);
+            setAvailability(prev => ({ ...prev, [field]: { ...prev[field], loading: false } }));
+        }
+    };
+
 
     /*What it does: Every time the admin types a letter in an input field, this function runs.
 
     How it works: It looks at the name of the input field (like "email") and updates only that specific part of the form while keeping everything else exactly as it was.
     */
     const handleAddStudentChange = (e) => {
-        setAddStudentForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setAddStudentForm((prev) => ({ ...prev, [name]: value }));
         if (addError) setAddError(null);
+
+        // Clear existing availability state if value changes
+        if (availability[name]) {
+            setAvailability(prev => ({ 
+                ...prev, 
+                [name]: { ...prev[name], exists: false, checkedValue: "" } 
+            }));
+        }
     };
 
 
     const handleAddStudentSubmit = async (e) => {
         e.preventDefault();
+        
+        // Email Regex Validation
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(addStudentForm.email)) {
+            setAddError("Please provide a valid work email address (e.g., name@domain.com).");
+            return;
+        }
+
+        // Final Uniqueness Verification before submit
+        if (availability.roll_no.exists || availability.email.exists) {
+            setAddError("Identity conflict detected. Please fix the highlighted fields.");
+            return;
+        }
+
         setAddLoading(true);
         setAddError(null);
         try {
@@ -255,5 +300,8 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         handleArchiveClick,
         handleConfirmArchive,
         handleRestoreStudent,
+        // Uniqueness
+        availability,
+        checkUniqueness,
     };
 }

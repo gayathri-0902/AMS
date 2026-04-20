@@ -1,8 +1,31 @@
-import React from "react";
-import { MdClose } from "react-icons/md";
+import React, { useEffect } from "react";
+import { MdClose, MdCheckCircle, MdError, MdHourglassEmpty } from "react-icons/md";
 
-function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, loading, error }) {
+function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
     if (!isOpen) return null;
+
+    const isEmailValid = /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(form.email || "");
+
+    // Debounced Uniqueness Check
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (form.roll_no && form.roll_no !== availability.roll_no.checkedValue) {
+                checkUniqueness("roll_no", form.roll_no);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [form.roll_no]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (form.email && isEmailValid && form.email !== availability.email.checkedValue) {
+                checkUniqueness("email", form.email);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [form.email, isEmailValid]);
+
+    const hasConflict = availability.roll_no.exists || availability.email.exists;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -24,12 +47,55 @@ function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, load
 
                         <div>
                             <label className="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Roll Number / ID</label>
-                            <input type="text" name="roll_no" value={form.roll_no} onChange={onChange} required className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white" placeholder="e.g. 21CSE001" />
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    name="roll_no" 
+                                    value={form.roll_no} 
+                                    onChange={onChange} 
+                                    required 
+                                    className={`w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border ${availability.roll_no.exists ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-200 dark:border-slate-700'} rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white`} 
+                                    placeholder="e.g. 21CSE001" 
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    {availability.roll_no.loading && <MdHourglassEmpty className="animate-spin text-slate-400" />}
+                                    {form.roll_no && !availability.roll_no.loading && availability.roll_no.checkedValue === form.roll_no && (
+                                        availability.roll_no.exists ? <MdError className="text-red-500" /> : <MdCheckCircle className="text-green-500" />
+                                    )}
+                                </div>
+                            </div>
+                            {availability.roll_no.exists && (
+                                <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-wider">Roll Number Already Registered</p>
+                            )}
                         </div>
 
                         <div>
                             <label className="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Email Address</label>
-                            <input type="email" name="email" value={form.email} onChange={onChange} required className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white" placeholder="e.g. john@univ.edu" />
+                            <div className="relative">
+                                <input 
+                                    type="email" 
+                                    name="email" 
+                                    value={form.email} 
+                                    onChange={onChange} 
+                                    required 
+                                    className={`w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border ${form.email && (!isEmailValid || availability.email.exists) ? 'border-red-500 ring-1 ring-red-500/20' : 'border-slate-200 dark:border-slate-700'} rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white`} 
+                                    placeholder="e.g. john@univ.edu" 
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    {availability.email.loading && <MdHourglassEmpty className="animate-spin text-slate-400" />}
+                                    {form.email && isEmailValid && !availability.email.loading && availability.email.checkedValue === form.email && (
+                                        availability.email.exists ? <MdError className="text-red-500" /> : <MdCheckCircle className="text-green-500" />
+                                    )}
+                                </div>
+                            </div>
+                            {form.email && !isEmailValid && (
+                                <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    Please enter a valid email address structure (e.g. user@domain.com)
+                                </p>
+                            )}
+                            {availability.email.exists && availability.email.checkedValue === form.email && (
+                                <p className="text-[10px] text-red-500 font-bold mt-1 ml-1 uppercase tracking-wider">Email Already Exists in Database</p>
+                            )}
                         </div>
 
                         <div>
@@ -90,7 +156,7 @@ function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, load
                         <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95">
                             Cancel
                         </button>
-                        <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50">
+                        <button type="submit" disabled={loading || !isEmailValid || hasConflict} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Save Student'}
                         </button>
                     </div>
