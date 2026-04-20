@@ -6,7 +6,9 @@ const bcrypt = require("bcrypt");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require('crypto');
 const { exec } = require('child_process'); // For automated port management
+const nodemailer = require('nodemailer');
 
 // --- Models ---
 const User = require("./models/User");
@@ -27,6 +29,7 @@ const ClassNotes = require("./models/ClassNotes");
 const Feedback = require("./models/Feedback");
 const Assignment = require("./models/Assignment");
 const Submission = require("./models/Submission");
+const ResetToken = require("./models/ResetToken");
 
 const csv = require("csv-parser");
 const ExcelJS = require("exceljs");
@@ -339,6 +342,57 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
 });
 // ===== END MODIFICATION =====
 
+// 4.4 Student Overall Attendance (all subjects combined)
+app.get("/api/student/overall-attendance/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const enrollment = await StudentEnrollment.findOne({
+      student_id: studentId,
+      status: "active",
+    }).populate("yr_sem_id");
+
+    if (!enrollment) return res.status(404).json({ error: "No active enrollment" });
+
+    const yrSem = enrollment.yr_sem_id;
+
+    // Get all subject offerings for this batch
+    const offerings = await SubjectOffering.find({ yr_sem_id: yrSem._id, is_active: true });
+
+    let totalSessionsAll = 0;
+    let totalPresentAll = 0;
+
+    for (const offering of offerings) {
+      // Count all sessions held for this subject
+      const sessions = await ClassSession.find({ subject_offering_id: offering._id });
+      totalSessionsAll += sessions.length;
+
+      // Count sessions where this student was marked "Present"
+      const presentRecords = await Attendance.countDocuments({
+        student_id: studentId,
+        class_session_id: { $in: sessions.map(s => s._id) },
+        status: "Present"
+      });
+      totalPresentAll += presentRecords;
+    }
+
+    const percentage = totalSessionsAll > 0
+      ? ((totalPresentAll / totalSessionsAll) * 100).toFixed(2)
+      : "0.00";
+
+    res.json({
+      present_count: totalPresentAll,
+      total_count: totalSessionsAll,
+      percentage
+    });
+  } catch (error) {
+    console.error("Overall attendance error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // 4.5 Student Dashboard: Full Weekly Timetable
 app.get("/api/student/weekly-timetable/:studentId", async (req, res) => {
   const { studentId } = req.params;
@@ -470,13 +524,14 @@ app.get("/api/attendance/:studentId", async (req, res) => {
         class_session_id: { $in: sessions.map(s => s._id) },
       });
       const present = records.filter((r) => r.status === "Present").length;
+      const totalSessions = sessions.length;
       subjectAttendance.push({
         subject_offering_id: subject._id,
         class_name: subject.course_master_id.course_name,
         class_code: subject.course_master_id.course_code,
         present_count: present,
-        total_count: records.length,
-        percentage: records.length > 0 ? ((present / records.length) * 100).toFixed(2) : "0.00",
+        total_count: totalSessions,
+        percentage: totalSessions > 0 ? ((present / totalSessions) * 100).toFixed(2) : "0.00",
       });
     }
     res.json({ subjectAttendance });
@@ -1958,6 +2013,8 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
     if (!subject) return res.status(404).json({ message: "Subject not found" });
 
     const sessions = await ClassSession.find({ subject_offering_id: subjectOfferingId });
+    const totalSessions = sessions.length;
+
     const records = await Attendance.find({
       student_id: studentId,
       class_session_id: { $in: sessions.map(s => s._id) },
@@ -1966,8 +2023,8 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
     const present = records.filter(r => r.status === "Present").length;
     const attendanceStats = {
       present_count: present,
-      total_count: records.length,
-      percentage: records.length > 0 ? ((present / records.length) * 100).toFixed(2) : "0.00"
+      total_count: totalSessions,
+      percentage: totalSessions > 0 ? ((present / totalSessions) * 100).toFixed(2) : "0.00"
     };
 
     const notes = await ClassNotes.find({
@@ -2128,6 +2185,38 @@ app.post("/api/academic-ai/query", async (req, res) => {
   }
 });
 
+app.post("/api/faculty-ai/query", async (req, res) => {
+  try {
+    const response = await fetch(`${FLASK_URL}/api/faculty/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    if (response.body) {
+      for await (const chunk of response.body) {
+        res.write(chunk);
+      }
+    }
+    res.end();
+
+  } catch (error) {
+    console.error("Faculty AI proxy error:", error.message);
+    res.status(502).json({
+      message: "Faculty AI service is unavailable. Make sure the Flask server is running.",
+    });
+  }
+});
+
 // 18. Get All Faculties
 app.get("/api/admin/faculties", async (req, res) => {
   try {
@@ -2149,6 +2238,146 @@ app.get("/api/admin/faculties", async (req, res) => {
   } catch (error) {
     console.error("Get faculties error:", error);
     res.status(500).json({ message: "Server error while fetching faculties" });
+  }
+});
+
+// ============================================================
+// FORGOT PASSWORD / RESET LINK FLOW
+// ============================================================
+
+// Nodemailer transporter (Gmail + App Password)
+const mailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// POST /api/auth/forgot-password
+// Body: { email }
+// Validates college email, finds user, generates secure token, sends reset link
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  // 1. Strict format validation: name or rollno @crraoaimscs.res.in
+  const COLLEGE_EMAIL_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9.]*@crraoaimscs\.res\.in$/;
+  if (!email || !COLLEGE_EMAIL_REGEX.test(email)) {
+    return res.status(400).json({
+      message: 'Enter a valid college email (e.g. yourname or rollno@crraoaimscs.res.in).',
+    });
+  }
+
+  const emailLower = email.toLowerCase();
+  const emailRegex = new RegExp(`^${emailLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+
+  try {
+    // 2. Verify email exists in Faculty or Student (case-insensitive)
+    const facultyRecord = await Faculty.findOne({ email: emailRegex });
+    const studentRecord = await Student.findOne({ email: emailRegex });
+
+    if (!facultyRecord && !studentRecord) {
+      return res.status(404).json({
+        message: 'No account found with this college email address.',
+      });
+    }
+
+    // 3. Invalidate any existing unused tokens for this email
+    await ResetToken.deleteMany({ email: emailLower, used: false });
+
+    // 4. Generate a cryptographically secure random token
+    const token = crypto.randomBytes(32).toString('hex'); // 64-char hex string
+
+    // 5. Save token to DB — TTL index auto-deletes it after 15 minutes
+    await ResetToken.create({ email: emailLower, token });
+
+    // 6. Build reset link
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${token}`;
+
+    // 7. Send email with reset link
+    await mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: email,
+      subject: 'AMS – Password Reset Link',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">Attendance Management System</h2>
+          <p>Hello,</p>
+          <p>You requested a password reset. Click the button below to set a new password:</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetLink}"
+               style="background: #2563eb; color: #fff; text-decoration: none;
+                      padding: 14px 32px; border-radius: 10px;
+                      font-size: 16px; font-weight: bold; display: inline-block;">
+              Reset My Password
+            </a>
+          </div>
+          <p>This link is valid for <strong>15 minutes</strong> and can only be used once.</p>
+          <p style="font-size: 13px; color: #64748b; word-break: break-all;">
+            If the button doesn't work, copy this link into your browser:<br/>${resetLink}
+          </p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="color: #94a3b8; font-size: 12px;">CR Rao AIMSCS – Campus Management</p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({ message: 'Password reset link sent to your email.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ message: 'Failed to send reset link. Please try again.' });
+  }
+});
+
+// POST /api/auth/reset-password
+// Body: { token, newPassword }
+// Validates token from DB, resets the password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ message: 'Token and new password are required.' });
+  }
+
+  try {
+    // 1. Find token in DB (TTL handles expiry — if document exists, it's still valid)
+    const tokenRecord = await ResetToken.findOne({ token, used: false });
+
+    if (!tokenRecord) {
+      return res.status(400).json({
+        message: 'This reset link is invalid or has already expired. Please request a new one.',
+      });
+    }
+
+    // 2. Find user from Faculty or Student using stored email (case-insensitive)
+    const email = tokenRecord.email;
+    const emailRegex = new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const facultyRecord = await Faculty.findOne({ email: emailRegex });
+    const studentRecord = await Student.findOne({ email: emailRegex });
+    const profile = facultyRecord || studentRecord;
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const userRecord = await User.findById(profile.user_id);
+    if (!userRecord) {
+      return res.status(404).json({ message: 'User account not found.' });
+    }
+
+    // 3. Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(userRecord._id, { password: hashedPassword });
+
+    // 4. Mark token as used (prevents reuse; TTL will clean it up later)
+    await ResetToken.findByIdAndUpdate(tokenRecord._id, { used: true });
+
+    return res.status(200).json({ message: 'Password reset successfully.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ message: 'Failed to reset password. Please try again.' });
   }
 });
 

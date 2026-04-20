@@ -14,6 +14,7 @@ import AssignmentHub from "./components/AssignmentHub";
 import HandIn from "./components/HandIn";
 import AssignmentGrader from "./components/AssignmentGrader";
 import FeedbackPage from "./components/FeedbackPage";
+import ResetPassword from "./components/ResetPassword";
 
 
 /**
@@ -132,6 +133,9 @@ function App() {
             </PublicRoute>
           }
         />
+
+        {/* Password Reset — must be public (user is logged out) */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Admin Access */}
         <Route

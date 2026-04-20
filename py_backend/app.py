@@ -21,6 +21,7 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
 from query_engine import setup_query_engine
+from faculty_engine import setup_faculty_engine
 from config import cfg
 from agents.assignment_agent import assignment_agent, parse_faculty_request, AssignType
 
@@ -47,17 +48,25 @@ _cached_engine = None
 _cached_key = None          # (year, branch) tuple
 
 
-def _get_engine(year: int, branch: str):
+def _get_engine(
+    year: int | None = None,
+    branch: str | None = None,
+    subject_code: str | None = None
+):
     """Return a cached engine, or build a new one if params changed."""
     global _cached_engine, _cached_key
 
-    key = (year, branch)
+    key = subject_code if subject_code else (year, branch)
     if _cached_engine is not None and _cached_key == key:
         return _cached_engine
 
-    print(f"[app] Building query engine for year={year}, branch={branch} ...")
-    # Enable streaming for the engine
-    _cached_engine = setup_query_engine(year=year, branch=branch, streaming=True)
+    if subject_code:
+        print(f"[app] Building faculty query engine for subject={subject_code} ...")
+        _cached_engine = setup_faculty_engine(subject_code=subject_code, streaming=True)
+    else:
+        print(f"[app] Building query engine for year={year}, branch={branch} ...")
+        _cached_engine = setup_query_engine(year=year, branch=branch, streaming=True)
+    
     _cached_key = key
     print("[app] Query engine ready.")
     return _cached_engine
@@ -146,6 +155,61 @@ def handle_query():
     except Exception as e:
         print(f"[app] Query error: {e}")
         return jsonify({"error": f"RAG pipeline error: {str(e)}"}), 500
+
+
+@app.route("/api/faculty/query", methods=["POST"])
+def handle_faculty_query():
+    """
+    Accept a faculty member's question along with a subject code and
+    return the subject-specific RAG answer.
+    """
+    data = request.get_json(force=True)
+
+    query = data.get("query", "").strip()
+    subject_code = data.get("subject_code", "").strip()
+
+    if not query:
+        return jsonify({"error": "query is required"}), 400
+    if not subject_code:
+        return jsonify({"error": "subject_code is required"}), 400
+
+    try:
+        engine = _get_engine(subject_code=subject_code)
+
+        def generate():
+            try:
+                yield f"data: {json.dumps({'status': 'started', 'message': f'Searching {subject_code} materials...'})}\n\n"
+                response = engine.query(query)
+                
+                for token in response.response_gen:
+                    chunk_data = json.dumps({"status": "token", "token": token})
+                    yield f"data: {chunk_data}\n\n"
+
+                sources = []
+                for node in response.source_nodes:
+                    sources.append({
+                        "document": os.path.basename(node.metadata.get("file_path", "Unknown")),
+                        "page": node.metadata.get("page_label", "?"),
+                        "score": round(node.score, 4) if node.score else None,
+                    })
+                
+                final_data = json.dumps({
+                    "status": "complete",
+                    "sources": sources,
+                    "subject_code": subject_code,
+                    "done": True
+                })
+                yield f"data: {final_data}\n\n"
+            except Exception as stream_error:
+                print(f"[app] Faculty Stream error: {stream_error}")
+                error_event = json.dumps({"status": "error", "message": str(stream_error)})
+                yield f"data: {error_event}\n\n"
+
+        return Response(generate(), mimetype="text/event-stream")
+
+    except Exception as e:
+        print(f"[app] Faculty Query error: {e}")
+        return jsonify({"error": f"Faculty RAG pipeline error: {str(e)}"}), 500
 
 
 @app.route("/api/assignment/generate", methods=["POST"])
@@ -290,75 +354,6 @@ def generate_assignment():
 def health():
     """Simple health-check for the proxy to verify connectivity."""
     return jsonify({"status": "ok"})
-
-
-# ---------------------------------------------------------------------------
-# Face Detection Routes
-# ---------------------------------------------------------------------------
-
-@app.route("/api/enroll", methods=["POST"])
-def enroll_faces():
-    """
-    Enroll all student faces from the data/images2 directory into ChromaDB.
-    Expects: No body required (uses the fixed DATASET_DIR from enroll.py)
-    Returns: { "status": "success", "message": "Students enrolled" }
-    """
-    try:
-        print("[app] Starting face enrollment...")
-        enroll_all()
-        print("[app] Face enrollment completed successfully")
-        return jsonify({
-            "status": "success",
-            "message": "All students enrolled successfully"
-        }), 200
-    except Exception as e:
-        print(f"[app] Enrollment error: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-
-@app.route("/api/recognize", methods=["POST"])
-def recognize_single_face():
-    """
-    Recognize a single face in an uploaded image.
-    Expects: form-data with 'image' file
-    Returns: { "name": str, "confidence": float }
-    """
-    try:
-        if 'image' not in request.files:
-            return jsonify({"error": "No image provided"}), 400
-        
-        image_file = request.files['image']
-        if image_file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-        
-        # Save temporary file
-        import tempfile
-        temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, image_file.filename)
-        image_file.save(temp_path)
-        
-        try:
-            # Recognize the face
-            name, confidence = recognize(temp_path)
-            os.remove(temp_path)
-            
-            return jsonify({
-                "name": name,
-                "confidence": round(float(confidence), 4)
-            }), 200
-        except Exception as e:
-            os.remove(temp_path) if os.path.exists(temp_path) else None
-            raise e
-            
-    except Exception as e:
-        print(f"[app] Recognition error: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
 
 
 # ---------------------------------------------------------------------------

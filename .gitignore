@@ -32,3 +32,4 @@ py_backend/facedetection/data
 py_backend/facedetection/face_env
 
 __pycache__
+venv

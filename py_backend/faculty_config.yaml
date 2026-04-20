@@ -1,0 +1,48 @@
+# =============================================================================
+# Faculty RAG Configuration (Isolated)
+# =============================================================================
+# This file is a dedicated copy for Faculty RAG, mirroring the Student RAG
+# settings but handling isolation for textbooks.
+
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+paths:
+  base_dir: "."                       # Portably resolves to current directory
+  db_dir: "chromadb"                  # relative to base_dir
+  embedding_model: "models/bge-m3"    # relative to base_dir
+  subjects_dir: "data/subjects"       # dedicated faculty materials directory
+
+# -----------------------------------------------------------------------------
+# Retrieval settings
+# -----------------------------------------------------------------------------
+retrieval:
+  vector_top_k: 5
+  bm25_top_k: 5
+  fusion_top_k: 3
+  num_queries: 1
+
+# -----------------------------------------------------------------------------
+# Local LLM
+# -----------------------------------------------------------------------------
+local_llm:
+  model: "meta-llama/Llama-3.2-3B-Instruct"
+  max_new_tokens: 256
+  context_window: 2048
+  temperature: 0.1
+
+# -----------------------------------------------------------------------------
+# Ollama LLM
+# -----------------------------------------------------------------------------
+ollama_llm:
+  model: "qwen3:8b"
+  request_timeout: 120.0
+  context_window: 4096
+  temperature: 0.3
+
+# -----------------------------------------------------------------------------
+# Pipeline defaults  
+# -----------------------------------------------------------------------------
+pipeline:
+  llm_backend: "ollama"   # matches student default
+  streaming: true
