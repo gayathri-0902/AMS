@@ -51,18 +51,22 @@ _cached_key = None          # (year, branch) tuple
 def _get_engine(
     year: int | None = None,
     branch: str | None = None,
-    subject_code: str | None = None
+    subject_code: str | list[str] | None = None
 ):
     """Return a cached engine, or build a new one if params changed."""
     global _cached_engine, _cached_key
 
-    key = subject_code if subject_code else (year, branch)
+    if isinstance(subject_code, list):
+        key = tuple(sorted(subject_code))
+    else:
+        key = subject_code if subject_code else (year, branch)
+        
     if _cached_engine is not None and _cached_key == key:
         return _cached_engine
 
     if subject_code:
-        print(f"[app] Building faculty query engine for subject={subject_code} ...")
-        _cached_engine = setup_faculty_engine(subject_code=subject_code, streaming=True)
+        print(f"[app] Building faculty query engine for subjects={subject_code} ...")
+        _cached_engine = setup_faculty_engine(subject_codes=subject_code, streaming=True)
     else:
         print(f"[app] Building query engine for year={year}, branch={branch} ...")
         _cached_engine = setup_query_engine(year=year, branch=branch, streaming=True)
@@ -166,19 +170,26 @@ def handle_faculty_query():
     data = request.get_json(force=True)
 
     query = data.get("query", "").strip()
-    subject_code = data.get("subject_code", "").strip()
+    subject_codes_raw = data.get("subject_codes") or data.get("subject_code", "")
+    
+    if isinstance(subject_codes_raw, str):
+        subject_codes = [s.strip() for s in subject_codes_raw.split(",") if s.strip()]
+    elif isinstance(subject_codes_raw, list):
+        subject_codes = subject_codes_raw
+    else:
+        subject_codes = []
 
     if not query:
         return jsonify({"error": "query is required"}), 400
-    if not subject_code:
-        return jsonify({"error": "subject_code is required"}), 400
+    if not subject_codes:
+        return jsonify({"error": "subject_code(s) is required"}), 400
 
     try:
-        engine = _get_engine(subject_code=subject_code)
+        engine = _get_engine(subject_code=subject_codes)
 
         def generate():
             try:
-                yield f"data: {json.dumps({'status': 'started', 'message': f'Searching {subject_code} materials...'})}\n\n"
+                yield f"data: {json.dumps({'status': 'started', 'message': f'Searching {subject_codes} materials...'})}\n\n"
                 response = engine.query(query)
                 
                 for token in response.response_gen:
@@ -196,7 +207,7 @@ def handle_faculty_query():
                 final_data = json.dumps({
                     "status": "complete",
                     "sources": sources,
-                    "subject_code": subject_code,
+                    "subject_codes": subject_codes,
                     "done": True
                 })
                 yield f"data: {final_data}\n\n"
