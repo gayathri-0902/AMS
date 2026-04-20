@@ -49,18 +49,21 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
         fusion_top_k: int = 2,
         num_queries: int = 1,
         cache_dir: str | None = None,
+        cache_prefix: str | None = None,
     ) -> None:
         self._vector_top_k = vector_top_k
         self._bm25_top_k = bm25_top_k
         self._fusion_top_k = fusion_top_k
         self._num_queries = num_queries
         self._cache_dir = cache_dir
+        self._cache_prefix = cache_prefix
 
     def _cache_path(self, collection_name: str) -> str | None:
         """Return the pickle cache file path for a given collection, or None if caching is disabled."""
         if self._cache_dir is None:
             return None
-        return os.path.join(self._cache_dir, f"{collection_name}_bm25_cache.pkl")
+        prefix = self._cache_prefix or collection_name
+        return os.path.join(self._cache_dir, f"{prefix}_bm25_cache.pkl")
 
     def _get_bm25_nodes(self, index: VectorStoreIndex) -> list[TextNode]:
         """
