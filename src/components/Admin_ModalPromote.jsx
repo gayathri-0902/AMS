@@ -72,7 +72,7 @@ function Admin_ModalPromote({ isOpen, onClose, selectedStudents = [], onSubmit, 
                              <MdInfoOutline className="text-sm" /> Promotion Summary
                         </h4>
                         
-                        <div className="max-h-48 overflow-y-auto px-2 space-y-2 pr-4 custom-scrollbar">
+                        <div className="max-h-48 overflow-y-auto px-2 space-y-2 pr-4 no-scrollbar">
                             {groups.map((g, idx) => (
                                 <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 group hover:border-blue-200 dark:hover:border-blue-900/30 transition-all">
                                     <div className="flex flex-col">

@@ -154,7 +154,7 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto no-scrollbar p-6">
                     {!results ? (
                         <>
                             {/* Template Download */}
@@ -202,7 +202,7 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
                                     
                                     {previewData.length > 0 ? (
                                         <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
-                                            <div className="max-h-[300px] overflow-auto">
+                                            <div className="max-h-[300px] overflow-auto no-scrollbar">
                                                 <table className="w-full text-sm text-left border-collapse">
                                                     <thead className="bg-slate-50 dark:bg-slate-700/50 sticky top-0 border-b border-slate-200 dark:border-slate-700">
                                                         <tr>
@@ -271,7 +271,7 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
                                 <div className="mt-6">
                                     <h4 className="font-bold text-slate-700 dark:text-slate-300 mb-2">Failure Details</h4>
                                     <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/50 rounded-xl overflow-hidden">
-                                        <ul className="divide-y divide-red-100 dark:divide-red-900/20 text-sm max-h-[250px] overflow-auto">
+                                        <ul className="divide-y divide-red-100 dark:divide-red-900/20 text-sm max-h-[250px] overflow-auto no-scrollbar">
                                             {results.failureList.map((f, i) => (
                                                 <li key={i} className="px-4 py-3 flex justify-between items-center">
                                                     <div>
