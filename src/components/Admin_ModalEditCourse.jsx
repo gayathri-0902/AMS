@@ -33,7 +33,7 @@ function Admin_ModalEditCourse({ isOpen, onClose, form, onChange, onSubmit, onRe
                 </nav>
 
                 {/* Content */}
-                <main className="flex-1 overflow-y-auto p-6">
+                <main className="flex-1 overflow-y-auto no-scrollbar p-6">
 
                     {/* GENERAL TAB */}
                     {tab === "general" && (
