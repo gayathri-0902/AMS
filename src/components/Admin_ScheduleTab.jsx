@@ -132,7 +132,7 @@ function Admin_ScheduleTab({
                             {/* Row Body: Days as Rows */}
                             <div className="bg-white dark:bg-slate-900">
                                 {days.map((day, dayIdx) => (
-                                    <div key={day} className="flex border-b last:border-b-0 hover:bg-slate-50/50 transition-colors">
+                                    <div key={day} className="flex border-b last:border-b-0 transition-colors">
                                         {/* Day Column (Side Header) */}
                                         <div className="min-w-[100px] p-4 border-r flex flex-col justify-center bg-white dark:bg-slate-900 z-10">
                                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">{day}</span>
