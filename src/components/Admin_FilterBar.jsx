@@ -56,7 +56,7 @@ function CustomSelect({ name, value, options, placeholder, onChange }) {
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-800/90 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
                     {options.map((opt) => (
                         <div
                             key={opt.value}
@@ -101,7 +101,7 @@ function Admin_FilterBar({ formData, handleChange, handleFetch, clearFilters, lo
     return (
         <div className="w-full mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
             {/* Outer Container with Glow effect */}
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 rounded-[1.8rem] shadow-xl shadow-slate-200/20 dark:shadow-black/20 p-2 flex flex-col lg:flex-row items-center gap-3">
+            <div className="bg-white dark:bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 rounded-[1.8rem] shadow-xl shadow-slate-200/20 dark:shadow-black/20 p-2 flex flex-col lg:flex-row items-center gap-3">
                 
                 {/* Year Select Container */}
                 <div className="w-full lg:w-36">

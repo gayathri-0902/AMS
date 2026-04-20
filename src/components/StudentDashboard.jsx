@@ -89,7 +89,7 @@ const StudentDashboard = ({ overrideId }) => {
         return "bg-red-100 text-red-500";
       case "Not Marked":
       default:
-        return "bg-gray-100 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500";
+        return "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500";
     }
   };
 

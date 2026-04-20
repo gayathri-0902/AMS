@@ -308,7 +308,7 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
                             </button>
                         </>
                     ) : (
-                        <button onClick={reset} className="px-8 py-2.5 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all">
+                        <button onClick={reset} className="px-8 py-2.5 bg-slate-800 dark:bg-white dark:bg-slate-800 text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all">
                             Close
                         </button>
                     )}

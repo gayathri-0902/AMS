@@ -84,7 +84,7 @@ const ParentDashboard = () => {
           </button>
           <button 
             onClick={logout} 
-            className="w-full bg-white dark:bg-slate-800 border-2 border-gray-100 dark:border-slate-600 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 py-4 rounded-2xl font-bold hover:bg-gray-50 dark:bg-slate-700 transition-all"
+            className="w-full bg-white dark:bg-slate-800 border-2 border-gray-100 dark:border-slate-600 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 py-4 rounded-2xl font-bold hover:bg-gray-50 dark:hover:bg-slate-800 dark:bg-slate-700 transition-all"
           >
             Back to Login
           </button>
@@ -137,7 +137,7 @@ const ParentDashboard = () => {
                   <div className="bg-blue-50 dark:bg-blue-900/40 w-14 h-14 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <HiOutlineChartBar className="w-8 h-8" />
                   </div>
-                  <span className="bg-gray-100 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  <span className="bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
                     Student Linked
                   </span>
                 </div>
@@ -154,7 +154,7 @@ const ParentDashboard = () => {
                       <span className="text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 text-[11px] font-bold uppercase tracking-tighter">Overall Attendance</span>
                       <span className="text-gray-900 dark:text-white font-black text-xl">{child.attendanceStats?.percentage}%</span>
                    </div>
-                   <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden shadow-inner">
+                   <div className="w-full bg-gray-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden shadow-inner">
                       <div 
                         className="bg-blue-600 h-full transition-all duration-1000 ease-out" 
                         style={{ width: `${child.attendanceStats?.percentage || 0}%` }}

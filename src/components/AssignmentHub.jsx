@@ -191,7 +191,7 @@ const AssignmentHub = () => {
             </div>
             <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2 text-center">Successfully Published!</h3>
             <p className="text-gray-500 dark:text-slate-400 dark:text-slate-500 font-medium text-center mb-6">Navigating to dashboard...</p>
-            <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2 overflow-hidden">
+            <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5 mb-2 overflow-hidden">
                <div className="bg-green-50 dark:bg-green-900/200 h-1.5 rounded-full animate-[progress_1.5s_ease-in-out]" style={{ width: '100%' }}></div>
             </div>
           </div>
@@ -335,7 +335,7 @@ const AssignmentHub = () => {
                   <button
                     disabled={loading || !config.instructions || !config.title}
                     onClick={handleGenerate}
-                    className={`w-full py-5 rounded-3xl text-xl font-bold flex items-center justify-center space-x-3 transition-all ${loading ? "bg-gray-100 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95"}`}
+                    className={`w-full py-5 rounded-3xl text-xl font-bold flex items-center justify-center space-x-3 transition-all ${loading ? "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95"}`}
                   >
                     {loading ? (
                       <>

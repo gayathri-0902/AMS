@@ -3,7 +3,7 @@ import { MdLogout, MdSearch } from "react-icons/md";
 
 function Admin_Header({ activeTab, logout, searchTerm, setSearchTerm, showSearch }) {
     return (
-        <header className="sticky top-0 z-30 flex items-center justify-between px-8 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-8 py-4 bg-white dark:bg-slate-800/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-4">
                 <button
                     onClick={logout}

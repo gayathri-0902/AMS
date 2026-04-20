@@ -135,7 +135,7 @@ function Admin_FeedbackTab() {
                             placeholder="Search batches..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-blue-500/50 focus:bg-white dark:focus:bg-slate-900 rounded-xl text-xs font-bold outline-none transition-all w-48 md:w-64"
+                            className="pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-blue-500/50 focus:bg-white dark:bg-slate-800 dark:focus:bg-slate-900 rounded-xl text-xs font-bold outline-none transition-all w-48 md:w-64"
                         />
                     </div>
 

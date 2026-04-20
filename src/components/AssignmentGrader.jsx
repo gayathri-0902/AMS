@@ -152,7 +152,7 @@ const AssignmentGrader = () => {
               }`}>
                 {assignment.assignment_type}
               </span>
-              <span className="text-[10px] font-black px-3 py-1 rounded-full bg-gray-100 text-gray-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <span className="text-[10px] font-black px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 {assignment.assignment_mode?.replace("_", " ")}
               </span>
             </div>

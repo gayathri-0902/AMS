@@ -190,7 +190,7 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-6 py-5 flex items-center justify-between shrink-0 shadow-md z-10">
                     <div className="flex items-center space-x-3">
-                        <div className="bg-white/20 p-2.5 rounded-xl">
+                        <div className="bg-white dark:bg-slate-800/20 p-2.5 rounded-xl">
                             <HiOutlineSparkles className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -204,7 +204,7 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all"
+                        className="text-white/70 hover:text-white hover:bg-white dark:bg-slate-800/10 p-2 rounded-xl transition-all"
                     >
                         <HiOutlineX className="w-6 h-6" />
                     </button>

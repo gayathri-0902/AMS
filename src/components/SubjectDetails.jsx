@@ -100,7 +100,7 @@ const SubjectDetails = () => {
                 {courseData?.attendanceStats?.percentage}%
               </div>
               <p className="text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 text-sm font-bold uppercase mb-6">Current Standing</p>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-gray-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-600 h-full" 
                   style={{ width: `${courseData?.attendanceStats?.percentage}%` }}

@@ -191,7 +191,7 @@ const HandIn = () => {
                             </div>
                             <button
                                 onClick={() => navigate(`/student-dashboard/${auth.studentId}`)}
-                                className="mt-4 px-8 py-4 bg-gray-100 text-gray-600 dark:text-slate-300 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all active:scale-95"
+                                className="mt-4 px-8 py-4 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all active:scale-95"
                             >
                                 Back to Dashboard
                             </button>
@@ -229,7 +229,7 @@ const HandIn = () => {
                                                         newArr[qIdx].student_selected_option = opt;
                                                         setAnswers(newArr);
                                                     }}
-                                                    className={`p-5 rounded-2xl border-2 text-left font-bold transition-all ${answers[qIdx]?.student_selected_option === opt ? "border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 shadow-md ring-4 ring-blue-50" : "border-gray-50 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-slate-400 dark:text-slate-500 hover:border-gray-200 dark:border-slate-600"}`}>
+                                                    className={`p-5 rounded-2xl border-2 text-left font-bold transition-all ${answers[qIdx]?.student_selected_option === opt ? "border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 shadow-md ring-4 ring-blue-50" : "border-gray-50 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-slate-400 dark:text-slate-500 hover:border-gray-200 dark:hover:border-slate-500 dark:border-slate-600"}`}>
                                                     {opt}
                                                 </button>
                                             ))}

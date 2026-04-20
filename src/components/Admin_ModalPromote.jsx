@@ -107,7 +107,7 @@ function Admin_ModalPromote({ isOpen, onClose, selectedStudents = [], onSubmit, 
                 <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2.5 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-[0.98]"
+                        className="flex-1 py-2.5 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-white dark:bg-slate-800 dark:hover:bg-slate-800 transition-all active:scale-[0.98]"
                     >
                         Cancel
                     </button>
