@@ -60,6 +60,7 @@ function Admin_ModalAddSession({
                                 <input
                                     type="number"
                                     name="session"
+                                    min="1"
                                     value={form.session}
                                     onChange={onChange}
                                     className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"

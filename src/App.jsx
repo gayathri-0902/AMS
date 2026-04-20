@@ -7,7 +7,7 @@ import LoginPage from "./components/LoginPage";
 import FacultyDashboard from "./components/FacultyDashboard";
 import StudentDashboard from "./components/StudentDashboard";
 //import AdminDashboard from "./components/AdminDashboard";
-import AdminDash2 from "./components/AdminDash2";
+import AdminDashboard from "./components/AdminDashboard";
 import ParentDashboard from "./components/ParentDashboard";
 import SubjectDetails from "./components/SubjectDetails";
 import AssignmentHub from "./components/AssignmentHub";
@@ -142,7 +142,7 @@ function App() {
           path="/admin-dashboard"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDash2 />
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

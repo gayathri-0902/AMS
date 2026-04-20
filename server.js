@@ -1261,6 +1261,72 @@ app.get("/api/admin/batch-data", async (req, res) => {
   }
 });
 
+// --- NEW: Centralized Availability Check ---
+app.get("/api/admin/validate-identifier", async (req, res) => {
+  const { field, value } = req.query;
+  
+  if (!field || !value) {
+    return res.status(400).json({ message: "Field and value are required" });
+  }
+
+  try {
+    let exists = false;
+    let conflictType = "";
+
+    switch (field) {
+      case "email":
+        // Check Students, Faculty, and Admin/Parents via User if needed
+        const studentEmail = await Student.findOne({ email: value });
+        const facultyEmail = await Faculty.findOne({ email: value });
+        const parentEmail = await Parent.findOne({ email: value });
+        
+        if (studentEmail || facultyEmail || parentEmail) {
+          exists = true;
+          conflictType = studentEmail ? "Student" : (facultyEmail ? "Faculty" : "Parent");
+        }
+        break;
+
+      case "roll_no":
+        // Check Students and User collection (for login consistency)
+        const studentRoll = await Student.findOne({ roll_no: value });
+        const userRoll = await User.findOne({ user_name: value });
+        
+        if (studentRoll || userRoll) {
+          exists = true;
+          conflictType = "Student/Account";
+        }
+        break;
+
+      case "user_name":
+        // Specifically for Faculty or general accounts
+        const userAccount = await User.findOne({ user_name: value });
+        const facultyRecord = await Faculty.findOne({ user_name: value }); // If such field exists, check it
+        
+        if (userAccount || facultyRecord) {
+          exists = true;
+          conflictType = "Account Username";
+        }
+        break;
+
+      case "course_code":
+        const course = await CourseMaster.findOne({ course_code: value });
+        if (course) {
+          exists = true;
+          conflictType = "Course";
+        }
+        break;
+
+      default:
+        return res.status(400).json({ message: "Invalid field for validation" });
+    }
+
+    res.json({ exists, conflictType });
+  } catch (error) {
+    console.error("Validation error:", error);
+    res.status(500).json({ message: "Error validating identifier" });
+  }
+});
+
 // version 2 for change faculty (Direct ID lookup)
 app.put("/api/admin/change-faculty", async (req, res) => {
   const { subject_offering_id, faculty_email } = req.body;
@@ -1381,7 +1447,17 @@ app.post("/api/admin/add-student", async (req, res) => {
 
   } catch (error) {
     await session.abortTransaction();
-    res.status(400).json({ message: error.message });
+    console.error("Add student error:", error);
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === "email" 
+        ? "A student with this email address already exists." 
+        : "A student with this roll number already exists.";
+      return res.status(409).json({ message });
+    }
+    
+    res.status(400).json({ message: error.message || "Server error while adding student" });
   } finally {
     session.endSession();
   }
@@ -1450,15 +1526,24 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
   }
 
   async function processRows(data) {
+    let rowIndex = 1; // Track row for better error reporting (assuming header is row 1)
     for (const row of data) {
+      rowIndex++;
+      // Skip completely empty rows
+      const isEmpty = Object.values(row).every(val => !val || val.toString().trim() === "");
+      if (isEmpty) continue;
+
       const { name, roll_no, email, password, yr, sem, stream, academic_yr } = row;
 
       const session = await mongoose.startSession();
       session.startTransaction();
 
       try {
-        if (!name || !roll_no || !email || !password || !yr || !sem || !stream || !academic_yr) {
-          throw new Error("Missing required fields");
+        const requiredFields = ["name", "roll_no", "email", "password", "yr", "sem", "stream", "academic_yr"];
+        const missing = requiredFields.filter(f => !row[f] || row[f].toString().trim() === "");
+
+        if (missing.length > 0) {
+          throw new Error(`Missing required fields: ${missing.join(", ")}`);
         }
 
         // 1. Verify if Batch Metadata exists
@@ -1469,11 +1554,17 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
 
         // 2. Conflict Check: Roll Number (Universal User ID)
         const existingUser = await User.findOne({ user_name: roll_no }).session(session);
-        if (existingUser) throw new Error(`Roll number ${roll_no} already exists`);
+        if (existingUser) throw new Error(`Roll number '${roll_no}' already exists as a student or account`);
 
-        // 3. Conflict Check: Email (Student Model)
-        const existingEmail = await Student.findOne({ email }).session(session);
-        if (existingEmail) throw new Error(`Email ${email} already exists`);
+        // 3. Conflict Check: Global Email (Cross-Collection)
+        const studentEmail = await Student.findOne({ email }).session(session);
+        const facultyEmail = await Faculty.findOne({ email }).session(session);
+        const parentEmail = await Parent.findOne({ email }).session(session);
+        
+        if (studentEmail || facultyEmail || parentEmail) {
+          const type = studentEmail ? "Student" : (facultyEmail ? "Faculty" : "Parent");
+          throw new Error(`Email '${email}' is already registered to a ${type}`);
+        }
 
         const hashedPassword = await bcrypt.hash(password.toString(), 10);
 
@@ -1506,10 +1597,19 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
         successList.push({ name, roll_no });
       } catch (error) {
         await session.abortTransaction();
+        
+        let displayError = error.message;
+        if (error.code === 11000) {
+          const field = Object.keys(error.keyPattern)[0];
+          displayError = field === "email" 
+            ? "Email already exists." 
+            : "Roll number already exists.";
+        }
+
         failureList.push({
-          roll_no: roll_no || "Unknown",
-          name: name || "Unknown",
-          error: error.message
+          roll_no: roll_no || `Row #${rowIndex}`,
+          name: name || "Empty Record",
+          error: displayError
         });
       } finally {
         session.endSession();
@@ -1577,9 +1677,16 @@ app.post("/api/admin/add-faculty", async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error("Add faculty error:", error);
-    const isDuplicate = error.code === 11000;
-    const errorMsg = isDuplicate ? "Faculty with this username or email already exists." : error.message;
-    res.status(400).json({ message: errorMsg || "Server error while adding faculty" });
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === "email" 
+        ? "A faculty member with this email already exists." 
+        : "This username is already taken by another faculty member.";
+      return res.status(409).json({ message });
+    }
+    
+    res.status(400).json({ message: error.message || "Server error while adding faculty" });
   } finally {
     session.endSession();
   }
@@ -1725,7 +1832,17 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
 
   } catch (error) {
     await session.abortTransaction();
-    res.status(400).json({ message: error.message });
+    console.error("Edit student error:", error);
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === "email" 
+        ? "Email is already taken by another student." 
+        : "Roll Number is already taken by another student.";
+      return res.status(409).json({ message });
+    }
+    
+    res.status(400).json({ message: error.message || "Server error while editing student" });
   } finally {
     session.endSession();
   }

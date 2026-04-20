@@ -26,6 +26,8 @@ const Admin_ModalBulkUpload = ({ isOpen, onClose, onRefresh }) => {
 
         if (!isExcel && fileExt !== "csv") {
             setError("Please upload a valid .csv or .xlsx file.");
+            setFile(null);
+            setPreviewData([]);
             return;
         }
 
