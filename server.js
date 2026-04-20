@@ -2011,6 +2011,38 @@ app.post("/api/academic-ai/query", async (req, res) => {
   }
 });
 
+app.post("/api/faculty-ai/query", async (req, res) => {
+  try {
+    const response = await fetch(`${FLASK_URL}/api/faculty/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    if (response.body) {
+      for await (const chunk of response.body) {
+        res.write(chunk);
+      }
+    }
+    res.end();
+
+  } catch (error) {
+    console.error("Faculty AI proxy error:", error.message);
+    res.status(502).json({
+      message: "Faculty AI service is unavailable. Make sure the Flask server is running.",
+    });
+  }
+});
+
 // 18. Get All Faculties
 app.get("/api/admin/faculties", async (req, res) => {
   try {

@@ -69,11 +69,22 @@ def recognize_group_faces_api():
         image_file = request.files['image']
         if image_file.filename == '':
             return jsonify({"error": "No file selected"}), 400
-        
-        # Check if maximum 10 photos already processed
-        from group_attendance import total_frames_processed
-        if total_frames_processed >= 10:
-            return jsonify({"error": "Maximum 10 photos allowed per session. Please finalize or reset."}), 400
+
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, image_file.filename)
+        image_file.save(temp_path)
+
+        try:
+            from group_attendance import total_frames_processed
+            if total_frames_processed >= 10:
+                os.remove(temp_path)
+                return jsonify({"error": "Maximum 10 photos allowed per session. Please finalize or reset."}), 400
+
+            result = recognize_group_faces(temp_path)
+            os.remove(temp_path)
+            return jsonify(result), 200
+        except Exception as e:
             os.remove(temp_path) if os.path.exists(temp_path) else None
             raise e
 
@@ -109,10 +120,61 @@ def finalize_attendance():
     try:
         data = request.get_json() or {}
         min_frames = data.get("min_frames_required", 7)  # Default to 7
+        result = compute_final_attendance(min_frames)
+        return jsonify(result), 200
+    except Exception as e:
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
+
+
+@app.route("/face/enroll", methods=["POST"])
+def enroll_faces():
+    """
+    Enroll all student faces from the data/images2 directory into ChromaDB.
+    Expects: no request body.
+    Returns: { "status": "success", "message": "Students enrolled" }
+    """
+    try:
+        enroll_all()
+        return jsonify({"status": "success", "message": "All students enrolled successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/face/recognize", methods=["POST"])
+def recognize_single_face():
+    """
+    Recognize a single face in an uploaded image.
+    Expects: form-data with 'image' file
+    Returns: { "name": str, "confidence": float }
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image provided"}), 400
+
+        image_file = request.files['image']
+        if image_file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, image_file.filename)
+        image_file.save(temp_path)
+
+        try:
+            name, confidence = recognize(temp_path)
+            os.remove(temp_path)
+            return jsonify({"name": name, "confidence": round(float(confidence), 4)}), 200
+        except Exception as e:
+            os.remove(temp_path) if os.path.exists(temp_path) else None
+            raise e
+
+    except Exception as e:
+        print(f"[face_api] Single recognition error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # ---------------------------------------------------------------------------
 # Entry point
