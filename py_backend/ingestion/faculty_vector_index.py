@@ -11,14 +11,14 @@ from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
-from config import cfg
+from faculty_config import faculty_cfg
 from ingestion.build_vector_index import HuggingFaceEmbedder
 from ingestion.faculty_loader import FacultyDocumentLoader
 
 class FacultyVectorIndexBuilder:
-    def __init__(self, db_dir: str = cfg.paths.db_dir):
+    def __init__(self, db_dir: str | None = None):
         self._embedder = HuggingFaceEmbedder()
-        self._db_dir = db_dir
+        self._db_dir = db_dir or faculty_cfg.paths.db_dir
         self._loader = FacultyDocumentLoader()
 
     def _get_storage_context(self, subject_code: str) -> StorageContext:

@@ -8,20 +8,20 @@ from llama_index.core import Settings
 from llama_index.llms.ollama import Ollama
 from llama_index.core.query_engine import RetrieverQueryEngine
 
-from config import cfg
+from faculty_config import faculty_cfg
 from ingestion.faculty_vector_index import build_faculty_index
 from retrieval.hybrid_retriever import HybridRRFRetrieverBuilder
 
 def setup_faculty_engine(subject_code: str, streaming: bool = True):
     """
-    Builds a subject-specific RAG engine for faculty.
+    Builds a subject-specific RAG engine for faculty using isolated config.
     """
-    # 1. LLM Setup
+    # 1. Setup Ollama LLM
     llm = Ollama(
-        model=cfg.ollama_llm.model,
-        request_timeout=cfg.ollama_llm.request_timeout,
-        context_window=cfg.ollama_llm.context_window,
-        temperature=cfg.ollama_llm.temperature,
+        model=faculty_cfg.ollama_llm.model,
+        request_timeout=faculty_cfg.ollama_llm.request_timeout,
+        context_window=faculty_cfg.ollama_llm.context_window,
+        temperature=faculty_cfg.ollama_llm.temperature,
     )
     Settings.llm = llm
 
@@ -30,12 +30,13 @@ def setup_faculty_engine(subject_code: str, streaming: bool = True):
 
     # 3. Hybrid Retriever with subject-specific cache isolation
     builder = HybridRRFRetrieverBuilder(
-        index=index,
-        vector_top_k=cfg.retrieval.vector_top_k,
-        bm25_top_k=cfg.retrieval.bm25_top_k,
-        cache_prefix=f"subject_{subject_code}" 
+        vector_top_k=faculty_cfg.retrieval.vector_top_k,
+        bm25_top_k=faculty_cfg.retrieval.bm25_top_k,
+        fusion_top_k=faculty_cfg.retrieval.fusion_top_k,
+        cache_dir=faculty_cfg.paths.db_dir,
+        cache_prefix=f"subject_{subject_code}"
     )
-    retriever = builder.build()
+    retriever = builder.build(index)
 
     # 4. Engine
     engine = RetrieverQueryEngine.from_args(

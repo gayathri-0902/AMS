@@ -10,13 +10,13 @@ import json
 import os
 from typing import Any
 from llama_index.core import SimpleDirectoryReader
-from config import cfg
+from faculty_config import faculty_cfg
 
 def _compute_subject_hash_state(subject_code: str) -> dict[str, str]:
     """
     Returns a {filepath: md5_hash} mapping for a specific subject directory.
     """
-    subjects_dir = cfg.paths.subjects_dir
+    subjects_dir = faculty_cfg.paths.subjects_dir
     dir_path = os.path.join(subjects_dir, subject_code)
     current_state: dict[str, str] = {}
 
