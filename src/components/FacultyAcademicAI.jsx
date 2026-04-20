@@ -13,11 +13,23 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
     const [messages, setMessages] = useState([
         {
             role: "assistant",
-            text: `Hello Professor ${facultyName || ""}! 👋 I'm your Faculty AI assistant. Select a subject and ask me anything about the textbooks and materials!`,
+            text: `Hello Professor ${facultyName || ""}! 👋 I'm your Academic Research Assistant. I'm ready to help you compile comprehensive lecture notes and extract key concepts from your assigned subjects (...). What topic should we research today?`,
         },
     ]);
+
+    // Update the welcome message once the subjects data loads asynchronously
+    useEffect(() => {
+        if (subjects && subjects.length > 0 && messages.length === 1 && messages[0].role === "assistant") {
+            const subjectListStr = subjects.map((s) => s.course_code).join(", ");
+            setMessages([{
+                role: "assistant",
+                text: `Hello Professor ${facultyName || ""}! 👋 I'm your Academic Research Assistant. I'm ready to help you compile comprehensive lecture notes and extract key concepts from your assigned subjects (${subjectListStr}). What topic should we research today?`,
+            }]);
+        }
+    }, [subjects, facultyName]);
+
     const [input, setInput] = useState("");
-    const [selectedSubject, setSelectedSubject] = useState(subjects?.[0]?.course_code || "");
+    const [selectedSubject, setSelectedSubject] = useState("ALL");
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
@@ -35,13 +47,13 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
 
     const sendMessage = async () => {
         const query = input.trim();
-        if (!query || loading || !selectedSubject) return;
+        if (!query || loading) return;
 
         // Add user message and a placeholder for the assistant's streaming response
         setMessages((prev) => [
             ...prev,
             { role: "user", text: query },
-            { role: "assistant", text: "", sources: [], isStreaming: true, subjectCode: selectedSubject },
+            { role: "assistant", text: "", sources: [], isStreaming: true },
         ]);
         setInput("");
         setLoading(true);
@@ -59,7 +71,9 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                 signal: abortControllerRef.current.signal,
                 body: JSON.stringify({
                     query,
-                    subject_code: selectedSubject,
+                    subject_codes: selectedSubject === "ALL" 
+                        ? (subjects || []).map((s) => s.course_code) 
+                        : [selectedSubject],
                 }),
             });
 
@@ -181,10 +195,10 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-xl leading-tight">
-                                Faculty AI Assistant
+                                Faculty Research Assistant
                             </h3>
                             <p className="text-blue-100 text-xs opacity-90 uppercase tracking-tighter">
-                                Subject-Wise Textbook RAG
+                                Lecture Notes Compiler
                             </p>
                         </div>
                     </div>
@@ -197,17 +211,26 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                 </div>
 
                 {/* Subject Selector Bar */}
-                <div className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700 px-5 py-3 flex items-center space-x-3 shrink-0">
+                <div className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700 px-5 py-3 flex items-center space-x-3 shrink-0 z-10 relative">
                     <HiOutlineBookOpen className="text-blue-600 w-5 h-5 shrink-0" />
                     <select
                         value={selectedSubject}
                         onChange={(e) => setSelectedSubject(e.target.value)}
-                        className="flex-1 bg-transparent text-sm font-bold text-gray-700 dark:text-slate-200 outline-none cursor-pointer"
+                        className="flex-1 appearance-none bg-transparent text-sm font-bold text-gray-700 dark:text-slate-200 outline-none cursor-pointer py-1.5 focus:ring-2 focus:ring-blue-500/50 rounded-md transition-shadow"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='%233b82f6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                            backgroundPosition: "right 0.2rem center",
+                            backgroundSize: "1rem 1rem",
+                            backgroundRepeat: "no-repeat",
+                            paddingRight: "1.5rem"
+                        }}
                     >
-                        <option value="" disabled>Select a Subject...</option>
+                        <option className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium" value="ALL">
+                            🌐 Global Search (All Assigned Subjects)
+                        </option>
                         {subjects.map((sub) => (
-                            <option key={sub.course_code} value={sub.course_code}>
-                                {sub.course_code} - {sub.course_name}
+                            <option className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium" key={sub.course_code} value={sub.course_code}>
+                                📚 {sub.course_code} - {sub.course_name}
                             </option>
                         ))}
                     </select>
@@ -228,11 +251,6 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                                         : "bg-white dark:bg-slate-800 text-gray-800 dark:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-slate-600 rounded-tl-sm"
                                     }`}
                             >
-                                {msg.subjectCode && msg.role === "assistant" && (
-                                    <span className="absolute -top-3 left-0 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-                                        {msg.subjectCode}
-                                    </span>
-                                )}
                                 <p className="whitespace-pre-wrap">{msg.text || (msg.isStreaming ? "..." : "")}</p>
 
                                 {msg.isStreaming && (
@@ -275,8 +293,8 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder={selectedSubject ? `Ask about ${selectedSubject}...` : "Select a subject first..."}
-                            disabled={loading || !selectedSubject}
+                            placeholder={selectedSubject === "ALL" ? "Enter a topic to compile notes for..." : `Compile notes for ${selectedSubject}...`}
+                            disabled={loading}
                             className="flex-1 px-5 py-4 bg-[#f0f2f5] dark:bg-slate-900 rounded-2xl text-[15px] text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50 resize-none h-[56px] overflow-hidden"
                         />
                         {loading ? (
@@ -292,7 +310,7 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                         ) : (
                             <button
                                 onClick={sendMessage}
-                                disabled={!input.trim() || !selectedSubject}
+                                disabled={!input.trim()}
                                 className="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 transition-all shadow-md disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed active:scale-95 shrink-0 flex items-center justify-center group"
                                 title="Send Message"
                             >
