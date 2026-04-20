@@ -32,6 +32,8 @@ EMBEDDING_MODEL_PATH: str = cfg.paths.embedding_model
 # ---------------------------------------------------------------------------
 
 
+_cached_embed_model = None
+
 class HuggingFaceEmbedder(BaseEmbedder):
     """
     Loads a HuggingFace sentence-transformer model for use as a LlamaIndex
@@ -56,7 +58,10 @@ class HuggingFaceEmbedder(BaseEmbedder):
             A ``HuggingFaceEmbedding`` instance ready for node parsing and
             vector retrieval.
         """
-        return HuggingFaceEmbedding(model_name=self._model_path, device="cuda")
+        global _cached_embed_model
+        if _cached_embed_model is None:
+            _cached_embed_model = HuggingFaceEmbedding(model_name=self._model_path, device="cuda")
+        return _cached_embed_model
 
 
 # ---------------------------------------------------------------------------
