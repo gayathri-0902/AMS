@@ -203,7 +203,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 bg-[#f8f9fb]">
+                <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 bg-[#f8f9fb] dark:bg-slate-900/20">
                     {messages.map((msg, i) => (
                         <div
                             key={i}

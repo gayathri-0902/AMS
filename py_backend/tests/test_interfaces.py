@@ -128,3 +128,27 @@ class TestBasePromptProvider:
         prompt = provider.get_prompt()
         assert "{context_str}" in prompt.template
         assert "{query_str}" in prompt.template
+
+
+class TestFacultyPromptProvider:
+    """Verify FacultyPromptProvider satisfies the BasePromptProvider ABC."""
+
+    def test_faculty_prompt_provider_is_subclass(self):
+        from prompts.faculty_prompts import FacultyPromptProvider
+        assert issubclass(FacultyPromptProvider, BasePromptProvider)
+
+    def test_faculty_prompt_provider_is_instantiable(self):
+        from prompts.faculty_prompts import FacultyPromptProvider
+        provider = FacultyPromptProvider()
+        assert isinstance(provider, BasePromptProvider)
+
+    def test_faculty_prompt_provider_returns_template(self):
+        from llama_index.core import PromptTemplate
+        from prompts.faculty_prompts import FacultyPromptProvider
+        provider = FacultyPromptProvider()
+        assert isinstance(provider.get_prompt(), PromptTemplate)
+
+    def test_faculty_hybrid_builder_accepts_subject_filters(self):
+        """Verify subject_filters param is part of the builder's public API."""
+        builder = HybridRRFRetrieverBuilder(subject_filters=["C4103", "C4201"])
+        assert builder._subject_filters == ["C4103", "C4201"]

@@ -5,13 +5,13 @@ Configures and builds the faculty-specific RAG query engine.
 """
 
 from llama_index.core import Settings, get_response_synthesizer
-from llama_index.llms.ollama import Ollama
 from llama_index.core.query_engine import RetrieverQueryEngine
 
 from faculty_config import faculty_cfg
 from ingestion.faculty_vector_index import build_faculty_index, get_faculty_global_index
 from retrieval.hybrid_retriever import HybridRRFRetrieverBuilder
 from prompts.faculty_prompts import get_faculty_prompt
+from llm_factory import get_llama_index_llm  # shared singleton — avoids Settings.llm conflict
 
 def setup_faculty_engine(subject_codes: list[str] | str, streaming: bool = True):
     """
@@ -19,15 +19,9 @@ def setup_faculty_engine(subject_codes: list[str] | str, streaming: bool = True)
     """
     if isinstance(subject_codes, str):
         subject_codes = [subject_codes]
-    # 1. Setup Ollama LLM
-    llm = Ollama(
-        model=faculty_cfg.ollama_llm.model,
-        request_timeout=faculty_cfg.ollama_llm.request_timeout,
-        context_window=faculty_cfg.ollama_llm.context_window,
-        temperature=faculty_cfg.ollama_llm.temperature,
-        additional_kwargs={"num_gpu": 1} # Force layer offloading to the GPU
-    )
-    Settings.llm = llm
+    # 1. Setup LLM — uses the shared singleton to avoid overwriting Settings.llm
+    #    and creating VRAM-wasteful duplicate model instances.
+    llm = get_llama_index_llm(backend="ollama")
 
     # 2. Build/Sync Index
     for sc in subject_codes:

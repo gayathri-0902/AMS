@@ -8,7 +8,7 @@
 # Paths
 # -----------------------------------------------------------------------------
 paths:
-  base_dir: "."                       # Portably resolves to current directory
+  base_dir: "E:/Documents/data_Science/AMS/py_backend"   # absolute — safe regardless of CWD
   db_dir: "chromadb"                  # relative to base_dir
   embedding_model: "models/bge-m3"    # relative to base_dir
   subjects_dir: "data/subjects"       # dedicated faculty materials directory

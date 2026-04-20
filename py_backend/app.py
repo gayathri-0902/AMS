@@ -15,7 +15,6 @@ year/branch combination changes.
 
 import sys
 import os
-import sys
 import json
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
@@ -43,9 +42,12 @@ BRANCH_MAP = {
 app = Flask(__name__)
 CORS(app)
 
-# Engine cache — avoids reloading the LLM on every request
-_cached_engine = None
-_cached_key = None          # (year, branch) tuple
+# Engine caches — each pipeline gets its own slot so they never evict each other
+_student_engine = None
+_student_key = None          # (year, branch) tuple
+
+_faculty_engine = None
+_faculty_key = None          # frozenset of subject_codes
 
 
 def _get_engine(
@@ -53,27 +55,34 @@ def _get_engine(
     branch: str | None = None,
     subject_code: str | list[str] | None = None
 ):
-    """Return a cached engine, or build a new one if params changed."""
-    global _cached_engine, _cached_key
-
-    if isinstance(subject_code, list):
-        key = tuple(sorted(subject_code))
-    else:
-        key = subject_code if subject_code else (year, branch)
-        
-    if _cached_engine is not None and _cached_key == key:
-        return _cached_engine
+    """Return a cached engine, or build a new one if params changed.
+    Student and faculty engines are cached independently so a faculty
+    query never evicts the student engine and vice-versa.
+    """
+    global _student_engine, _student_key, _faculty_engine, _faculty_key
 
     if subject_code:
-        print(f"[app] Building faculty query engine for subjects={subject_code} ...")
-        _cached_engine = setup_faculty_engine(subject_codes=subject_code, streaming=True)
+        # --- Faculty pipeline ---
+        codes = subject_code if isinstance(subject_code, list) else [subject_code]
+        key = tuple(sorted(codes))
+        if _faculty_engine is not None and _faculty_key == key:
+            return _faculty_engine
+        print(f"[app] Building faculty query engine for subjects={codes} ...")
+        _faculty_engine = setup_faculty_engine(subject_codes=codes, streaming=True)
+        _faculty_key = key
+        print("[app] Query engine ready.")
+        return _faculty_engine
     else:
+        # --- Student pipeline ---
+        key = (year, branch)
+        if _student_engine is not None and _student_key == key:
+            return _student_engine
         print(f"[app] Building query engine for year={year}, branch={branch} ...")
-        _cached_engine = setup_query_engine(year=year, branch=branch, streaming=True)
-    
-    _cached_key = key
-    print("[app] Query engine ready.")
-    return _cached_engine
+        _student_engine = setup_query_engine(year=year, branch=branch, streaming=True)
+        _student_key = key
+        print("[app] Query engine ready.")
+        return _student_engine
+
 
 
 # ---------------------------------------------------------------------------
