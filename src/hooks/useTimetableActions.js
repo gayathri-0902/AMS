@@ -57,6 +57,20 @@ export function useTimetableActions({ batchData, refetchBatchData, setActiveModa
             return;
         }
 
+        // Logic Validation: Session Number must be positive
+        if (Number(session) < 1) {
+            setError("Session number must be 1 or greater.");
+            setLoading(false);
+            return;
+        }
+
+        // Logic Validation: Start Time < End Time
+        if (start_time >= end_time) {
+            setError("Class Start Time must be earlier than the End Time.");
+            setLoading(false);
+            return;
+        }
+
         // Find the course code from the selected name
         const selectedCourse = batchData.courses?.find(c => c.course_name === addSessionForm.course);
         const courseCode = selectedCourse?.course_code || addSessionForm.course;
