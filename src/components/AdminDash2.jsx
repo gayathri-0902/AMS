@@ -128,6 +128,8 @@ function AdminDash2() {
                                 selectedIds={students.selectedStudentIds}
                                 onToggleSelect={students.handleToggleStudentSelection}
                                 onSelectAll={students.handleSelectAll}
+                                isSelectionMode={students.isSelectionMode}
+                                toggleSelectionMode={students.toggleSelectionMode}
                                 onPromote={() => setActiveModal(MODALS.PROMOTE)}
                                 // Pagination props
                                 hasMore={batch.hasMore}
@@ -264,7 +266,10 @@ function AdminDash2() {
 
                 <Admin_ModalPromote
                     isOpen={activeModal === MODALS.PROMOTE}
-                    onClose={() => setActiveModal(null)}
+                    onClose={() => {
+                        setActiveModal(null);
+                        students.resetSelection();
+                    }}
                     selectedStudents={(batch.batchData?.students || []).filter(s => students.selectedStudentIds.includes(s._id))}
                     onSubmit={students.handlePromoteSubmit}
                     loading={students.promoteLoading}

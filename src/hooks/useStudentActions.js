@@ -192,6 +192,7 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
 
     // ── Bulk Selection & Promotion ─────────────────────────────────────────────
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [promoteLoading, setPromoteLoading] = useState(false);
     const [promoteError, setPromoteError] = useState(null);
 
@@ -209,6 +210,18 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         }
     };
 
+    const toggleSelectionMode = () => {
+        if (isSelectionMode) {
+            setSelectedStudentIds([]); // Clear selection when exiting
+        }
+        setIsSelectionMode(!isSelectionMode);
+    };
+
+    const resetSelection = () => {
+        setSelectedStudentIds([]);
+        setIsSelectionMode(false);
+    };
+
     const handlePromoteSubmit = async () => {
         if (!selectedStudentIds.length) return;
         setPromoteLoading(true);
@@ -223,6 +236,7 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
               setPromoteError(`Partially complete: ${res.data.failures.join(", ")}`);
             } else {
               setSelectedStudentIds([]);
+              setIsSelectionMode(false);
               setActiveModal(null);
               await refetchBatchData();
             }
@@ -289,10 +303,13 @@ export function useStudentActions({ batchData, formData, refetchBatchData, setAc
         handleEditStudentSubmit,
         // Selection/Promote
         selectedStudentIds,
+        isSelectionMode,
         promoteLoading,
         promoteError,
         handleToggleStudentSelection,
         handleSelectAll,
+        toggleSelectionMode,
+        resetSelection,
         handlePromoteSubmit,
         // Archive
         archivingLoading,

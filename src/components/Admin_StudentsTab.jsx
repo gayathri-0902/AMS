@@ -36,7 +36,9 @@ function Admin_StudentsTab({
     isArchived,
     onArchiveStudent,
     onRestoreStudent,
-    toggleArchivedView
+    toggleArchivedView,
+    isSelectionMode,
+    toggleSelectionMode
 }) {
     // Local filter based on searchTerm
     const filteredStudents = (batchData?.students || []).filter(s => 
@@ -92,13 +94,25 @@ function Admin_StudentsTab({
 
                     <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block"></div>
 
-                    {selectedIds.length > 0 && (
+                    <button
+                        onClick={isSelectionMode ? onPromote : toggleSelectionMode}
+                        disabled={isSelectionMode && selectedIds.length === 0}
+                        className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg ${
+                            isSelectionMode 
+                                ? "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none" 
+                                : "bg-white dark:bg-slate-900 text-amber-600 border border-amber-200 dark:border-amber-800 shadow-sm"
+                        }`}
+                    >
+                        <MdDoubleArrow className={`text-xl ${isSelectionMode ? "animate-pulse" : ""}`} />
+                        {isSelectionMode ? `Review & Promote (${selectedIds.length})` : "Promote Students"}
+                    </button>
+
+                    {isSelectionMode && (
                         <button
-                            onClick={onPromote}
-                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold text-sm hover:bg-amber-700 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-amber-600/20"
+                            onClick={toggleSelectionMode}
+                            className="px-4 py-2.5 text-slate-500 hover:text-red-500 font-bold text-sm transition-colors"
                         >
-                            <MdDoubleArrow className="text-xl" />
-                            Promote ({selectedIds.length}) (Batch +1)
+                            Cancel
                         </button>
                     )}
                     <button
@@ -126,14 +140,16 @@ function Admin_StudentsTab({
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-                                <th className="px-6 py-5 w-10">
-                                    <input
-                                        type="checkbox"
-                                        className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
-                                        checked={filteredStudents.length > 0 && selectedIds.length === filteredStudents.length}
-                                        onChange={() => onSelectAll(filteredStudents)}
-                                    />
-                                </th>
+                                {isSelectionMode && (
+                                    <th className="px-6 py-5 w-10">
+                                        <input
+                                            type="checkbox"
+                                            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                                            checked={filteredStudents.length > 0 && selectedIds.length === filteredStudents.length}
+                                            onChange={() => onSelectAll(filteredStudents)}
+                                        />
+                                    </th>
+                                )}
                                 <th className="px-6 py-5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Student Information</th>
                                 <th className="px-6 py-5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email Address</th>
                                 <th className="px-6 py-5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Academic Batch</th>
@@ -144,14 +160,16 @@ function Admin_StudentsTab({
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredStudents.length > 0 ? filteredStudents.map((s, i) => (
                                 <tr key={s._id} className={`group hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-all ${selectedIds.includes(s._id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="checkbox"
-                                            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all group-hover:border-blue-400"
-                                            checked={selectedIds.includes(s._id)}
-                                            onChange={() => onToggleSelect(s._id)}
-                                        />
-                                    </td>
+                                    {isSelectionMode && (
+                                        <td className="px-6 py-4">
+                                            <input
+                                                type="checkbox"
+                                                className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all group-hover:border-blue-400"
+                                                checked={selectedIds.includes(s._id)}
+                                                onChange={() => onToggleSelect(s._id)}
+                                            />
+                                        </td>
+                                    )}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
                                             <div className="h-11 w-11 rounded-[0.8rem] flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-500/20">
@@ -199,7 +217,7 @@ function Admin_StudentsTab({
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="6" className="text-slate-400 text-center py-20 bg-slate-50/30 dark:bg-slate-800/10">
+                                    <td colSpan={isSelectionMode ? "6" : "5"} className="text-slate-400 text-center py-20 bg-slate-50/30 dark:bg-slate-800/10">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="p-4 bg-white dark:bg-slate-800 rounded-full shadow-sm">
                                                 <MdSearch className="text-5xl opacity-20" />
