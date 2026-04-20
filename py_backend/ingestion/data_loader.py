@@ -57,7 +57,6 @@ def _compute_hash_state(current_year: int, branch: str) -> dict[str, str]:
 
     return current_state
 
-
 # ---------------------------------------------------------------------------
 # Concrete implementation
 # ---------------------------------------------------------------------------

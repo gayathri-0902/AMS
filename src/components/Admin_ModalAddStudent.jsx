@@ -16,7 +16,7 @@ function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, load
 
                 <form onSubmit={onSubmit} className="flex flex-col max-h-[85vh]">
                     {/* Scrollable Content Area */}
-                    <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
+                    <div className="p-6 space-y-4 overflow-y-auto no-scrollbar">
                         <div>
                             <label className="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Full Name</label>
                             <input type="text" name="name" value={form.name} onChange={onChange} required className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white" placeholder="e.g. John Doe" />

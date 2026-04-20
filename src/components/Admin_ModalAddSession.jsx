@@ -40,14 +40,14 @@ function Admin_ModalAddSession({
                         {/* Row 1 */}
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                                <label className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400">
                                     <MdSchedule className="text-blue-500" /> Day
                                 </label>
                                 <select
                                     name="day"
                                     value={form.day}
                                     onChange={onChange}
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 >
                                     {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(d => (
                                         <option key={d}>{d}</option>
@@ -56,13 +56,13 @@ function Admin_ModalAddSession({
                             </div>
 
                             <div>
-                                <label className="text-sm font-semibold text-slate-600">Session No</label>
+                                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 pl-1">Session No</label>
                                 <input
                                     type="number"
                                     name="session"
                                     value={form.session}
                                     onChange={onChange}
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
                         </div>
@@ -70,37 +70,37 @@ function Admin_ModalAddSession({
                         {/* Row 2 */}
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <label className="text-sm font-semibold text-slate-600">Start Time</label>
+                                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 pl-1">Start Time</label>
                                 <input
                                     type="time"
                                     name="start_time"
                                     value={form.start_time}
                                     onChange={onChange}
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-sm font-semibold text-slate-600">End Time</label>
+                                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 pl-1">End Time</label>
                                 <input
                                     type="time"
                                     name="end_time"
                                     value={form.end_time}
                                     onChange={onChange}
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                            <label className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400">
                                 <MdBook className="text-green-500" /> Course
                             </label>
                             <select
                                 name="course"
                                 value={form.course}
                                 onChange={onChange}
-                                className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                             >
                                 <option value="">Select Course</option>
                                 {courses.map((c, idx) => (
@@ -114,14 +114,14 @@ function Admin_ModalAddSession({
                         {/* Faculty + Location */}
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                                <label className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400">
                                     <MdPerson className="text-orange-500" /> Faculty
                                 </label>
                                 <select
                                     name="faculty"
                                     value={form.faculty}
                                     onChange={onChange}
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 >
                                     <option value="">Select Faculty</option>
                                     {faculties.map((f, idx) => (
@@ -133,7 +133,7 @@ function Admin_ModalAddSession({
                             </div>
 
                             <div>
-                                <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                                <label className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400 pl-1">
                                     <MdLocationOn className="text-red-500" /> Location
                                 </label>
                                 <input
@@ -142,7 +142,7 @@ function Admin_ModalAddSession({
                                     value={form.location}
                                     onChange={onChange}
                                     placeholder="Room 302"
-                                    className="w-full mt-2 p-3 rounded-lg bg-slate-50 border"
+                                    className="w-full mt-2 p-3 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
                         </div>
