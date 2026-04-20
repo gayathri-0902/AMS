@@ -18,6 +18,7 @@ import {
   HiOutlineChartBar,
 } from "react-icons/hi";
 import { useLocation } from "react-router-dom";
+import FacultyAcademicAI from "./FacultyAcademicAI";
 
 function FacultyDashboard() {
   // 1. URL & CONTEXT
@@ -66,6 +67,7 @@ function FacultyDashboard() {
   const [faceStatus, setFaceStatus] = useState(null);
   const [facePhotoFile, setFacePhotoFile] = useState(null);
   const [faceApiBase] = useState("http://localhost:8001"); // Face API base URL
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -412,6 +414,25 @@ function FacultyDashboard() {
             <HiOutlineLogout size={20} />
           </button>
         </div>
+
+        {/* --- AI ASSISTANT BUTTON --- */}
+        <button
+          onClick={() => setIsAIOpen(true)}
+          className="fixed bottom-10 right-10 z-[1000] bg-gradient-to-tr from-blue-600 to-indigo-700 text-white p-5 rounded-3xl shadow-[0_10px_30px_rgba(59,130,246,0.5)] hover:scale-110 hover:-translate-y-2 transition-all duration-300 group overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+          <div className="relative flex items-center space-x-3">
+            <HiOutlineSparkles className="w-8 h-8 animate-pulse" />
+            <span className="font-bold tracking-tight text-lg">AI Assistant</span>
+          </div>
+        </button>
+
+        <FacultyAcademicAI 
+          isOpen={isAIOpen}
+          onClose={() => setIsAIOpen(false)}
+          facultyName={auth?.name || "Professor"}
+          subjects={allSubjects}
+        />
 
         {/* --- WELCOME TITLE --- */}
         <div className="mb-10 text-left px-2">
