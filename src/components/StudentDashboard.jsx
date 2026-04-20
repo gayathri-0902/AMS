@@ -14,6 +14,29 @@ import {
   HiOutlineDocumentText,
   HiOutlineDownload
 } from "react-icons/hi";
+
+// Curated color palette for subject tiles (border-left + background tint)
+const SUBJECT_COLORS = [
+  { border: '#6366f1', bg: 'rgba(99,102,241,0.10)',  text: '#6366f1' },  // Indigo
+  { border: '#f59e0b', bg: 'rgba(245,158,11,0.10)',  text: '#f59e0b' },  // Amber
+  { border: '#10b981', bg: 'rgba(16,185,129,0.10)',  text: '#10b981' },  // Emerald
+  { border: '#ef4444', bg: 'rgba(239,68,68,0.10)',   text: '#ef4444' },  // Red
+  { border: '#8b5cf6', bg: 'rgba(139,92,246,0.10)',  text: '#8b5cf6' },  // Violet
+  { border: '#ec4899', bg: 'rgba(236,72,153,0.10)',  text: '#ec4899' },  // Pink
+  { border: '#14b8a6', bg: 'rgba(20,184,166,0.10)',  text: '#14b8a6' },  // Teal
+  { border: '#f97316', bg: 'rgba(249,115,22,0.10)',  text: '#f97316' },  // Orange
+  { border: '#06b6d4', bg: 'rgba(6,182,212,0.10)',   text: '#06b6d4' },  // Cyan
+  { border: '#84cc16', bg: 'rgba(132,204,22,0.10)',  text: '#84cc16' },  // Lime
+];
+
+// Simple hash to deterministically map a string to a color index
+const getSubjectColor = (subjectName) => {
+  let hash = 0;
+  for (let i = 0; i < subjectName.length; i++) {
+    hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return SUBJECT_COLORS[Math.abs(hash) % SUBJECT_COLORS.length];
+};
 import AcademicAI from "./AcademicAI";
 
 const StudentDashboard = ({ overrideId }) => {
@@ -28,6 +51,7 @@ const StudentDashboard = ({ overrideId }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [assignments, setAssignments] = useState([]);
   const [feedbackStatus, setFeedbackStatus] = useState({ allowed: false, phase: "", pending: [] });
+  const [overallAttendance, setOverallAttendance] = useState(null);
 
   // NEW: Weekend UI State
   const [showResourcePicker, setShowResourcePicker] = useState(false);
@@ -153,6 +177,14 @@ const StudentDashboard = ({ overrideId }) => {
           console.error("Error fetching feedback status:", error);
         }
 
+        // Fetch overall attendance
+        try {
+          const attRes = await axios.get(`${API_BASE}/api/student/overall-attendance/${targetId}`);
+          setOverallAttendance(attRes.data);
+        } catch (error) {
+          console.error("Error fetching overall attendance:", error);
+        }
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -244,6 +276,43 @@ const StudentDashboard = ({ overrideId }) => {
             Welcome back, <span className="text-blue-600 dark:text-blue-400 font-bold">{studentInfo?.student_name}</span>
           </p>
         </div>
+
+        {/* --- OVERALL ATTENDANCE CARD --- */}
+        {overallAttendance && (
+          <div className="mb-10 px-2">
+            <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-sm border border-gray-100 dark:border-slate-600 flex flex-col md:flex-row md:items-center gap-6">
+              <div className="flex items-center gap-5 flex-1">
+                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg ${
+                  parseFloat(overallAttendance.percentage) >= 75 ? 'bg-green-500' :
+                  parseFloat(overallAttendance.percentage) >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}>
+                  {Math.round(parseFloat(overallAttendance.percentage))}%
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white">Overall Attendance</h3>
+                  <p className="text-sm text-gray-400 dark:text-slate-400 font-medium mt-1">
+                    {overallAttendance.present_count} present out of {overallAttendance.total_count} sessions
+                  </p>
+                </div>
+              </div>
+              <div className="flex-1 max-w-md">
+                <div className="w-full bg-gray-100 dark:bg-slate-700 h-4 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      parseFloat(overallAttendance.percentage) >= 75 ? 'bg-green-500' :
+                      parseFloat(overallAttendance.percentage) >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${overallAttendance.percentage}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-slate-500 font-bold mt-2 text-right">
+                  {parseFloat(overallAttendance.percentage) >= 75 ? '✅ Good standing' :
+                   parseFloat(overallAttendance.percentage) >= 50 ? '⚠️ Needs improvement' : '🚨 Below minimum'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* --- MINIMALISTIC FEEDBACK NOTIFICATION --- */}
         {feedbackStatus.allowed && feedbackStatus.pending.length > 0 && (
@@ -613,10 +682,17 @@ const StudentDashboard = ({ overrideId }) => {
                                 const entry = weeklyTimetable.find(e => e.day === day && e.session_no === sessionNo);
                                 const items = [];
 
+                                const color = entry ? getSubjectColor(entry.class_name) : null;
                                 items.push(
                                   <div key={`${day}-${sessionNo}`} className="flex-1 min-w-[140px] p-1.5 border-r dark:border-slate-800 flex">
                                     {entry ? (
-                                      <div className={`w-full border-l-[3px] p-3 rounded-lg shadow-sm border bg-blue-50 dark:bg-slate-800 border-blue-500 dark:border-slate-700 dark:border-l-blue-500`}>
+                                      <div
+                                        className="w-full border-l-[3px] p-3 rounded-lg shadow-sm border dark:border-slate-700"
+                                        style={{
+                                          borderLeftColor: color.border,
+                                          backgroundColor: color.bg,
+                                        }}
+                                      >
                                         <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate mb-1" title={entry.class_name}>
                                           {entry.class_name}
                                         </h4>
@@ -628,9 +704,8 @@ const StudentDashboard = ({ overrideId }) => {
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="w-full rounded-lg border border-dashed border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 flex flex-col items-center justify-center opacity-80 p-2 text-center text-emerald-700 dark:text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
-                                          <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                                            <HiOutlineSparkles className="w-3 h-3" />
+                                      <div className="w-full rounded-lg border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col items-center justify-center opacity-60 p-2 text-center text-slate-400 dark:text-slate-500">
+                                          <span className="text-[10px] font-bold uppercase tracking-widest">
                                             Leisure / Projects
                                           </span>
                                       </div>
