@@ -12,6 +12,8 @@ the underlying documents change.
 
 import os
 import pickle
+import time
+import functools
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.retrievers import BaseRetriever, QueryFusionRetriever, VectorIndexRetriever
@@ -149,6 +151,24 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
                 condition=FilterCondition.OR
             )
 
+        def sync_timing_decorator(name, func):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                start = time.time()
+                res = func(*args, **kwargs)
+                print(f"[TIMING] {name} took {time.time() - start:.4f} seconds")
+                return res
+            return wrapper
+
+        def async_timing_decorator(name, func):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                start = time.time()
+                res = await func(*args, **kwargs)
+                print(f"[TIMING] {name} took {time.time() - start:.4f} seconds")
+                return res
+            return wrapper
+
         # 1. Dense vector retriever
         vector_retriever = VectorIndexRetriever(
             index=index,
@@ -167,6 +187,12 @@ class HybridRRFRetrieverBuilder(BaseRetrieverBuilder):
             nodes=bm25_nodes,
             similarity_top_k=self._bm25_top_k,
         )
+
+        # Monkey-patch to measure time
+        vector_retriever._retrieve = sync_timing_decorator("VectorDB HybridSync", vector_retriever._retrieve)
+        vector_retriever._aretrieve = async_timing_decorator("VectorDB HybridAsync", vector_retriever._aretrieve)
+        bm25_retriever._retrieve = sync_timing_decorator("BM25 HybridSync", bm25_retriever._retrieve)
+        bm25_retriever._aretrieve = async_timing_decorator("BM25 HybridAsync", bm25_retriever._aretrieve)
 
         # 3. RRF fusion retriever
         retriever = QueryFusionRetriever(

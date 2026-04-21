@@ -16,6 +16,7 @@ year/branch combination changes.
 import sys
 import os
 import json
+import time
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
@@ -131,13 +132,22 @@ def handle_query():
                 yield f"data: {json.dumps({'status': 'started', 'message': 'Processing your query...'})}\n\n"
                 
                 # Fetch RAG streaming response (blocks during retrieval)
+                t_start = time.time()
                 response = engine.query(query)
+                t_query_done = time.time()
+                print(f"[TIMING] engine.query() blocking took {t_query_done - t_start:.4f} seconds (Retrieval + Setup)")
                 
                 # 1) Stream the text token by token
+                first_token = True
                 for token in response.response_gen:
+                    if first_token:
+                        print(f"[TIMING] Time to First Token (TTFT) took {time.time() - t_query_done:.4f} seconds")
+                        first_token = False
                     # We yield each token as an SSE event containing a JSON blob
                     chunk_data = json.dumps({"status": "token", "token": token})
                     yield f"data: {chunk_data}\n\n"
+                
+                print(f"[TIMING] Model total generation time: {time.time() - t_query_done:.4f} seconds")
 
                 # 2) Collect and yield the source citations as the final event
                 sources = []
@@ -199,11 +209,20 @@ def handle_faculty_query():
         def generate():
             try:
                 yield f"data: {json.dumps({'status': 'started', 'message': f'Searching {subject_codes} materials...'})}\n\n"
+                t_start = time.time()
                 response = engine.query(query)
+                t_query_done = time.time()
+                print(f"[TIMING] Faculty engine.query() blocking took {t_query_done - t_start:.4f} seconds (Retrieval + Setup)")
                 
+                first_token = True
                 for token in response.response_gen:
+                    if first_token:
+                        print(f"[TIMING] Faculty Time to First Token (TTFT) took {time.time() - t_query_done:.4f} seconds")
+                        first_token = False
                     chunk_data = json.dumps({"status": "token", "token": token})
                     yield f"data: {chunk_data}\n\n"
+                
+                print(f"[TIMING] Faculty Model total generation time: {time.time() - t_query_done:.4f} seconds")
 
                 sources = []
                 for node in response.source_nodes:
