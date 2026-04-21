@@ -191,7 +191,7 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-6 py-5 flex items-center justify-between shrink-0 shadow-md z-10">
                     <div className="flex items-center space-x-3">
                         <div className="bg-white dark:bg-slate-800/20 p-2.5 rounded-xl">
-                            <HiOutlineSparkles className="w-6 h-6 text-white" />
+                            <HiOutlineSparkles className="w-6 h-6 text-blue-700 dark:text-white" />
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-xl leading-tight">

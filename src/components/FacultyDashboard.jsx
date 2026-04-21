@@ -421,7 +421,7 @@ function FacultyDashboard() {
           className="fixed bottom-10 right-10 z-[1000] bg-gradient-to-tr from-blue-600 to-indigo-700 text-white p-5 rounded-3xl shadow-[0_10px_30px_rgba(59,130,246,0.5)] hover:scale-110 hover:-translate-y-2 transition-all duration-300 group overflow-hidden"
         >
           <div className="absolute inset-0 bg-white dark:bg-slate-800/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          <div className="relative flex items-center space-x-3">
+          <div className="relative flex items-center space-x-3 group-hover:text-blue-700 dark:group-hover:text-white transition-colors duration-300">
             <HiOutlineSparkles className="w-8 h-8 animate-pulse" />
             <span className="font-bold tracking-tight text-lg">AI Assistant</span>
           </div>
