@@ -133,6 +133,10 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    if (user.is_archived) {
+      return res.status(403).json({ message: "Account has been archived. Please contact your administrator." });
+    }
+
     if (body.role && user.role !== body.role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
@@ -231,6 +235,7 @@ app.get("/api/faculty-dashboard/students/:sectionId", async (req, res) => {
     const enrollments = await StudentEnrollment.find({
       yr_sem_id: sectionId,
       status: "active",
+      is_archived: { $ne: true }   // to disable archived students from faculty dashboard
     }).populate("student_id").sort({ "student_id.roll_no": 1 });
 
     if (!enrollments || enrollments.length === 0) {
@@ -470,7 +475,8 @@ app.get("/api/parent/dashboard/:parentId", async (req, res) => {
       // 3. Safe Enrollment Check (Optional Chaining prevents 500 errors)
       const enrollment = await StudentEnrollment.findOne({
         student_id: student._id,
-        status: "active"
+        status: "active",
+        is_archived: { $ne: true }
       }).populate("yr_sem_id");
 
       // 4. Safe Attendance Calculation
@@ -1055,11 +1061,15 @@ app.get("/api/admin/batches", async (req, res) => {
 // 11. get data for admin dashboard (SUPPORT MULTIPLE BATCHES & PAGINATION)
 app.get("/api/admin/batch-data", async (req, res) => {
   try {
-    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active" } = req.query;
+    const { yr, sem, stream, academic_yr, page = 1, limit = 50, status = "active", isArchived = "false" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let studentQuery = {};
+    const archivedFilter = isArchived === "true";
+    const archivedQuery = archivedFilter ? true : { $ne: true };
+
+    let studentQuery = { is_archived: archivedQuery };
     let offeringQuery = { is_active: true };
+    let timetableQuery = {};
     let isFiltered = false;
 
     // If any filter is provided, find all matching metadata IDs
@@ -1085,15 +1095,16 @@ app.get("/api/admin/batch-data", async (req, res) => {
       }
 
       const yrSemIds = matchingYrSems.map(y => y._id);
-      studentQuery = { yr_sem_id: { $in: yrSemIds }, status };
+      studentQuery = { yr_sem_id: { $in: yrSemIds }, status, is_archived: archivedQuery };
       offeringQuery = { yr_sem_id: { $in: yrSemIds } };
       timetableQuery = { yr_sem_id: { $in: yrSemIds } }; // Timetable doesn't have is_active
       isFiltered = true;
     } else {
-      // If no ID filters are provided, we show all students matching the requested status (Default: Active)
-      studentQuery = { status };
+
+      // Keep is_archived even when no yr/sem filters are applied
+      studentQuery = { ...studentQuery, status };
       offeringQuery = {};
-      timetableQuery = {}; // Fetch all for global view
+      timetableQuery = {};
       isFiltered = false;
     }
 
@@ -1152,8 +1163,8 @@ app.get("/api/admin/batch-data", async (req, res) => {
       academic_yr: offering.yr_sem_id?.academic_yr
     }));
 
-    // 3. Fetch ALL Faculties & Assignments (Enriched)
-    const allFaculty = await Faculty.find({}).lean();
+    // 3. Fetch Faculties matching archival status
+    const allFaculty = await Faculty.find({ is_archived: archivedQuery }).lean();
     const assignments = await FacultyAssignment.find({
       subject_offering_id: { $in: offerings.map(o => o._id) },
       status: "active"
@@ -1264,7 +1275,7 @@ app.get("/api/admin/batch-data", async (req, res) => {
 // --- NEW: Centralized Availability Check ---
 app.get("/api/admin/validate-identifier", async (req, res) => {
   const { field, value } = req.query;
-  
+
   if (!field || !value) {
     return res.status(400).json({ message: "Field and value are required" });
   }
@@ -1279,7 +1290,7 @@ app.get("/api/admin/validate-identifier", async (req, res) => {
         const studentEmail = await Student.findOne({ email: value });
         const facultyEmail = await Faculty.findOne({ email: value });
         const parentEmail = await Parent.findOne({ email: value });
-        
+
         if (studentEmail || facultyEmail || parentEmail) {
           exists = true;
           conflictType = studentEmail ? "Student" : (facultyEmail ? "Faculty" : "Parent");
@@ -1290,7 +1301,7 @@ app.get("/api/admin/validate-identifier", async (req, res) => {
         // Check Students and User collection (for login consistency)
         const studentRoll = await Student.findOne({ roll_no: value });
         const userRoll = await User.findOne({ user_name: value });
-        
+
         if (studentRoll || userRoll) {
           exists = true;
           conflictType = "Student/Account";
@@ -1301,7 +1312,7 @@ app.get("/api/admin/validate-identifier", async (req, res) => {
         // Specifically for Faculty or general accounts
         const userAccount = await User.findOne({ user_name: value });
         const facultyRecord = await Faculty.findOne({ user_name: value }); // If such field exists, check it
-        
+
         if (userAccount || facultyRecord) {
           exists = true;
           conflictType = "Account Username";
@@ -1448,15 +1459,15 @@ app.post("/api/admin/add-student", async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error("Add student error:", error);
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
-      const message = field === "email" 
-        ? "A student with this email address already exists." 
+      const message = field === "email"
+        ? "A student with this email address already exists."
         : "A student with this roll number already exists.";
       return res.status(409).json({ message });
     }
-    
+
     res.status(400).json({ message: error.message || "Server error while adding student" });
   } finally {
     session.endSession();
@@ -1560,7 +1571,7 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
         const studentEmail = await Student.findOne({ email }).session(session);
         const facultyEmail = await Faculty.findOne({ email }).session(session);
         const parentEmail = await Parent.findOne({ email }).session(session);
-        
+
         if (studentEmail || facultyEmail || parentEmail) {
           const type = studentEmail ? "Student" : (facultyEmail ? "Faculty" : "Parent");
           throw new Error(`Email '${email}' is already registered to a ${type}`);
@@ -1597,12 +1608,12 @@ app.post("/api/admin/bulk-add-students", upload.single("csvFile"), async (req, r
         successList.push({ name, roll_no });
       } catch (error) {
         await session.abortTransaction();
-        
+
         let displayError = error.message;
         if (error.code === 11000) {
           const field = Object.keys(error.keyPattern)[0];
-          displayError = field === "email" 
-            ? "Email already exists." 
+          displayError = field === "email"
+            ? "Email already exists."
             : "Roll number already exists.";
         }
 
@@ -1677,15 +1688,15 @@ app.post("/api/admin/add-faculty", async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error("Add faculty error:", error);
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
-      const message = field === "email" 
-        ? "A faculty member with this email already exists." 
+      const message = field === "email"
+        ? "A faculty member with this email already exists."
         : "This username is already taken by another faculty member.";
       return res.status(409).json({ message });
     }
-    
+
     res.status(400).json({ message: error.message || "Server error while adding faculty" });
   } finally {
     session.endSession();
@@ -1833,16 +1844,80 @@ app.put("/api/admin/edit-student/:studentId", async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error("Edit student error:", error);
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
-      const message = field === "email" 
-        ? "Email is already taken by another student." 
+      const message = field === "email"
+        ? "Email is already taken by another student."
         : "Roll Number is already taken by another student.";
       return res.status(409).json({ message });
     }
-    
+
     res.status(400).json({ message: error.message || "Server error while editing student" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14.1 Archive Student
+app.put("/api/admin/archive/student/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const student = await Student.findById(req.params.id).session(session);
+    if (!student) throw new Error("Student not found");
+
+    await Student.findByIdAndUpdate(req.params.id, {
+      is_archived: true,
+      archived_at: new Date()
+    }).session(session);
+
+    await User.findByIdAndUpdate(student.user_id, {
+      is_archived: true
+    }).session(session);
+
+    await StudentEnrollment.updateMany(
+      { student_id: req.params.id },
+      { is_archived: true }
+    ).session(session);
+
+    await session.commitTransaction();
+    res.json({ message: "Student archived successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500).json({ message: error.message });
+  } finally {
+    session.endSession();
+  }
+});
+
+// 14.2 Restore Student
+app.put("/api/admin/restore/student/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const student = await Student.findById(req.params.id).session(session);
+    if (!student) throw new Error("Student not found");
+
+    await Student.findByIdAndUpdate(req.params.id, {
+      is_archived: false,
+      archived_at: null
+    }).session(session);
+
+    await User.findByIdAndUpdate(student.user_id, {
+      is_archived: false
+    }).session(session);
+
+    await StudentEnrollment.updateMany(
+      { student_id: req.params.id },
+      { is_archived: false }
+    ).session(session);
+
+    await session.commitTransaction();
+    res.json({ message: "Student restored successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500).json({ message: error.message });
   } finally {
     session.endSession();
   }
