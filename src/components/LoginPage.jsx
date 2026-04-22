@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
-import { 
-  MdAdminPanelSettings, 
-  MdSchool, 
-  MdSupervisorAccount, 
+import {
+  MdAdminPanelSettings,
+  MdSchool,
+  MdSupervisorAccount,
   MdCastForEducation,
   MdPerson
 } from "react-icons/md";
@@ -40,15 +40,15 @@ function LoginPage() {
   const getRoleIcon = () => {
     const iconStyle = { color: "#94a3b8" };
     switch (activeTab) {
-      case "Admin": 
+      case "Admin":
         return <MdAdminPanelSettings size={26} style={iconStyle} />;
-      case "Faculty": 
+      case "Faculty":
         return <MdCastForEducation size={26} style={iconStyle} />;
-      case "Student": 
+      case "Student":
         return <MdSchool size={26} style={iconStyle} />;
-      case "Parent": 
+      case "Parent":
         return <MdSupervisorAccount size={26} style={iconStyle} />;
-      default: 
+      default:
         return <MdPerson size={26} style={iconStyle} />;
     }
   };
@@ -56,17 +56,17 @@ function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-slate-950 p-6 font-antiqua transition-colors">
       <div className="w-full max-w-[520px] bg-white dark:bg-slate-900 shadow-[0_10px_40px_rgba(0,0,0,0.06)] dark:shadow-none rounded-[32px] p-12 flex flex-col items-center border dark:border-slate-800">
-        
+
         <div className="mb-6">
-          <img 
-            src="/logo.jpeg" 
-            alt="AIMSCS Logo" 
+          <img
+            src="/logo.jpeg"
+            alt="AIMSCS Logo"
             className="w-24 h-24 object-contain rounded-2xl"
           />
         </div>
 
         <h1 className="text-[30px] text-[#2b2b2b] dark:text-white mb-10 capitalize text-center leading-tight font-bold">
-          Attendance Management System
+          Campus Management System
         </h1>
 
         <div className="w-full flex bg-[#e2e8f0] dark:bg-slate-800 p-1.5 rounded-2xl mb-10">
@@ -74,11 +74,10 @@ function LoginPage() {
             <button
               key={tab}
               type="button"
-              className={`flex-1 py-3 text-base font-bold rounded-xl transition-all duration-200 ${
-                activeTab === tab
-                  ? "bg-[#3b82f6] text-white shadow-md"
-                  : "text-[#64748b] dark:text-slate-400 hover:text-[#1e293b] dark:hover:text-white"
-              }`}
+              className={`flex-1 py-3 text-base font-bold rounded-xl transition-all duration-200 ${activeTab === tab
+                ? "bg-[#3b82f6] text-white shadow-md"
+                : "text-[#64748b] dark:text-slate-400 hover:text-[#1e293b] dark:hover:text-white"
+                }`}
               onClick={() => {
                 setActiveTab(tab);
                 setCredentials({ identifier: "", password: "" });
@@ -106,7 +105,7 @@ function LoginPage() {
                 name="identifier"
                 placeholder={
                   activeTab === "Student" ? "Roll Number" :
-                  `${activeTab} Username`
+                    `${activeTab} Username`
                 }
                 value={credentials.identifier}
                 onChange={handleInputChange}
@@ -147,7 +146,7 @@ function LoginPage() {
           </form>
         )}
 
-        <ForgotPasswordTrigger />
+        {activeTab !== "Parent" && <ForgotPasswordTrigger />}
       </div>
 
       <footer className="mt-10 text-[15px] text-[#94a3b8] dark:text-slate-500 italic">

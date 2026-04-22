@@ -10,7 +10,7 @@ const ClassSessionSchema = new mongoose.Schema(
     faculty_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Faculty",
-      required: true,
+      required: false,
     },
     date: { type: Date, required: true },
     is_conducted: { type: Boolean, default: true },

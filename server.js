@@ -294,41 +294,47 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const sessions = await ClassSession.find({
-      yr_sem_id: yrSem._id,
-      date: { $gte: startOfDay, $lte: endOfDay }
-    });
 
-    const attendanceRecords = await Attendance.find({
-      student_id: studentId,
-      class_session_id: { $in: sessions.map(s => s._id) },
-    }).populate("class_session_id");
+    // For each timetable entry, directly find if a session was conducted today
+    // and look up this student's attendance record for it.
+    const timetableData = await Promise.all(
+      timetableEntries.map(async (entry) => {
+        const subject = entry.subject_offering_id || {};
+        const course = subject.course_master_id || {};
 
-    const attendanceMap = {};
-    attendanceRecords.forEach((record) => {
-      const key = `${record.class_session_id.subject_offering_id}_${record.class_session_id.session_no}`;
-      attendanceMap[key] = record.status;
-    });
+        // Find the exact class session: same subject + session_no + today
+        const classSession = await ClassSession.findOne({
+          subject_offering_id: subject._id,
+          session_no: entry.session_no,
+          date: { $gte: startOfDay, $lte: endOfDay },
+        });
 
-    const timetableData = timetableEntries.map((entry) => {
-      const subject = entry.subject_offering_id || {};
-      const course = subject.course_master_id || {};
-      const key = `${subject._id}_${entry.session_no}`;
+        let attendance_status = "Not Marked";
 
-      return {
-        class_name: course.course_name || "Unknown Subject",
-        class_code: course.course_code || "N/A",
-        subject_offering_id: subject._id,
-        faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
-        session_no: entry.session_no,
-        day: entry.day_of_week,
-        start_time: entry.start_time,
-        end_time: entry.end_time,
-        attendance_status: attendanceMap[key] || "Not Marked",
-      };
-    });
+        if (classSession) {
+          const attRecord = await Attendance.findOne({
+            student_id: studentId,
+            class_session_id: classSession._id,
+          });
+          if (attRecord) {
+            attendance_status = attRecord.status; // "Present" or "Absent"
+          }
+        }
 
-    // ===== CHANGE 2: Added currentDay to response =====
+        return {
+          class_name: course.course_name || "Unknown Subject",
+          class_code: course.course_code || "N/A",
+          subject_offering_id: subject._id,
+          faculty_name: entry.faculty_id ? entry.faculty_id.name : "Unknown",
+          session_no: entry.session_no,
+          day: entry.day_of_week,
+          start_time: entry.start_time,
+          end_time: entry.end_time,
+          attendance_status,
+        };
+      })
+    );
+
     res.json({
       studentDetails: {
         student_id_no: student.roll_no,
@@ -340,8 +346,8 @@ app.get("/api/student-dashboard/:studentId", async (req, res) => {
       timetableData,
       currentDay
     });
-    // ===== END CHANGE 2 =====
   } catch (error) {
+    console.error("Student dashboard error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -2088,18 +2094,21 @@ app.get("/api/student/course-details/:studentId/:subjectOfferingId", async (req,
     if (!subject) return res.status(404).json({ message: "Subject not found" });
 
     const sessions = await ClassSession.find({ subject_offering_id: subjectOfferingId });
-    const totalSessions = sessions.length;
 
     const records = await Attendance.find({
       student_id: studentId,
       class_session_id: { $in: sessions.map(s => s._id) },
     });
 
+    // Only count sessions where this student was actually marked (Present or Absent).
+    // Orphan ClassSessions (created but attendance never recorded) are excluded.
+    // If no records exist at all → 0%.
     const present = records.filter(r => r.status === "Present").length;
+    const totalMarked = records.length; // sessions where attendance was actually recorded
     const attendanceStats = {
       present_count: present,
-      total_count: totalSessions,
-      percentage: totalSessions > 0 ? ((present / totalSessions) * 100).toFixed(2) : "0.00"
+      total_count: totalMarked,
+      percentage: totalMarked > 0 ? ((present / totalMarked) * 100).toFixed(2) : "0.00"
     };
 
     const notes = await ClassNotes.find({
