@@ -183,7 +183,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between shrink-0 shadow-md z-10">
                     <div className="flex items-center space-x-3">
                         <div className="bg-white dark:bg-slate-800/20 p-2.5 rounded-xl">
-                            <HiOutlineSparkles className="w-6 h-6 text-white" />
+                            <HiOutlineSparkles className="w-6 h-6 text-blue-700 dark:text-white" />
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-xl leading-tight">
@@ -196,7 +196,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/70 hover:text-white hover:bg-white dark:bg-slate-800/10 p-2 rounded-xl transition-all"
+                        className="text-white/70 hover:text-blue-700 dark:hover:text-white hover:bg-white/90 dark:bg-slate-800/10 p-2 rounded-xl transition-all"
                     >
                         <HiOutlineX className="w-6 h-6" />
                     </button>

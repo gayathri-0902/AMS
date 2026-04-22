@@ -350,7 +350,7 @@ const StudentDashboard = ({ overrideId }) => {
         {assignments.length > 0 && (
           <div className="mb-14 px-2">
             <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Pending Assignments</h2>
-            <div className="flex overflow-x-auto pb-6 space-x-6 scrollbar-hide">
+            <div className="flex overflow-x-auto pb-6 space-x-6 no-scrollbar">
               {assignments.map((assign, idx) => (
                 <div key={idx} className="min-w-[320px] bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-50 dark:border-slate-700 flex flex-col justify-between">
                   <div>
@@ -603,10 +603,13 @@ const StudentDashboard = ({ overrideId }) => {
         {/* Floating Academic AI Button */}
         <button
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-10 right-10 flex items-center space-x-3 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-blue-700 hover:-translate-y-2 transition-all z-[1000] border-4 border-white"
+          className="fixed bottom-10 right-10 z-[1000] bg-gradient-to-tr from-blue-600 to-indigo-700 text-white p-5 rounded-3xl shadow-[0_10px_30px_rgba(59,130,246,0.5)] hover:scale-110 hover:-translate-y-2 transition-all duration-300 group overflow-hidden"
         >
-          <HiOutlineSparkles className="w-6 h-6" />
-          <span className="text-lg">Academic AI</span>
+          <div className="absolute inset-0 bg-white dark:bg-slate-800/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+          <div className="relative flex items-center space-x-3 group-hover:text-blue-700 dark:group-hover:text-white transition-colors duration-300">
+            <HiOutlineSparkles className="w-8 h-8 animate-pulse" />
+            <span className="font-bold tracking-tight text-lg">Academic AI</span>
+          </div>
         </button>
 
         {/* Academic AI Chat Modal */}
