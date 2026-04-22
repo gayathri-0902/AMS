@@ -2254,9 +2254,13 @@ app.post("/api/academic-ai/query", async (req, res) => {
 
   } catch (error) {
     console.error("Academic AI proxy error:", error.message);
-    res.status(502).json({
-      message: "Academic AI service is unavailable. Make sure the Flask server is running.",
-    });
+    if (!res.headersSent) {
+      res.status(502).json({
+        message: "Academic AI service is unavailable. Make sure the Flask server is running.",
+      });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -2286,9 +2290,13 @@ app.post("/api/faculty-ai/query", async (req, res) => {
 
   } catch (error) {
     console.error("Faculty AI proxy error:", error.message);
-    res.status(502).json({
-      message: "Faculty AI service is unavailable. Make sure the Flask server is running.",
-    });
+    if (!res.headersSent) {
+      res.status(502).json({
+        message: "Faculty AI service is unavailable. Make sure the Flask server is running.",
+      });
+    } else {
+      res.end();
+    }
   }
 });
 
