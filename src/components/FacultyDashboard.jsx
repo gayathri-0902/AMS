@@ -397,7 +397,7 @@ function FacultyDashboard() {
               <HiOutlineUser className="w-8 h-8" />
             </div>
             <div className="text-left">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-none tracking-tight">
+              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
                 {capitalizeName(auth?.name || auth?.facultyName) || "Faculty Member"}
               </h2>
               <p className="text-sm font-bold text-[#3b82f6] uppercase mt-1 tracking-widest">
@@ -427,7 +427,7 @@ function FacultyDashboard() {
           </div>
         </button>
 
-        <FacultyAcademicAI 
+        <FacultyAcademicAI
           isOpen={isAIOpen}
           onClose={() => setIsAIOpen(false)}
           facultyName={auth?.name || "Professor"}
@@ -436,8 +436,8 @@ function FacultyDashboard() {
 
         {/* --- WELCOME TITLE --- */}
         <div className="mb-10 text-left px-2">
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">Faculty Dashboard</h1>
-          <p className="text-xl text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">Faculty Dashboard</h1>
+          <p className="text-xl text-gray-500 mt-1">
             Welcome back, <span className="text-[#3b82f6] font-bold">{capitalizeName(auth?.name?.split(' ')[0]) || "Professor"}</span>
           </p>
         </div>
@@ -453,9 +453,9 @@ function FacultyDashboard() {
                 <div className="w-24 h-24 rounded-3xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mb-8">
                   <HiOutlineCalendar className="w-14 h-14 text-blue-400" />
                 </div>
-                <h3 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-3">No Classes Today</h3>
+                <h3 className="text-3xl font-extrabold text-gray-800 mb-3">No Classes Today</h3>
                 <p className="text-lg text-gray-400 font-medium mb-6 max-w-md">
-                <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                  <span className="text-[#3b82f6] font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
                   <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest">
@@ -499,7 +499,7 @@ function FacultyDashboard() {
                           </div>
                           <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest">{sub.course_code}</span>
                         </div>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-tight mb-2">{sub.course_name}</h3>
+                        <h3 className="text-lg font-bold text-gray-800 leading-tight mb-2">{sub.course_name}</h3>
                         <p className="text-[11px] text-gray-400 font-bold uppercase tracking-tighter">{sub.section_label}</p>
                       </div>
                     ))}
@@ -522,7 +522,7 @@ function FacultyDashboard() {
                     <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">Session {cls.session_no}</span>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight mb-1">{cls.class_name}</h3>
+                  <h3 className="text-2xl font-bold text-gray-800 leading-tight mb-1">{cls.class_name}</h3>
                   <span className="inline-block bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1 rounded-lg uppercase">
                     {cls.section_name}
                   </span>
@@ -532,13 +532,13 @@ function FacultyDashboard() {
                     <div className="flex items-center space-x-3 text-gray-600 dark:text-slate-300">
                       <HiOutlineCalendar className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                       <div>
-                        <p className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-none">{cls.day}</p>
+                        <p className="font-bold text-gray-800 text-sm leading-none">{cls.day}</p>
                         <p className="text-[11px] text-gray-400 mt-1 uppercase">Current Schedule</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3 text-gray-600 dark:text-gray-300">
                       <HiOutlineClock className="w-5 h-5 text-gray-400" />
-                      <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                      <p className="text-sm font-bold text-gray-700">
                         {formatTime(cls.start_time)} - {formatTime(cls.end_time || 'Next Slot')}
                       </p>
                     </div>
@@ -555,7 +555,7 @@ function FacultyDashboard() {
             {selectedClass && (
               <div className="bg-white dark:bg-slate-800 rounded-[40px] p-10 shadow-sm border border-gray-100 dark:border-slate-600">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Attendance Marking</h3>
+                  <h3 className="text-2xl font-bold text-gray-800">Attendance Marking</h3>
                   <button
                     onClick={handleMarkAllPresent}
                     className="text-xs font-bold text-green-600 uppercase border-b-2 border-green-600 hover:text-green-700 transition-colors tracking-widest"
@@ -589,36 +589,36 @@ function FacultyDashboard() {
               className={`space-y-8 ${!selectedClass ? "lg:col-span-2 max-w-4xl mx-auto w-full" : ""}`}
             >
               {/* Resources */}
-              <div className="bg-white dark:bg-slate-800 rounded-[40px] p-10 shadow-sm border-t-8 border-purple-500 border-x border-b border-gray-100 dark:border-slate-700">
-                <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800 dark:text-gray-100">
+              <div className="bg-white rounded-[40px] p-10 shadow-sm border-t-8 border-purple-500 border-x border-b border-gray-100">
+                <h3 className="text-2xl font-bold mb-6 flex items-center text-gray-800">
                   <HiOutlineCloudUpload className="mr-3 text-purple-600 w-8 h-8" /> Upload Resources
                 </h3>
                 {selectedSubjectOffering && (
-                  <p className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-widest bg-purple-50 p-3 rounded-xl inline-block">
+                  <p className="text-sm font-bold text-gray-400 dark:text-slate-400 mb-6 uppercase tracking-widest bg-purple-50 dark:bg-purple-900/30 p-3 rounded-xl inline-block">
                     Target: <span className="text-purple-600">{selectedSubjectOffering.course_name}</span>
                   </p>
                 )}
-                <div onClick={() => noteFileRef.current?.click()} className="border-2 border-dashed border-purple-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 cursor-pointer mb-6 hover:bg-purple-50 transition-colors group">
+                <div onClick={() => noteFileRef.current?.click()} className="border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-[24px] p-10 flex flex-col items-center justify-center bg-purple-50/30 dark:bg-purple-900/10 cursor-pointer mb-6 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group">
                   <input type="file" ref={noteFileRef} className="hidden" onChange={(e) => { setSelectedNoteFile(e.target.files[0]); setNewNote({ ...newNote, title: e.target.files[0]?.name || '' }) }} accept=".pdf,.doc,.docx,.txt" />
                   <HiOutlineDocumentText className="w-12 h-12 text-purple-300 mb-2 group-hover:scale-110 transition-transform" />
                   <p className="text-sm font-bold text-purple-400 uppercase tracking-widest text-center">{selectedNoteFile ? selectedNoteFile.name : "Choose PDF/DOC/TXT to Upload"}</p>
                 </div>
                 <form onSubmit={handleAddNote}>
-                  <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({ ...newNote, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-100 dark:border-slate-700 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
-                  <textarea placeholder="Description (optional)" value={newNote.description} onChange={(e) => setNewNote({ ...newNote, description: e.target.value })} className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-100 dark:border-slate-700 rounded-2xl mb-4 h-24 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" />
+                  <input type="text" placeholder="Document Title" value={newNote.title} onChange={(e) => setNewNote({ ...newNote, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" required />
+                  <textarea placeholder="Description (optional)" value={newNote.description} onChange={(e) => setNewNote({ ...newNote, description: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 h-24 text-lg outline-none focus:ring-2 focus:ring-purple-400 transition-all" />
                   <button type="submit" disabled={!selectedNoteFile} className="w-full bg-purple-600 text-white py-5 rounded-2xl text-lg font-bold shadow-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all uppercase tracking-widest">Publish Resource</button>
                 </form>
 
                 {/* Uploaded Notes List */}
                 {notes.length > 0 && (
                   <div className="mt-8 pt-8 border-t border-purple-100">
-                    <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Uploaded Notes ({notes.length})</h4>
+                    <h4 className="text-xl font-bold text-gray-800 mb-4">Uploaded Notes ({notes.length})</h4>
                     <div className="space-y-3 max-h-80 overflow-y-auto">
                       {notes.map((note) => (
-                        <div key={note._id} className="flex justify-between items-center p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-100">
+                        <div key={note._id} className="flex justify-between items-center p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-2xl border border-purple-100 dark:border-purple-800">
                           <div>
-                            <h5 className="font-bold text-gray-800 dark:text-gray-100">{note.title}</h5>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(note.upload_date).toLocaleDateString()}</p>
+                            <h5 className="font-bold text-gray-800">{note.title}</h5>
+                            <p className="text-sm text-gray-500">{new Date(note.upload_date).toLocaleDateString()}</p>
                           </div>
                           <a
                             href={`${API_BASE}${note.file_url}`}
@@ -638,7 +638,7 @@ function FacultyDashboard() {
               {(selectedClass || selectedSubjectOffering) && (
                 <div className="bg-white dark:bg-slate-800 rounded-[40px] p-10 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-100 dark:border-slate-600">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold flex items-center text-gray-800 dark:text-gray-100">
+                    <h3 className="text-2xl font-bold flex items-center text-gray-800">
                       <HiOutlineClipboardList className="mr-3 text-blue-600 w-8 h-8" /> Assign New Task
                     </h3>
                     <Link
@@ -649,7 +649,7 @@ function FacultyDashboard() {
                       <span>GENERATE WITH AI</span>
                     </Link>
                   </div>
-                  <div onClick={() => assignFileRef.current?.click()} className="border-2 border-dashed border-blue-100 rounded-[24px] p-10 flex flex-col items-center justify-center bg-blue-50/30 cursor-pointer mb-6 hover:bg-blue-50 transition-colors group">
+                  <div onClick={() => assignFileRef.current?.click()} className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-[24px] p-10 flex flex-col items-center justify-center bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer mb-6 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group">
                     <input type="file" ref={assignFileRef} className="hidden" onChange={(e) => setSelectedAssignFile(e.target.files[0])} accept=".pdf,.doc,.docx,.txt" />
                     <HiOutlineDocumentText className="w-12 h-12 text-blue-300 mb-2 group-hover:scale-110 transition-transform" />
                     <p className="text-sm font-bold text-blue-400 uppercase tracking-widest text-center">
@@ -659,11 +659,11 @@ function FacultyDashboard() {
                     </p>
                   </div>
                   <form onSubmit={handleAddAssignment}>
-                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})} className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-100 dark:border-slate-700 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
-                    <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({...newAssignment, instructions: e.target.value})} className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-100 dark:border-slate-700 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                    <input type="text" placeholder="Assignment Title" value={newAssignment.title} onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
+                    <textarea placeholder="Instructions for Students..." value={newAssignment.instructions} onChange={(e) => setNewAssignment({ ...newAssignment, instructions: e.target.value })} className="w-full px-6 py-4 bg-gray-50 text-gray-900 border border-gray-100 rounded-2xl mb-4 text-lg h-28 outline-none focus:ring-2 focus:ring-blue-400 transition-all" required />
                     <div className="flex flex-col mb-6">
-                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
-                       <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})} className="w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-2xl text-lg text-gray-500 dark:text-gray-400 focus:ring-2 focus:ring-blue-400 transition-all" required />
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-2">Due Date</label>
+                      <input type="date" value={newAssignment.due_date} onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })} className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-lg text-gray-500 focus:ring-2 focus:ring-blue-400 transition-all" required />
                     </div>
                     <button
                       type="submit"
@@ -675,13 +675,13 @@ function FacultyDashboard() {
 
                   {/* Assignment History */}
                   <div className="mt-8 pt-8 border-t border-blue-100">
-                    <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Posted Assignments ({assignments.length})</h4>
+                    <h4 className="text-xl font-bold text-gray-800 mb-4">Posted Assignments ({assignments.length})</h4>
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                       {assignments.length > 0 ? (
                         assignments.map((asm) => (
-                          <div key={asm._id} className="p-6 bg-gray-50 dark:bg-slate-900 rounded-3xl border border-transparent hover:border-gray-200 dark:hover:border-slate-500 dark:border-slate-600 transition-all flex justify-between items-center group">
+                          <div key={asm._id} className="p-6 bg-gray-50 rounded-3xl border border-transparent hover:border-gray-200 transition-all flex justify-between items-center group">
                             <div className="flex-1">
-                              <h4 className="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1">{asm.title}</h4>
+                              <h4 className="font-bold text-gray-800 text-lg mb-1">{asm.title}</h4>
                               <div className="flex items-center space-x-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                 <span className="flex items-center"><HiOutlineClock className="mr-1" /> Due: {new Date(asm.due_date || asm.submission_deadline).toLocaleDateString()}</span>
                               </div>
@@ -689,12 +689,12 @@ function FacultyDashboard() {
                             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => setViewingAssignment(asm)}
-                                className="p-3 bg-white dark:bg-slate-800 text-blue-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-50">
+                                className="p-3 bg-white text-blue-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-50">
                                 <HiOutlineEye size={20} />
                               </button>
                               <button
                                 onClick={() => handleDeleteAssignment(asm._id)}
-                                className="p-3 bg-white dark:bg-slate-800 text-red-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-red-50">
+                                className="p-3 bg-white text-red-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-red-50">
                                 <HiOutlineTrash size={20} />
                               </button>
                             </div>
@@ -732,7 +732,7 @@ function FacultyDashboard() {
                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">
                   {viewingAssignment.assignment_mode} Task
                 </span>
-                <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{viewingAssignment.title}</h3>
+                <h3 className="text-3xl font-bold text-gray-800">{viewingAssignment.title}</h3>
               </div>
               <button
                 onClick={() => setViewingAssignment(null)}
@@ -742,44 +742,44 @@ function FacultyDashboard() {
             </div>
 
             <div className="p-10 space-y-8">
-               <div className="bg-gray-50 dark:bg-slate-900 p-6 rounded-[32px] border border-gray-100 dark:border-slate-700">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 ml-2">Context / Instructions</h4>
-                  <p className="text-gray-700 dark:text-gray-200 font-medium leading-relaxed">{viewingAssignment.instructions}</p>
-                  {viewingAssignment.file_url && (
-                    <a href={viewingAssignment.file_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all">
-                      <HiOutlineCloudUpload className="mr-2" /> View Resource Link
-                    </a>
-                  )}
-               </div>
-
-               {viewingAssignment.questions && viewingAssignment.questions.length > 0 && (
-                 <div className="space-y-6">
-                   <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Assessment Content</h4>
-                   {viewingAssignment.questions.map((q, idx) => (
-                     <div key={idx} className="p-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[32px] hover:border-blue-100 transition-all">
-                        <div className="flex items-start space-x-4 mb-4">
-                          <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</span>
-                          <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{q.question_text}</p>
-                        </div>
-                        {q.options && q.options.length > 0 && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
-                            {q.options.map((opt, oIdx) => (
-                              <div key={oIdx} className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 dark:bg-slate-900 border-transparent text-gray-500 dark:text-gray-400"}`}>
-                                {opt === q.correct_answer && "✓ "}{opt}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {q.model_answer && (
-                           <div className="mt-4 pl-12">
-                              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Model Answer</p>
-                              <p className="text-gray-600 dark:text-gray-300 italic font-medium">{q.model_answer}</p>
-                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+              <div className="bg-gray-50 dark:bg-slate-900 p-6 rounded-[32px] border border-gray-100 dark:border-slate-700">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 ml-2">Context / Instructions</h4>
+                <p className="text-gray-700 dark:text-gray-200 font-medium leading-relaxed">{viewingAssignment.instructions}</p>
+                {viewingAssignment.file_url && (
+                  <a href={viewingAssignment.file_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all">
+                    <HiOutlineCloudUpload className="mr-2" /> View Resource Link
+                  </a>
                 )}
+              </div>
+
+              {viewingAssignment.questions && viewingAssignment.questions.length > 0 && (
+                <div className="space-y-6">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Assessment Content</h4>
+                  {viewingAssignment.questions.map((q, idx) => (
+                    <div key={idx} className="p-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[32px] hover:border-blue-100 transition-all">
+                      <div className="flex items-start space-x-4 mb-4">
+                        <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</span>
+                        <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{q.question_text}</p>
+                      </div>
+                      {q.options && q.options.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+                          {q.options.map((opt, oIdx) => (
+                            <div key={oIdx} className={`p-4 rounded-2xl border text-sm font-medium ${opt === q.correct_answer ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 dark:bg-slate-900 border-transparent text-gray-500 dark:text-gray-400"}`}>
+                              {opt === q.correct_answer && "✓ "}{opt}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {q.model_answer && (
+                        <div className="mt-4 pl-12">
+                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Model Answer</p>
+                          <p className="text-gray-600 dark:text-gray-300 italic font-medium">{q.model_answer}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
