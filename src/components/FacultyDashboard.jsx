@@ -397,7 +397,7 @@ function FacultyDashboard() {
               <HiOutlineUser className="w-8 h-8" />
             </div>
             <div className="text-left">
-              <h2 className="text-2xl font-bold text-gray-800 leading-none tracking-tight">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white leading-none tracking-tight">
                 {capitalizeName(auth?.name || auth?.facultyName) || "Faculty Member"}
               </h2>
               <p className="text-sm font-bold text-[#3b82f6] uppercase mt-1 tracking-widest">
@@ -436,8 +436,8 @@ function FacultyDashboard() {
 
         {/* --- WELCOME TITLE --- */}
         <div className="mb-10 text-left px-2">
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">Faculty Dashboard</h1>
-          <p className="text-xl text-gray-500 mt-1">
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">Faculty Dashboard</h1>
+          <p className="text-xl text-gray-500 dark:text-slate-400 mt-1">
             Welcome back, <span className="text-[#3b82f6] font-bold">{capitalizeName(auth?.name?.split(' ')[0]) || "Professor"}</span>
           </p>
         </div>
