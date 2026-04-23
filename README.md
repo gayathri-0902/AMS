@@ -1,12 +1,29 @@
 # C R Rao Campus Management System (AMS)
 
 ![Project Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 ![React](https://img.shields.io/badge/Frontend-React_18-blue)
 ![Node.js](https://img.shields.io/badge/Backend-Node.js_Express-green)
 ![Python](https://img.shields.io/badge/AI_Engine-Python_Flask-yellow)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-success)
 
 A comprehensive, MERN-stack based Campus Management System enriched with an AI-powered Assignment Generation Engine and Student Chatbot (RAG pipeline). Designed to streamline academic operations, attendance tracking, scheduling, assignment workflows, and information retrieval for Faculty and Students.
+
+---
+
+## 👥 Team
+
+This project was developed at **C R Rao Advanced Institute of Mathematics, Statistics and Computer Science (AIMSCS), Telangana, India**.
+
+| Name | Role | Contact |
+|---|---|---|
+| **Apoorva Pothakamuri** | Developer | apurvarao47@gmail.com |
+| **Amkam Dharani** | Developer | dharaniamkam@gmail.com |
+| **Gayathri Settipalli** | Developer | gayathrisettipalli02@gmail.com |
+| **Shaik Zaheer Hussain** | Developer | zaheerhussain160304@gmail.com |
+| **Dr. G. Padmavathi** | Project Supervisor | padmagvathi@gmail.com |
+
+> © 2026 Apoorva Pothakamuri, Amkam Dharani, Gayathri Settipalli, Shaik Zaheer Hussain & Dr. G. Padmavathi. All Rights Reserved.
 
 ---
 
@@ -86,7 +103,7 @@ AMS/
 │   └── components/
 │       ├── AssignmentHub.jsx     # Faculty AI Assignment generation & publish
 │       ├── HandIn.jsx            # Student submission portal
-│       ├── AssignmentGrader.jsx  # Faculty grading view (upcoming)
+│       ├── AssignmentGrader.jsx  # Faculty grading view
 │       ├── StudentDashboard.jsx  # Student home
 │       └── FacultyDashboard.jsx  # Faculty home
 ├── models/                       # Mongoose Schemas
@@ -104,6 +121,7 @@ AMS/
 │   ├── query_engine.py           # Hybrid RAG pipeline (Vector + BM25)
 │   └── llm_loaders/              # Pluggable LLM backends (Ollama, Local)
 ├── server.js                     # Node.js Express entry point (port 3002)
+├── LICENSE                       # Proprietary License — All Rights Reserved
 └── README.md
 ```
 
@@ -187,4 +205,10 @@ The AI Assignment Hub requires the vector knowledge base to be built first. Run 
 ---
 
 ## 📄 License
-This software is provided under the terms in the `LICENSE` file. All rights reserved to C R Rao AIMSCS.
+
+This software is **proprietary** and protected under a custom All Rights Reserved license.
+
+> **Copyright © 2026 Apoorva Pothakamuri, Amkam Dharani, Gayathri Settipalli, Shaik Zaheer Hussain & Dr. G. Padmavathi.**
+> No part of this software may be copied, modified, distributed, or used without explicit written permission from all copyright holders.
+
+See the [`LICENSE`](./LICENSE) file for full terms.
