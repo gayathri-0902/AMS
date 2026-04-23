@@ -2,28 +2,30 @@ import React, { useEffect } from "react";
 import { MdClose, MdCheckCircle, MdError, MdHourglassEmpty } from "react-icons/md";
 
 function Admin_ModalAddStudent({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
-    if (!isOpen) return null;
-
     const isEmailValid = /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(form.email || "");
 
     // Debounced Uniqueness Check
     useEffect(() => {
+        if (!isOpen) return;
         const timer = setTimeout(() => {
             if (form.roll_no && form.roll_no !== availability.roll_no.checkedValue) {
                 checkUniqueness("roll_no", form.roll_no);
             }
         }, 600);
         return () => clearTimeout(timer);
-    }, [form.roll_no]);
+    }, [form.roll_no, isOpen]);
 
     useEffect(() => {
+        if (!isOpen) return;
         const timer = setTimeout(() => {
             if (form.email && isEmailValid && form.email !== availability.email.checkedValue) {
                 checkUniqueness("email", form.email);
             }
         }, 600);
         return () => clearTimeout(timer);
-    }, [form.email, isEmailValid]);
+    }, [form.email, isEmailValid, isOpen]);
+
+    if (!isOpen) return null;
 
     const hasConflict = availability.roll_no.exists || availability.email.exists;
 
