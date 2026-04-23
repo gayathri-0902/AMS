@@ -1,4 +1,4 @@
-# C R Rao Campus Management System (AMS)
+# C R Rao Campus Management System (CMS)
 
 ![Project Status](https://img.shields.io/badge/Status-Active-brightgreen)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
