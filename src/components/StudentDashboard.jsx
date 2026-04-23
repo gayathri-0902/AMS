@@ -52,6 +52,7 @@ const StudentDashboard = ({ overrideId }) => {
   const [assignments, setAssignments] = useState([]);
   const [feedbackStatus, setFeedbackStatus] = useState({ allowed: false, phase: "", pending: [] });
   const [overallAttendance, setOverallAttendance] = useState(null);
+  const [subjectAttendances, setSubjectAttendances] = useState([]);
 
   // NEW: Weekend UI State
   const [showResourcePicker, setShowResourcePicker] = useState(false);
@@ -82,16 +83,12 @@ const StudentDashboard = ({ overrideId }) => {
   };
 
   const getStatusStyle = (status) => {
-    switch (status) {
-      case "Present":
-        return "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400";
-      case "Absent":
-        return "bg-red-100 text-red-500";
-      case "Not Marked":
-      default:
-        return "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500";
+    if (status === "Present") {
+      return "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400";
     }
+    return "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500";
   };
+
 
   // NEW: Fetch notes for selected subject
   const handleSelectSubject = async (subject) => {
@@ -183,6 +180,14 @@ const StudentDashboard = ({ overrideId }) => {
           setOverallAttendance(attRes.data);
         } catch (error) {
           console.error("Error fetching overall attendance:", error);
+        }
+
+        // Fetch subject attendance
+        try {
+          const subjectAttRes = await axios.get(`${API_BASE}/api/attendance/${targetId}`);
+          setSubjectAttendances(subjectAttRes.data.subjectAttendance || []);
+        } catch (error) {
+          console.error("Error fetching subject attendance:", error);
         }
 
       } catch (error) {
@@ -350,7 +355,7 @@ const StudentDashboard = ({ overrideId }) => {
         {assignments.length > 0 && (
           <div className="mb-14 px-2">
             <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Pending Assignments</h2>
-            <div className="flex overflow-x-auto pb-6 space-x-6 scrollbar-hide">
+            <div className="flex overflow-x-auto pb-6 space-x-6 no-scrollbar">
               {assignments.map((assign, idx) => (
                 <div key={idx} className="min-w-[320px] bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-sm border-t-8 border-blue-500 border-x border-b border-gray-50 dark:border-slate-700 flex flex-col justify-between">
                   <div>
@@ -381,9 +386,22 @@ const StudentDashboard = ({ overrideId }) => {
         {/* --- WEEKDAY: ASSIGNMENT TIMELINE + COURSE CARDS --- */}
         {timetable.length > 0 ? (
           <div className="mb-20">
-            <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
-              Today's Schedule
-            </h2>
+            <div className="flex justify-between items-center mb-6 pl-4 ml-2 border-l-4 border-blue-500">
+              <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+                Today's Schedule
+              </h2>
+              <button
+                onClick={() => {
+                  setShowResourcePicker(!showResourcePicker);
+                  if (showResourcePicker) {
+                    setSelectedSubject(null);
+                  }
+                }}
+                className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-800 transition-all border border-blue-100 dark:border-blue-800 active:scale-95"
+              >
+                {showResourcePicker ? "Hide Course Materials" : "View Course Materials"}
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {timetable.map((course, index) => (
@@ -393,7 +411,7 @@ const StudentDashboard = ({ overrideId }) => {
                       <HiOutlineBookOpen className="w-8 h-8" />
                     </div>
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${getStatusStyle(course.attendance_status)}`}>
-                      {course.attendance_status || "Not Marked"}
+                      {course.attendance_status === "Present" ? "Marked" : "Not Marked"}
                     </span>
                   </div>
 
@@ -418,9 +436,16 @@ const StudentDashboard = ({ overrideId }) => {
 
                   <button
                     onClick={() => navigate(`/student/subject-details/${course.subject_offering_id}`)}
-                    className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg"
+                    className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold flex flex-col items-center justify-center hover:bg-blue-600 transition-all shadow-lg"
                   >
-                    VIEW COURSE DETAILS <HiOutlineArrowRight className="ml-2 w-5 h-5" />
+                    <div className="flex items-center">
+                      VIEW COURSE DETAILS <HiOutlineArrowRight className="ml-2 w-5 h-5" />
+                    </div>
+                    {subjectAttendances.find(sa => sa.subject_offering_id === course.subject_offering_id) && (
+                      <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">
+                        Attendance: {subjectAttendances.find(sa => sa.subject_offering_id === course.subject_offering_id).percentage}%
+                      </div>
+                    )}
                   </button>
                 </div>
               ))}
@@ -462,14 +487,17 @@ const StudentDashboard = ({ overrideId }) => {
                   {showResourcePicker ? "Hide Course Materials" : "View Course Materials"}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* Subject Picker & Notes - Only show on weekends */}
-              {showResourcePicker && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
-                    Your Courses
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Subject Picker & Notes - Available both weekend and weekday */}
+        {showResourcePicker && (
+          <div className="mb-20 animate-in fade-in slide-in-from-top-4 duration-500">
+            <h2 className="text-xs font-bold text-gray-400 dark:text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4 ml-2">
+              Your Courses
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     {allSubjects.map((subject) => (
                       <div
                         key={subject.subject_offering_id}
@@ -594,19 +622,19 @@ const StudentDashboard = ({ overrideId }) => {
                     </div>
                   )}
                   {/* ===== END MODIFIED ===== */}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
         {/* Floating Academic AI Button */}
         <button
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-10 right-10 flex items-center space-x-3 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-blue-700 hover:-translate-y-2 transition-all z-[1000] border-4 border-white"
+          className="fixed bottom-10 right-10 z-[1000] bg-gradient-to-tr from-blue-600 to-indigo-700 text-white p-5 rounded-3xl shadow-[0_10px_30px_rgba(59,130,246,0.5)] hover:scale-110 hover:-translate-y-2 transition-all duration-300 group overflow-hidden"
         >
-          <HiOutlineSparkles className="w-6 h-6" />
-          <span className="text-lg">Academic AI</span>
+          <div className="absolute inset-0 bg-white dark:bg-slate-800/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+          <div className="relative flex items-center space-x-3 group-hover:text-blue-700 dark:group-hover:text-white transition-colors duration-300">
+            <HiOutlineSparkles className="w-8 h-8 animate-pulse" />
+            <span className="font-bold tracking-tight text-lg">Academic AI</span>
+          </div>
         </button>
 
         {/* Academic AI Chat Modal */}

@@ -6,6 +6,8 @@ import {
     HiOutlineDocumentText,
     HiOutlineBookOpen,
 } from "react-icons/hi";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -251,7 +253,15 @@ const FacultyAcademicAI = ({ isOpen, onClose, facultyName, subjects }) => {
                                         : "bg-white dark:bg-slate-800 text-gray-800 dark:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-slate-600 rounded-tl-sm"
                                     }`}
                             >
-                                <p className="whitespace-pre-wrap">{msg.text || (msg.isStreaming ? "..." : "")}</p>
+                                <div className="prose dark:prose-invert max-w-none text-[15px] leading-relaxed break-words markdown-body">
+                                    {msg.text ? (
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.text}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        msg.isStreaming ? <p className="whitespace-pre-wrap">...</p> : null
+                                    )}
+                                </div>
 
                                 {msg.isStreaming && (
                                     <span className="inline-block w-2 bg-blue-500 rounded-full ml-1 animate-pulse" style={{ height: '1.2em', verticalAlign: 'text-bottom' }}></span>

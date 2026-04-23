@@ -1,0 +1,20 @@
+           +-------------------------------------------------------------+
+           |                                                             |
+           |                  ACADEMIC ASSISTANTS                        |
+           |                   (Python AI Layer)                         |
+           |                                                             |
+           +-----------------------------+-------------------------------+
+                                         |
+          +------------------------------+-------------------------------+
+          |                              |                               |
+          v                              v                               v
++---------------------+          +---------------------+          +---------------------+
+|                     |          |                     |          |                     |
+|     STUDENT RAG     |          |     FACULTY RAG     |          |  ASSIGNMENT AGENT   |
+|                     |          |                     |          |                     |
+|=====================|          |=====================|          |=====================|
+| - Vector Search     |          | - Subject Selection |          | - Multi-step Flow   |
+| - BM25 Keyword      |          | - Subject Context   |          | - Draft Generator   |
+| - Rank Fusion       |          | - Quick Answers     |          | - Self-Critique     |
+| - Fast Inference    |          | - Detailed Answers  |          | - Output Refiner    |
++---------------------+          +---------------------+          +---------------------+

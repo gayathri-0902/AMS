@@ -5,6 +5,8 @@ import {
     HiOutlinePaperAirplane,
     HiOutlineDocumentText,
 } from "react-icons/hi";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -183,7 +185,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between shrink-0 shadow-md z-10">
                     <div className="flex items-center space-x-3">
                         <div className="bg-white dark:bg-slate-800/20 p-2.5 rounded-xl">
-                            <HiOutlineSparkles className="w-6 h-6 text-white" />
+                            <HiOutlineSparkles className="w-6 h-6 text-blue-700 dark:text-white" />
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-xl leading-tight">
@@ -196,7 +198,7 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/70 hover:text-white hover:bg-white dark:bg-slate-800/10 p-2 rounded-xl transition-all"
+                        className="text-white/70 hover:text-blue-700 dark:hover:text-white hover:bg-white/90 dark:bg-slate-800/10 p-2 rounded-xl transition-all"
                     >
                         <HiOutlineX className="w-6 h-6" />
                     </button>
@@ -217,7 +219,15 @@ const AcademicAI = ({ isOpen, onClose, studentName, year, branch }) => {
                                         : "bg-white dark:bg-slate-800 text-gray-800 dark:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 dark:border-slate-600 rounded-tl-sm"
                                     }`}
                             >
-                                <p className="whitespace-pre-wrap">{msg.text || (msg.isStreaming ? "..." : "")}</p>
+                                <div className="prose dark:prose-invert max-w-none text-[15px] leading-relaxed break-words markdown-body">
+                                    {msg.text ? (
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.text}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        msg.isStreaming ? <p className="whitespace-pre-wrap">...</p> : null
+                                    )}
+                                </div>
 
                                 {/* Streaming cursor indicator */}
                                 {msg.isStreaming && (
