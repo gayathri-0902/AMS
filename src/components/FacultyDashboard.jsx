@@ -687,6 +687,12 @@ function FacultyDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Link
+                                to={`/assignment-grader/${asm._id}`}
+                                className="p-3 bg-white dark:bg-slate-800 text-emerald-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-emerald-50 flex items-center gap-1.5 text-xs font-bold px-4"
+                              >
+                                <HiOutlineChartBar size={16} /> View Submissions
+                              </Link>
                               <button
                                 onClick={() => setViewingAssignment(asm)}
                                 className="p-3 bg-white text-blue-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-blue-50">
