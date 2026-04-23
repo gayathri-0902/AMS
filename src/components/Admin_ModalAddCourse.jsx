@@ -2,17 +2,18 @@ import React, { useEffect } from "react";
 import { MdClose, MdTag, MdBook, MdStar, MdExpandMore, MdPersonAdd, MdHourglassEmpty, MdCheckCircle, MdError } from "react-icons/md";
 
 function Admin_ModalAddCourse({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
-    if (!isOpen) return null;
-
     // Debounced Uniqueness Check
     useEffect(() => {
+        if (!isOpen) return;
         const timer = setTimeout(() => {
             if (form.course_code && form.course_code !== availability.course_code.checkedValue) {
                 checkUniqueness("course_code", form.course_code);
             }
         }, 600);
         return () => clearTimeout(timer);
-    }, [form.course_code]);
+    }, [form.course_code, isOpen]);
+
+    if (!isOpen) return null;
 
     const hasConflict = availability.course_code.exists;
 

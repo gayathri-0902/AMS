@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import {
     MdClose,
     MdOutlinePerson,
@@ -11,28 +12,30 @@ import {
 } from "react-icons/md";
 
 function Admin_ModalAddFaculty({ isOpen, onClose, form, onChange, onSubmit, loading, error, availability, checkUniqueness }) {
-    if (!isOpen) return null;
-
     const isEmailValid = /^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(form.email || "");
 
     // Debounced Uniqueness Check
     useEffect(() => {
+        if (!isOpen) return;
         const timer = setTimeout(() => {
             if (form.user_name && form.user_name !== availability.user_name.checkedValue) {
                 checkUniqueness("user_name", form.user_name);
             }
         }, 600);
         return () => clearTimeout(timer);
-    }, [form.user_name]);
+    }, [form.user_name, isOpen]);
 
     useEffect(() => {
+        if (!isOpen) return;
         const timer = setTimeout(() => {
             if (form.email && isEmailValid && form.email !== availability.email.checkedValue) {
                 checkUniqueness("email", form.email);
             }
         }, 600);
         return () => clearTimeout(timer);
-    }, [form.email, isEmailValid]);
+    }, [form.email, isEmailValid, isOpen]);
+
+    if (!isOpen) return null;
 
     const hasConflict = availability.user_name.exists || availability.email.exists;
 
