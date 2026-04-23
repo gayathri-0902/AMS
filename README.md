@@ -19,7 +19,7 @@ This project was developed at **C R Rao Advanced Institute of Mathematics, Stati
 |---|---|---|
 | **Apoorva Pothakamuri** | Developer | apurvarao47@gmail.com |
 | **Amkam Dharani** | Developer | dharaniamkam@gmail.com |
-| **Gayathri Settipalli** | Developer | gayathrisettipalli02@gmail.com |
+| **Gayathri Settipalli** | Developer | gayathrisettipalli2@gmail.com |
 | **Shaik Zaheer Hussain** | Developer | zaheerhussain160304@gmail.com |
 | **Dr. G. Padmavathi** | Project Supervisor | padmagvathi@gmail.com |
 
