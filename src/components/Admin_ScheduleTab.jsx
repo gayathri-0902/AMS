@@ -160,8 +160,8 @@ function Admin_ScheduleTab({
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full rounded-lg border border-dashed border-slate-100 dark:border-slate-800/50 flex items-center justify-center opacity-30">
-                                                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Free</span>
+                                                        <div className="w-full rounded-lg border border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center opacity-80">
+                                                            <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Leisure / Vacant</span>
                                                         </div>
                                                     )}
                                                 </div>
