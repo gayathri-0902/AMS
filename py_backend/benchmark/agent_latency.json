@@ -1,0 +1,86 @@
+{
+  "summary": {
+    "MCQ": {
+      "n": 1,
+      "mean_total": 17359.6,
+      "min_total": 17359.6,
+      "max_total": 17359.6,
+      "mean_revisions": 3,
+      "pass_rate_pct": 0.0
+    },
+    "Written": {
+      "n": 1,
+      "mean_total": 481.2,
+      "min_total": 481.2,
+      "max_total": 481.2,
+      "mean_revisions": 1,
+      "pass_rate_pct": 100.0
+    },
+    "Coding": {
+      "n": 3,
+      "mean_total": 1532.5,
+      "min_total": 1024.9,
+      "max_total": 2077.6,
+      "mean_revisions": 2.7,
+      "pass_rate_pct": 33.3
+    }
+  },
+  "raw": {
+    "MCQ": [
+      {
+        "parse_time": 14511.165,
+        "retrieve_time": 6.786,
+        "agent_time": 2841.629,
+        "total_time": 17359.58,
+        "revisions": 3,
+        "passed": false,
+        "topic": "Binary Search Trees",
+        "type": "mcq"
+      }
+    ],
+    "Written": [
+      {
+        "parse_time": 50.665,
+        "retrieve_time": 0.532,
+        "agent_time": 430.011,
+        "total_time": 481.207,
+        "revisions": 1,
+        "passed": true,
+        "topic": "clustering algorithms",
+        "type": "written"
+      }
+    ],
+    "Coding": [
+      {
+        "parse_time": 91.557,
+        "retrieve_time": 0.19,
+        "agent_time": 1403.226,
+        "total_time": 1494.973,
+        "revisions": 3,
+        "passed": false,
+        "topic": "sorting algorithms",
+        "type": "coding"
+      },
+      {
+        "parse_time": 146.482,
+        "retrieve_time": 0.541,
+        "agent_time": 1930.582,
+        "total_time": 2077.605,
+        "revisions": 3,
+        "passed": false,
+        "topic": "linked list operations",
+        "type": "coding"
+      },
+      {
+        "parse_time": 56.516,
+        "retrieve_time": 0.491,
+        "agent_time": 967.923,
+        "total_time": 1024.93,
+        "revisions": 2,
+        "passed": true,
+        "topic": "graph traversal",
+        "type": "coding"
+      }
+    ]
+  }
+}

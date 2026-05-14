@@ -1,0 +1,81 @@
+{
+  "config": {
+    "flask_url": "http://localhost:5001",
+    "year": 4,
+    "branch": "DS",
+    "n": 10
+  },
+  "ttft": {
+    "mean": 36.431,
+    "std": 48.909,
+    "min": 6.719,
+    "max": 147.396
+  },
+  "total_time": {
+    "mean": 95.245,
+    "std": 52.104
+  },
+  "mean_tokens": 244.8,
+  "raw_results": [
+    {
+      "query": "What is virtual memory and how does it work?",
+      "ttft": 74.727,
+      "total": 132.593,
+      "tokens": 247
+    },
+    {
+      "query": "Explain the concept of database normalization",
+      "ttft": 9.135,
+      "total": 78.494,
+      "tokens": 271
+    },
+    {
+      "query": "What are the types of machine learning algorithms?",
+      "ttft": 9.189,
+      "total": 61.605,
+      "tokens": 198
+    },
+    {
+      "query": "Define and explain Big O notation",
+      "ttft": 10.198,
+      "total": 103.179,
+      "tokens": 361
+    },
+    {
+      "query": "What is the difference between supervised and unsupervised learning?",
+      "ttft": 147.396,
+      "total": 211.066,
+      "tokens": 284
+    },
+    {
+      "query": "Explain the working of a neural network",
+      "ttft": 7.781,
+      "total": 62.565,
+      "tokens": 234
+    },
+    {
+      "query": "What is recursion? Give an example",
+      "ttft": 7.833,
+      "total": 60.994,
+      "tokens": 224
+    },
+    {
+      "query": "Explain the CAP theorem in distributed systems",
+      "ttft": 7.708,
+      "total": 49.59,
+      "tokens": 174
+    },
+    {
+      "query": "What are the SOLID principles in software engineering?",
+      "ttft": 6.719,
+      "total": 52.467,
+      "tokens": 191
+    },
+    {
+      "query": "Describe the process of feature engineering in data science",
+      "ttft": 83.627,
+      "total": 139.893,
+      "tokens": 264
+    }
+  ]
+}

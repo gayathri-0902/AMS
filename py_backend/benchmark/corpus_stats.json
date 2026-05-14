@@ -1,0 +1,24 @@
+{
+  "student_collections": [
+    {
+      "collection": "4_yr_ds",
+      "branch": "DS",
+      "nodes": 254
+    }
+  ],
+  "branch_totals": {
+    "DS": {
+      "nodes": 254,
+      "collections": 1
+    }
+  },
+  "grand_total_nodes": 254,
+  "total_source_docs": 10,
+  "faculty_collections": [
+    {
+      "collection": "faculty_global",
+      "nodes": 187
+    }
+  ],
+  "avg_faculty_nodes": 187.0
+}
