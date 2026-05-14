@@ -8,6 +8,7 @@ from config import cfg
 _llama_index_llm: Optional[Any] = None
 _langchain_llm: Optional[ChatOllama] = None
 
+
 def get_llama_index_llm(backend: Optional[str] = None):
     """
     Get or create a LlamaIndex-compatible LLM instance (Singleton).
@@ -38,6 +39,17 @@ def get_llama_index_llm(backend: Optional[str] = None):
             temperature=c.temperature,
         )
         _llama_index_llm = loader.get_llm()
+    elif backend == "gradio":
+        from llm_loaders.gradio_loader import GradioLoader
+        c = cfg.gradio_llm
+        loader = GradioLoader(
+            base_url=c.base_url,
+            context_window=c.context_window,
+            max_new_tokens=c.max_new_tokens,
+            temperature=c.temperature,
+            timeout=c.timeout,
+        )
+        _llama_index_llm = loader.get_llm()
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
@@ -47,13 +59,18 @@ def get_llama_index_llm(backend: Optional[str] = None):
 
 def get_langchain_llm():
     """
-    Get or create a LangChain-compatible ChatOllama instance (Singleton).
+    Get or create a LangChain-compatible LLM instance (Singleton).
+    
+    NOTE: When llm_backend is "gradio", the LangGraph agent still uses Ollama
+    for JSON-structured output (tool calls / critic nodes) because the Gradio
+    endpoint does not support LangChain's structured-output protocol.
+    Set ollama_llm.model to a lightweight model (e.g. qwen3:1.7b) for speed.
     """
     global _langchain_llm
     if _langchain_llm is not None:
         return _langchain_llm
 
-    # Currently, our agent only supports Ollama backend for JSON formatting
+    # Agent JSON formatting always goes through Ollama — see NOTE above.
     c = cfg.ollama_llm
     _langchain_llm = ChatOllama(
         model=c.model,

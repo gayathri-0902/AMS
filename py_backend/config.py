@@ -24,7 +24,7 @@ import yaml
 
 _CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.yaml")
 
-with open(_CONFIG_PATH, "r") as _f:
+with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
     _raw: dict = yaml.safe_load(_f)
 
 
@@ -64,10 +64,19 @@ class OllamaLLMConfig:
 
 
 @dataclass(frozen=True)
+class GradioLLMConfig:
+    base_url: str
+    context_window: int
+    max_new_tokens: int
+    temperature: float
+    timeout: float
+
+
+@dataclass(frozen=True)
 class PipelineConfig:
     year: int
     branch: str
-    llm_backend: str   # "local" | "ollama"
+    llm_backend: str   # "local" | "ollama" | "gradio"
     streaming: bool
     test_query: str
 
@@ -79,6 +88,7 @@ class AppConfig:
     retrieval: RetrievalConfig
     local_llm: LocalLLMConfig
     ollama_llm: OllamaLLMConfig
+    gradio_llm: GradioLLMConfig
     pipeline: PipelineConfig
 
 
@@ -108,6 +118,7 @@ def _load() -> AppConfig:
     retrieval = RetrievalConfig(**_raw["retrieval"])
     local_llm = LocalLLMConfig(**_raw["local_llm"])
     ollama_llm = OllamaLLMConfig(**_raw["ollama_llm"])
+    gradio_llm = GradioLLMConfig(**_raw["gradio_llm"])
     pipeline = PipelineConfig(**_raw["pipeline"])
 
     return AppConfig(
@@ -115,6 +126,7 @@ def _load() -> AppConfig:
         retrieval=retrieval,
         local_llm=local_llm,
         ollama_llm=ollama_llm,
+        gradio_llm=gradio_llm,
         pipeline=pipeline,
     )
 

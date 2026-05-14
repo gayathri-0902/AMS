@@ -41,11 +41,22 @@ ollama_llm:
   temperature: 0.3
 
 # -----------------------------------------------------------------------------
+# Gradio Remote LLM (GradioLoader — requires the Gradio notebook running on
+# the 4× RTX 2080 Ti server.  Set base_url to the LAN IP shown by demo.launch)
+# -----------------------------------------------------------------------------
+gradio_llm:
+  base_url: "http://127.0.0.1:7860"   # ← replace with server LAN IP e.g. http://192.168.1.50:7860
+  context_window: 8192
+  max_new_tokens: 1024
+  temperature: 0.2
+  timeout: 120.0                       # seconds to wait for a response
+
+# -----------------------------------------------------------------------------
 # Pipeline defaults  (used by query_engine.py __main__ block)
 # -----------------------------------------------------------------------------
 pipeline:
   year: 4
   branch: "ds"
-  llm_backend: "ollama"   # "local" = QuantizedLocalLLM | "ollama" = OllamaLoader
-  streaming: true        # true only works with ollama backend
+  llm_backend: "gradio"   # "local" = QuantizedLocalLLM | "ollama" = OllamaLoader | "gradio" = GradioLoader
+  streaming: true         # true only works with ollama backend; gradio falls back to blocking
   test_query: "Different types of organizational behaviour models in detail?"
