@@ -30,6 +30,6 @@ py_backend/facedetection/chroma_db
 py_backend/chroma_db
 py_backend/facedetection/data
 py_backend/facedetection/face_env
-
+gemma_gradio_server.py
 __pycache__
 venv
